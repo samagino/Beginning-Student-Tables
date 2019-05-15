@@ -1,0 +1,41 @@
+class TempTable extends React.Component{
+  constructor(props){
+    super(props);
+    this.state = {temp: 0, text: ''};
+    this.handleChange = this.handleChange.bind(this);
+		this.handleClick = this.handleClick.bind(this);
+  }
+  
+  handleChange = (e) => this.setState({text: e.target.value});
+	handleClick = () => this.setState({temp: Number(this.state.text)});  
+
+  render(){
+    return (
+      <table border="1">
+        <tbody>
+          <tr>
+            <td>
+              <input type="text"
+                     value={this.state.text}
+                     onChange={this.handleChange} /> C
+            </td>
+            <td>
+              {this.state.temp * (9/5) + 32} F
+            </td>
+            <td>
+              {this.state.temp + 273} K
+            </td>
+						<td>
+							<button onClick={this.handleClick}>
+								Calculate
+							</button>
+						</td>
+          </tr>
+        </tbody>
+      </table>
+    );
+  }
+}
+
+ReactDOM.render(<TempTable />,
+                document.getElementById('root'));
