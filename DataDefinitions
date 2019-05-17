@@ -1,0 +1,12 @@
+Data Definitions:
+	A Table is 
+		{examples:	[Example],
+		 input_names:	[String],
+		 exprs:		[Column]}
+	A Column is one of
+		- String
+		- {question:	String,
+		   exprs:	[Column]}
+	An Example is
+		{inputs:	[String],
+		 exprs:		[Column]}
