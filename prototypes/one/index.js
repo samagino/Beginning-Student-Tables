@@ -19,7 +19,7 @@ function rotateMatrix(arr2d, numRows){
     //  identical arrays that contain every value in arr2d.
     // This function took more time than I'm proud of.
     let val = new Array(numRows).fill(0).map((elem) => []);
-    arr2d.forEach((arr, i) => arr.forEach((elem, j) => val[j].push(elem)));
+    arr2d.forEach((arr) => arr.forEach((elem, j) => val[j].push(elem)));
     return val;
 }
 
@@ -32,69 +32,24 @@ function randomChar(){
     return String.fromCharCode(char);
 }
 
+// Boolean -> N -> Boolean
+// returns true if elem is a Boolean and acc is true, else returns false
+function isBool(acc, elem){
+    const val = typeof elem == 'boolean' && acc;
+    return val;
+}
+
 /*********************
    React Components
 *********************/
-//cell in a table that has a button that says "delete"
-function DelCell(props){
-    return(
-        <td>
-          <button onClick={props.onClick}>
-            Delete
-          </button>
-        </td>
-    );
-}
 
-//cell in a table that one can write an expression in
-function ExprCell(props){
+/*** Buttons ***/
+//button that says "Delete"
+function DelButton(props){
     return (
-        <td>
-          <input 
-            type="text"
-            value={props.text}
-            onChange={props.onChange} />
-        </td>
-    );
-}
-
-//cell that contains the output of the application of 
-//   a relevent function to a relevent expression
-// the function is called "fexpr" and the 
-//    expression is called "inExpr"
-function TestCell(props){
-    const outText = String(props.outExpr);
-    return (
-        <td>
-          {outText}
-          {outText === props.wantText ? " yay" : ""}
-        </td>
-    );
-}
-
-//value mapping row
-function IORow(props){
-    return (
-        <tr>
-          {props.inTexts.map((inText, index) =>
-                             <ExprCell
-                               key={index}
-                               text={inText}
-                               onChange={(e) => props.inChange(e, index)}
-                             />)} 
-          {props.outExprs.map((outExpr, index) => 
-                            <TestCell
-                              key={index}
-                              outExpr={outExpr}
-                              wantText={props.wantText}
-                            />)}
-          <ExprCell
-            text={props.wantText}
-            onChange={props.wantChange} />
-          <DelCell
-            onClick={props.onClick}
-          />
-        </tr>
+        <button onClick={props.onClick}>
+          Delete
+        </button>
     );
 }
 
@@ -126,6 +81,7 @@ function AddInColumnButton(props){
     );
 }
 
+//button that says "Add Out Column"
 function AddOutColumnButton(props){
     return (
         <button onClick={props.onClick}>
@@ -134,6 +90,76 @@ function AddOutColumnButton(props){
     );
 }
 
+//button that says "Add Child Column"
+function AddChildColumnButton(props){
+    return (
+        <button onClick={props.onClick}>
+          Add Child Column
+        </button>
+    );
+}
+
+/*** Cells ***/
+//cell in a table that has a button that says "delete"
+function DelCell(props){
+    return(
+        <td>
+          <DelButton onClick={props.onClick}/>
+        </td>
+    );
+}
+
+//cell in a table that one can write an expression in
+function ExprCell(props){
+    return (
+        <td>
+          <input 
+            type="text"
+            value={props.text}
+            onChange={props.onChange} />
+        </td>
+    );
+}
+
+//cell that contains the output of a relevent fexpr applied to relevent inputs
+function TestCell(props){
+    const outText = String(props.outExpr);
+    return (
+        <td>
+          {outText}
+          {outText === props.wantText ? " yay" : ""}
+        </td>
+    );
+}
+
+/*** Rows ***/
+//value mapping row
+function IORow(props){
+    return (
+        <tr>
+          {props.inTexts.map((inText, index) =>
+                             <ExprCell
+                               key={index}
+                               text={inText}
+                               onChange={(e) => props.inChange(e, index)}
+                             />)} 
+          {props.outExprs.map((outExpr, index) => 
+                            <TestCell
+                              key={index}
+                              outExpr={outExpr}
+                              wantText={props.wantText}
+                            />)}
+          <ExprCell
+            text={props.wantText}
+            onChange={props.wantChange} />
+          <DelCell
+            onClick={props.onClick}
+          />
+        </tr>
+    );
+}
+
+//header, where parameters and f expressions go
 function Header(props){
     return (
         <tr>
@@ -156,6 +182,7 @@ function Header(props){
     );
 }
 
+//footer, where delete buttons for params and fexprs go
 function Footer(props){
     return (
         <tr>
@@ -165,10 +192,12 @@ function Footer(props){
                               onClick={() => props.remParam(index)}
                             />)}
           {props.fexprs.map((fexpr, index) => 
-                             <DelCell
-                               key={index}
-                               onClick={() => props.remFexpr(fexpr)}
-                             />)}
+                            <td
+                              key={index}>
+                              <DelButton onClick={props.remFexpr}/>
+                              {fexpr.outExprs.reduce(isBool) ?
+                               <AddChildColumnButton onClick={() => props.addChildColumn(fexpr)}/> : ''}
+                            </td>)}
           <td>
             Can't Delete Me
           </td>
@@ -176,17 +205,43 @@ function Footer(props){
     );
 }
 
+function Labels(props){
+    return (
+        <tr>
+          {props.params.map((param, index) =>
+                            <td key={index}>In</td>)}
+          {props.fexprs.map((fexpr, index) =>
+                            <td key={index}>Out</td>)}
+        </tr>
+    );
+}
+
+/*
+  Notes:
+  #inTexts == #params
+  #outExprs == #examples (for now at least)
+  -----------------------
+  |#inTexts != #outExprs|
+  -----------------------
+  
+  Questions:
+  should outExprs be in examples (rows) or fexprs (output columns)?
+  if it's in fExps then it would be easier to test if they're all bools and do stuff from there
+  but rendering is more annoying, so prolly should be in fexprs
+*/
 class App extends React.Component{
     constructor(props){
         super(props);
         const initParam = 'n';
-        this.state = {examples: [{inTexts: ['0'], wantText: '?'}], // rows
-                      fexprs: [{text: initParam, outExprs: [0]}],  // function columns, this will be expanded later I think
-                      params: [initParam]};                        // variable (parameter) columns
+        this.state = {examples: [{inTexts: ['0'], wantText: '?'}],               // rows
+                      fexprs: [{text: initParam, outExprs: [0], children: []}],  // function columns
+                      params: [initParam]};                                      // variable (parameter) columns
         
         this.test = this.test.bind(this);
+        this.testAll = this.testAll.bind(this);
         this.addExample = this.addExample.bind(this);
         this.addFexpr = this.addFexpr.bind(this);
+        this.addChildColumn = this.addChildColumn.bind(this);
         this.addParam = this.addParam.bind(this);
         this.remExample = this.remExample.bind(this);
         this.remFexpr = this.remFexpr.bind(this);
@@ -197,34 +252,34 @@ class App extends React.Component{
         this.paramChange = this.paramChange.bind(this);
     }
 
-    /*
-      Notes:
-        #inTexts == #params
-        #outExprs == #examples (for now at least)
-        -----------------------
-        |#inTexts != #outExprs|
-        -----------------------
-        
-      Questions:
-        should outExprs be in examples (rows) or fexprs (output columns)?
-          if it's in fExps then it would be easier to test if they're all bools and do stuff from there
-          but rendering is more annoying, so prolly should be in fexprs
-    */
     // function that actually does stuff
-    test(){
-        const formalParams = this.state.params.join(',');
+    // this one is pure (no side effects)
+    test(fexprs){
+        //base case, if fexprs is empty, return empty
+        if(!fexprs.length){
+            return [];
+        }
+        
+        const formalParams = this.state.params.join();
         // theres 2 Ss in argss because its kinda like a 2d array of arguments
         const argss = this.state.examples.map((example) => `(${example.inTexts.join()})`);
         
-        const fexprs = this.state.fexprs.map((fexpr) => {
+        return fexprs.map((fexpr) => {
             // NB: I like arrow notation (e.g. '(n) => n') because it looks kinda like lambda, could use other function constructors though
             const funct = `((${formalParams}) => ${fexpr.text})`;
             const outExprs = argss.map((args) => eval(funct + args)); // NB: this '+' means concatenate, not add
+            const children = this.test(fexpr.children); // yay recursion
 
-            return {text: fexpr.text,    // doesn't change
-                    outExprs: outExprs}; // changes
+            return {text: fexpr.text,          // doesn't change
+                    outExprs: outExprs,        // changes
+                    children: children};       // changes
         });
 
+    }
+
+    // this one has side effects
+    testAll(){
+        const fexprs = this.test(this.state.fexprs);
         this.setState({fexprs: fexprs});
     }
     
@@ -245,12 +300,29 @@ class App extends React.Component{
     
     //adds a new out column
     addFexpr(){
-        const firstParam = this.state.params.length ? this.state.params[0] : ''; // hopefully this exists...
+        const firstParam = this.state.params.length ? this.state.params[0] : '';
 
         let fexprs = this.state.fexprs.slice();
         const outExprs = this.state.examples.map((example) => '?');
         fexprs.push({text: firstParam,
-                     outExprs: outExprs});
+                     outExprs: outExprs,
+                     children: []});
+
+        this.setState({fexprs: fexprs});
+    }
+
+    //adds a child column to a fexpr
+    addChildColumn(parentFexpr){
+        console.log(this.state.fexprs);
+        const firstParam = this.state.params.length ? this.state.params[0] : '';
+        const fexprs = this.state.fexprs.map((expr) => expr === parentFexpr ? parentFexpr : expr);
+
+        const outExprs = this.state.examples.map((example) => '?');
+
+        parentFexpr.children.push({text: firstParam,
+                                      outExprs: outExprs,
+                                      children: []});
+        console.log(this.state.fexprs);
 
         this.setState({fexprs: fexprs});
     }
@@ -337,6 +409,10 @@ class App extends React.Component{
             <div>
               <table border="1">
                 <tbody>
+                  <Labels
+                    params={this.state.params}
+                    fexprs={this.state.fexprs}
+                  />
                   <Header 
                     fexprs={this.state.fexprs} 
                     params={this.state.params}
@@ -358,10 +434,11 @@ class App extends React.Component{
                     params={this.state.params}
                     remFexpr={this.remFexpr} 
                     remParam={this.remParam}
+                    addChildColumn={this.addChildColumn}
                   />
                 </tbody>
               </table>
-              <TestButton onClick={this.test} />
+              <TestButton onClick={this.testAll} />
               <AddRowButton onClick={this.addExample} />
               <AddInColumnButton onClick={this.addParam}/>
               <AddOutColumnButton onClick={this.addFexpr} />
