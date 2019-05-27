@@ -1,11 +1,11 @@
 Data Definitions:
 	A Table is 
 		{examples:	[Example],
-		 input_names:	[String],
+		 input_names:	[String],	(formal parameters)
 		 exprs:		[Column]}
 	A Column is one of
-		- String
-		- {question:	String,
+		- String			(non-boolean)
+		- {question:	String,		(boolean)
 		   exprs:	[Column]}
 	An Example is
 		{inputs:	[String],
