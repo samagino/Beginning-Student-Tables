@@ -194,8 +194,8 @@ function Footer(props){
           {props.fexprs.map((fexpr, index) => 
                             <td
                               key={index}>
-                              <DelButton onClick={props.remFexpr}/>
-                              {fexpr.outExprs.reduce(isBool) ?
+                              <DelButton onClick={() => props.remFexpr(fexpr)}/>
+                              {fexpr.outExprs.reduce(isBool, true) ?
                                <AddChildColumnButton onClick={() => props.addChildColumn(fexpr)}/> : ''}
                             </td>)}
           <td>
@@ -254,21 +254,26 @@ class App extends React.Component{
 
     // function that actually does stuff
     // this one is pure (no side effects)
-    test(fexprs){
-        //base case, if fexprs is empty, return empty
-        if(!fexprs.length){
-            return [];
-        }
-        
+    test(fexprs, inTextss){
         const formalParams = this.state.params.join();
         // theres 2 Ss in argss because its kinda like a 2d array of arguments
-        const argss = this.state.examples.map((example) => `(${example.inTexts.join()})`);
+        //const argss = this.state.examples.map((example) => `(${example.inTexts.join()})`);
+        const argss = inTextss.map((inTexts) => `(${inTexts.join()})`);
         
         return fexprs.map((fexpr) => {
             // NB: I like arrow notation (e.g. '(n) => n') because it looks kinda like lambda, could use other function constructors though
             const funct = `((${formalParams}) => ${fexpr.text})`;
             const outExprs = argss.map((args) => eval(funct + args)); // NB: this '+' means concatenate, not add
-            const children = this.test(fexpr.children); // yay recursion
+            let children;
+            if (outExprs.reduce(isBool, true)){
+                // these are the indices we want
+                // this looks pretty awful...
+                const filterIndices = outExprs.map((outExpr, index) => outExpr ? index : -1).filter((elem) => elem != -1);
+                const childrenInTextss = inTextss.filter((inText, index) => filterIndices.includes(index));
+                children = this.test(fexpr.children, childrenInTextss); // yay recursion
+            } else {
+                children = [];
+            }
 
             return {text: fexpr.text,          // doesn't change
                     outExprs: outExprs,        // changes
@@ -279,7 +284,7 @@ class App extends React.Component{
 
     // this one has side effects
     testAll(){
-        const fexprs = this.test(this.state.fexprs);
+        const fexprs = this.test(this.state.fexprs, this.state.examples.map((example) => example.inTexts));
         this.setState({fexprs: fexprs});
     }
     
@@ -313,18 +318,19 @@ class App extends React.Component{
 
     //adds a child column to a fexpr
     addChildColumn(parentFexpr){
-        console.log(this.state.fexprs);
         const firstParam = this.state.params.length ? this.state.params[0] : '';
-        const fexprs = this.state.fexprs.map((expr) => expr === parentFexpr ? parentFexpr : expr);
+        //const fexprs = this.state.fexprs.map((expr) => expr === parentFexpr ? parentFexpr : expr);
+        const fexprs = this.state.fexprs.slice();
 
-        const outExprs = this.state.examples.map((example) => '?');
+        // how do I map these to the correct inTexts though?
+        const outExprs = parentFexpr.outExprs.filter((outExpr) => outExpr === true).map((outExpr) => '?');
 
         parentFexpr.children.push({text: firstParam,
-                                      outExprs: outExprs,
-                                      children: []});
-        console.log(this.state.fexprs);
+                                   outExprs: outExprs,
+                                   children: []});
 
         this.setState({fexprs: fexprs});
+        console.log(this.state.fexprs);
     }
 
     // adds a new in column
@@ -379,19 +385,22 @@ class App extends React.Component{
     inTextChange(e, modExample, modIndex){
         //this mapping function does not change the array this.state.examples
         //not sure if this actually does anything... still need setState to rerender though
-        const examples = this.state.examples.map((example) => example === modExample ? modExample : example);
+        //const examples = this.state.examples.map((example) => example === modExample ? modExample : example);
+        const examples = this.state.examples.slice();
         modExample.inTexts[modIndex] = e.target.value;
         this.setState({examples: examples});
     }
 
     wantTextChange(e, modExample){
-        const examples = this.state.examples.map((example) => example === modExample ? modExample : example);
+        //const examples = this.state.examples.map((example) => example === modExample ? modExample : example);
+        const examples = this.state.examples.slice();
         modExample.wantText = e.target.value;
         this.setState({examples: examples});
     }
     
     fexprChange(e, modFexpr){
-        const fexprs = this.state.fexprs.map((expr) => expr === modFexpr ? modFexpr : expr);
+        //const fexprs = this.state.fexprs.map((expr) => expr === modFexpr ? modFexpr : expr);
+        const fexprs = this.state.fexprs.slice();
         modFexpr.text = e.target.value;
         this.setState({fexprs: fexprs});
     }
