@@ -2,9 +2,14 @@
 //import ReactDOM from 'react-dom';
 //import './index.css';
 
+/*****************************
+  Universal Constants I Want
+*****************************/
+// value to put in child columns that don't have an outExpr for that row, not sure what this should be
+const grayVal = undefined;
 
 /*********************
-   functions I want 
+   Functions I Want 
 *********************/
 // 2D Array -> 2D Array
 // takes a 2d array and returns rotated 2d array, so the columns become rows
@@ -24,7 +29,7 @@ function rotateMatrix(arr2d, numRows){
 }
 
 // String
-// returns a string containing one random latin character
+// returns a string containing one random lowercase latin character
 function randomChar(){
     const a = 0x61;
     let char = Math.random() * 26;
@@ -38,6 +43,20 @@ function isBool(acc, elem){
     const val = typeof elem == 'boolean' && acc;
     return val;
 }
+
+
+/*************
+  CSS Styles
+*************/
+
+const thouIstCorrect = {
+    backgroundColor: 'lightGreen'
+};
+
+const boringThing = {
+    backgroundColor: 'white',
+    borderColor: 'blue'
+};
 
 /*********************
    React Components
@@ -124,10 +143,29 @@ function ExprCell(props){
 //cell that contains the output of a relevent fexpr applied to relevent inputs
 function TestCell(props){
     const outText = String(props.outExpr);
+
+    function makeStyle(){
+        if (props.outExpr === grayVal) {
+            return {backgroundColor: 'gray'};
+        } else if (outText === props.wantText) {
+            return {backgroundColor: 'lightgreen'};
+        } else {
+            return {backgroundColor: 'white'};
+        }
+    }
+
+    function makeText(){
+        if (props.outExpr === grayVal) {
+            return '';
+        } else {
+            return outText;
+        }
+    }
+
     return (
-        <td>
-          {outText}
-          {outText === props.wantText ? " yay" : ""}
+        <td
+          style={makeStyle()}>
+          {makeText()}
         </td>
     );
 }
@@ -159,8 +197,13 @@ function IORow(props){
     );
 }
 
+
 //header, where parameters and f expressions go
 function Header(props){
+    function flattenFexprs(fexprs){
+        return fexprs.map((fexpr) => [fexpr, flattenFexprs(fexpr.children)].flat()).flat();
+    }
+    
     return (
         <tr>
           {props.params.map((param, index) =>
@@ -169,12 +212,12 @@ function Header(props){
                               text={param}
                               onChange={(e) => props.paramChange(e, index)}
                             />)}
-          {props.fexprs.map((fexpr, index) => 
-                          <ExprCell 
-                            key={index}
-                            text={fexpr.text}
-                            onChange={(e) => props.fexprChange(e, fexpr)}
-                          />)}
+          {flattenFexprs(props.fexprs).map((fexpr, index) =>
+                            <ExprCell 
+                              key={index}
+                              text={fexpr.text}
+                              onChange={(e) => props.fexprChange(e, fexpr)}
+                            />)}
           <td>
             Want
           </td>
@@ -184,6 +227,10 @@ function Header(props){
 
 //footer, where delete buttons for params and fexprs go
 function Footer(props){
+    function flattenFexprs(fexprs){
+        return fexprs.map((fexpr) => [fexpr, flattenFexprs(fexpr.children)].flat()).flat();
+    }
+
     return (
         <tr>
           {props.params.map((param, index) =>
@@ -191,13 +238,12 @@ function Footer(props){
                               key={index}
                               onClick={() => props.remParam(index)}
                             />)}
-          {props.fexprs.map((fexpr, index) => 
-                            <td
-                              key={index}>
-                              <DelButton onClick={() => props.remFexpr(fexpr)}/>
-                              {fexpr.outExprs.reduce(isBool, true) ?
-                               <AddChildColumnButton onClick={() => props.addChildColumn(fexpr)}/> : ''}
-                            </td>)}
+          {flattenFexprs(props.fexprs).map((fexpr, index) =>
+                                           <td key={index}>
+                                             <DelButton onClick={() => props.remFexpr(fexpr)}/>
+                                             {fexpr.outExprs.reduce(isBool, true) ?
+                                              <AddChildColumnButton onClick={() => props.addChildColumn(fexpr)}/> : ''}
+                                           </td>)}
           <td>
             Can't Delete Me
           </td>
@@ -233,8 +279,8 @@ class App extends React.Component{
     constructor(props){
         super(props);
         const initParam = 'n';
-        this.state = {examples: [{inTexts: ['0'], wantText: '?'}],               // rows
-                      fexprs: [{text: initParam, outExprs: [0], children: []}],  // function columns
+        this.state = {examples: [{inTexts: ['0'], wantText: ''}],                // rows
+                      fexprs: [{text: initParam, outExprs: ['?'], children: []}],  // function columns
                       params: [initParam]};                                      // variable (parameter) columns
         
         this.test = this.test.bind(this);
@@ -267,7 +313,6 @@ class App extends React.Component{
             let children;
             if (outExprs.reduce(isBool, true)){
                 // these are the indices we want
-                // this looks pretty awful...
                 const filterIndices = outExprs.map((outExpr, index) => outExpr ? index : -1).filter((elem) => elem != -1);
                 const childrenInTextss = inTextss.filter((inText, index) => filterIndices.includes(index));
                 children = this.test(fexpr.children, childrenInTextss); // yay recursion
@@ -293,11 +338,11 @@ class App extends React.Component{
         const examples = this.state.examples.slice();
         const inTexts = this.state.params.map((param) => '0');
         examples.push({inTexts: inTexts,
-                       wantText: '?'});
+                       wantText: ''});
 
         // need to maintain #outExprs == #examples
         let fexprs = this.state.fexprs.slice();
-        fexprs.map((fexpr) => fexpr.outExprs.push('?'));
+        fexprs.forEach((fexpr) => fexpr.outExprs.push('?'));
 
         this.setState({examples: examples,
                        fexprs: fexprs});
@@ -320,7 +365,7 @@ class App extends React.Component{
     addChildColumn(parentFexpr){
         const firstParam = this.state.params.length ? this.state.params[0] : '';
         //const fexprs = this.state.fexprs.map((expr) => expr === parentFexpr ? parentFexpr : expr);
-        const fexprs = this.state.fexprs.slice();
+        //const fexprs = this.state.fexprs.slice();
 
         // how do I map these to the correct inTexts though?
         const outExprs = parentFexpr.outExprs.filter((outExpr) => outExpr === true).map((outExpr) => '?');
@@ -329,8 +374,7 @@ class App extends React.Component{
                                    outExprs: outExprs,
                                    children: []});
 
-        this.setState({fexprs: fexprs});
-        console.log(this.state.fexprs);
+        this.setState({fexprs: this.state.fexprs});
     }
 
     // adds a new in column
@@ -340,7 +384,7 @@ class App extends React.Component{
 
         // need to maintain #inTexts == #params
         let examples = this.state.examples.slice();
-        examples.map((example) => example.inTexts.push('0'));
+        examples.forEach((example) => example.inTexts.push('0'));
 
         this.setState({params: params,
                        examples: examples});
@@ -350,9 +394,9 @@ class App extends React.Component{
     remExample(deadExample){
         // get index of example we wanna remove so we can remove all the corresponding outExprs
         const deadIndex = this.state.examples.indexOf(deadExample);
-
         //filter out the example we don't want from the examples
         const examples = this.state.examples.filter((example) => example !== deadExample);
+
         // gotta maintain #outExprs == #examples
         let fexprs = this.state.fexprs.slice();
         fexprs.forEach((fexpr) => fexpr.outExprs.splice(deadIndex, 1));
@@ -363,8 +407,22 @@ class App extends React.Component{
     
     //removes an output column
     remFexpr(deadFexpr){
+        // [Fexpr] -> [Fexpr]
+        // filters out the deadFexpr recursively through the tree
+        function filterFexpr(fexprs){
+            return fexprs.map((fexpr) => {
+                if (fexpr === deadFexpr){
+                    return undefined;
+                } else {
+                    return {text: fexpr.text,
+                            outExprs: fexpr.outExprs.slice(),
+                            children: filterFexpr(fexpr.children)};
+                }
+            }).filter((elem) => elem !== undefined);
+        }
+        
         //filter out the fexpr we don't want from the fexprs
-        const fexprs = this.state.fexprs.filter((fexpr) => fexpr !== deadFexpr);
+        const fexprs = filterFexpr(this.state.fexprs);
         this.setState({fexprs: fexprs});
     }
 
@@ -372,7 +430,8 @@ class App extends React.Component{
     remParam(deadIndex){
         let params = this.state.params.slice();
         params.splice(deadIndex, 1);
-        //gotta maintain #inTexts == #params (how?)
+
+        //gotta maintain #inTexts == #params
         let examples = this.state.examples.slice();
         examples.forEach((example) => example.inTexts.splice(deadIndex, 1));
 
@@ -383,37 +442,70 @@ class App extends React.Component{
     //handles changes caused by updating a text field
     //modExample refers to the modified row, modIndex referes to the modified inText
     inTextChange(e, modExample, modIndex){
-        //this mapping function does not change the array this.state.examples
-        //not sure if this actually does anything... still need setState to rerender though
         //const examples = this.state.examples.map((example) => example === modExample ? modExample : example);
-        const examples = this.state.examples.slice();
+        //const examples = this.state.examples.slice();
         modExample.inTexts[modIndex] = e.target.value;
-        this.setState({examples: examples});
+        //this doesn't actually change anything, but it causes the table to rerender
+        this.setState({examples: this.state.examples});
     }
 
     wantTextChange(e, modExample){
         //const examples = this.state.examples.map((example) => example === modExample ? modExample : example);
-        const examples = this.state.examples.slice();
+        //const examples = this.state.examples.slice();
         modExample.wantText = e.target.value;
-        this.setState({examples: examples});
+        this.setState({examples: this.state.examples});
     }
     
     fexprChange(e, modFexpr){
         //const fexprs = this.state.fexprs.map((expr) => expr === modFexpr ? modFexpr : expr);
-        const fexprs = this.state.fexprs.slice();
+        //const fexprs = this.state.fexprs.slice();
         modFexpr.text = e.target.value;
-        this.setState({fexprs: fexprs});
+        this.setState({fexprs: this.state.fexprs});
     }
 
     paramChange(e, modIndex){
         const modParam = e.target.value;
+        // this one actually does stuff
         // have to use index because params is an array of strings, not an array of objects
         const params = this.state.params.map((param, index) => index === modIndex ? modParam : param);
         this.setState({params: params});
     }
     
     render(){
-        const rowOutExprss = rotateMatrix(this.state.fexprs.map((fexpr) => fexpr.outExprs), this.state.examples.length);
+        // [Fexpr] -> [Boolean] -> [N] -> [N]
+        // uses side effects to build a shallow 2d array from a tree type thing
+        function rotateFexprs(fexprs, boolArr, val){
+            fexprs.forEach((fexpr) => {
+                let passedInvalidRows = 0;
+                let unifiedBoolArr = [];
+                boolArr.forEach((bool, j) => {
+                    if (bool){
+                        val[j].push(fexpr.outExprs[j - passedInvalidRows]);
+                        unifiedBoolArr.push(fexpr.outExprs[j - passedInvalidRows]);
+                    } else {
+                        passedInvalidRows ++;
+                        val[j].push(grayVal);
+                        unifiedBoolArr.push(false);
+                    }
+                });
+
+                if (fexpr.children.length) { // fexpr has children
+                    rotateFexprs(fexpr.children, unifiedBoolArr, val);
+                }
+            });
+
+            /*
+              let val = new Array(numRows).fill(0).map((elem) => []);
+              arr2d.forEach((arr) => arr.forEach((elem, j) => val[j].push(elem)));
+              return val;
+            */
+            
+        }
+
+        let rowOutExprss = new Array(this.state.examples.length).fill(0).map((elem) => []);
+        const trueArr = new Array(this.state.examples.length).fill(true);
+        rotateFexprs(this.state.fexprs, trueArr, rowOutExprss);
+        //const rowOutExprss = rotateMatrix(this.state.fexprs.map((fexpr) => fexpr.outExprs), this.state.examples.length);
         return (
             <div>
               <table border="1">
