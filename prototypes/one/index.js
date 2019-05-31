@@ -11,23 +11,6 @@ const grayVal = undefined;
 /*********************
    Functions I Want 
 *********************/
-// 2D Array -> 2D Array
-// takes a 2d array and returns rotated 2d array, so the columns become rows
-function rotateMatrix(arr2d, numRows){
-    // This mapping doesn't make much sense but it's necessary.
-    //  First an array containing n zeroes is created, then each of
-    //  zeroes is converted to a new empty array and the resulting array
-    //  is assigned to val.
-    //  The original array can't just be filled with a new empty array,
-    //  because then each element of the resulting array would be a reference
-    //  to the same array, so the resulting array would contain a bunch of
-    //  identical arrays that contain every value in arr2d.
-    // This function took more time than I'm proud of.
-    let val = new Array(numRows).fill(0).map((elem) => []);
-    arr2d.forEach((arr) => arr.forEach((elem, j) => val[j].push(elem)));
-    return val;
-}
-
 // String
 // returns a string containing one random lowercase latin character
 function randomChar(){
@@ -40,23 +23,9 @@ function randomChar(){
 // Boolean -> N -> Boolean
 // returns true if elem is a Boolean and acc is true, else returns false
 function isBool(acc, elem){
-    const val = typeof elem == 'boolean' && acc;
+    const val = acc && typeof elem == 'boolean' ;
     return val;
 }
-
-
-/*************
-  CSS Styles
-*************/
-
-const thouIstCorrect = {
-    backgroundColor: 'lightGreen'
-};
-
-const boringThing = {
-    backgroundColor: 'white',
-    borderColor: 'blue'
-};
 
 /*********************
    React Components
@@ -109,11 +78,20 @@ function AddOutColumnButton(props){
     );
 }
 
-//button that says "Add Child Column"
-function AddChildColumnButton(props){
+//button that says "Add Then Column"
+function AddThenColumnButton(props){
     return (
         <button onClick={props.onClick}>
-          Add Child Column
+          Add Then Column
+        </button>
+    );
+}
+
+//button that says "Add Else Column"
+function AddElseColumnButton(props){
+    return (
+        <button onClick={props.onClick}>
+          Add Else Column
         </button>
     );
 }
@@ -201,7 +179,7 @@ function IORow(props){
 //header, where parameters and f expressions go
 function Header(props){
     function flattenFexprs(fexprs){
-        return fexprs.map((fexpr) => [fexpr, flattenFexprs(fexpr.children)].flat()).flat();
+        return fexprs.map((fexpr) => [fexpr, flattenFexprs(fexpr.thenChildren), flattenFexprs(fexpr.elseChildren)].flat()).flat();
     }
     
     return (
@@ -228,7 +206,7 @@ function Header(props){
 //footer, where delete buttons for params and fexprs go
 function Footer(props){
     function flattenFexprs(fexprs){
-        return fexprs.map((fexpr) => [fexpr, flattenFexprs(fexpr.children)].flat()).flat();
+        return fexprs.map((fexpr) => [fexpr, flattenFexprs(fexpr.thenChildren), flattenFexprs(fexpr.elseChildren)].flat()).flat();
     }
 
     return (
@@ -242,7 +220,11 @@ function Footer(props){
                                            <td key={index}>
                                              <DelButton onClick={() => props.remFexpr(fexpr)}/>
                                              {fexpr.outExprs.reduce(isBool, true) ?
-                                              <AddChildColumnButton onClick={() => props.addChildColumn(fexpr)}/> : ''}
+                                              <div>
+                                                <AddThenColumnButton onClick={() => props.addThenChild(fexpr)}/>
+                                                <AddElseColumnButton onClick={() => props.addElseChild(fexpr)}/>
+                                              </div>
+                                              : ''}
                                            </td>)}
           <td>
             Can't Delete Me
@@ -252,11 +234,15 @@ function Footer(props){
 }
 
 function Labels(props){
+    function flattenFexprs(fexprs){
+        return fexprs.map((fexpr) => [fexpr, flattenFexprs(fexpr.thenChildren), flattenFexprs(fexpr.elseChildren)].flat()).flat();
+    }
+
     return (
         <tr>
           {props.params.map((param, index) =>
                             <td key={index}>In</td>)}
-          {props.fexprs.map((fexpr, index) =>
+          {flattenFexprs(props.fexprs).map((fexpr, index) =>
                             <td key={index}>Out</td>)}
         </tr>
     );
@@ -279,15 +265,16 @@ class App extends React.Component{
     constructor(props){
         super(props);
         const initParam = 'n';
-        this.state = {examples: [{inTexts: ['0'], wantText: ''}],                // rows
-                      fexprs: [{text: initParam, outExprs: ['?'], children: []}],  // function columns
-                      params: [initParam]};                                      // variable (parameter) columns
+        this.state = {examples: [{inTexts: ['0'], wantText: ''}],                                        // rows
+                      fexprs: [{text: initParam, outExprs: ['?'], thenChildren: [], elseChildren: []}],  // function columns
+                      params: [initParam]};                                                              // variable (parameter) columns
         
         this.test = this.test.bind(this);
         this.testAll = this.testAll.bind(this);
         this.addExample = this.addExample.bind(this);
         this.addFexpr = this.addFexpr.bind(this);
-        this.addChildColumn = this.addChildColumn.bind(this);
+        this.addThenChild = this.addThenChild.bind(this);
+        this.addElseChild = this.addElseChild.bind(this);
         this.addParam = this.addParam.bind(this);
         this.remExample = this.remExample.bind(this);
         this.remFexpr = this.remFexpr.bind(this);
@@ -310,19 +297,28 @@ class App extends React.Component{
             // NB: I like arrow notation (e.g. '(n) => n') because it looks kinda like lambda, could use other function constructors though
             const funct = `((${formalParams}) => ${fexpr.text})`;
             const outExprs = argss.map((args) => eval(funct + args)); // NB: this '+' means concatenate, not add
-            let children;
+
+            let thenChildren;
+            let elseChildren;
             if (outExprs.reduce(isBool, true)){
                 // these are the indices we want
-                const filterIndices = outExprs.map((outExpr, index) => outExpr ? index : -1).filter((elem) => elem != -1);
-                const childrenInTextss = inTextss.filter((inText, index) => filterIndices.includes(index));
-                children = this.test(fexpr.children, childrenInTextss); // yay recursion
+                const trueIndices = outExprs.map((outExpr, index) => outExpr ? index : -1).filter((elem) => elem != -1);
+                const falseIndices = outExprs.map((outExpr, index) => !outExpr ? index : -1).filter((elem) => elem != -1);
+
+                const trueInTextss = inTextss.filter((inText, index) => trueIndices.includes(index));
+                const falseInTextss = inTextss.filter((inText, index) => falseIndices.includes(index));
+
+                thenChildren = this.test(fexpr.thenChildren, trueInTextss); // yay recursion
+                elseChildren = this.test(fexpr.elseChildren, falseInTextss); // yay recursion
             } else {
-                children = [];
+                thenChildren = [];
+                elseChildren = [];
             }
 
-            return {text: fexpr.text,          // doesn't change
-                    outExprs: outExprs,        // changes
-                    children: children};       // changes
+            return {text: fexpr.text,             // doesn't change
+                    outExprs: outExprs,           // changes
+                    thenChildren: thenChildren,   // changes
+                    elseChildren: elseChildren};  // changes
         });
 
     }
@@ -341,6 +337,7 @@ class App extends React.Component{
                        wantText: ''});
 
         // need to maintain #outExprs == #examples
+        // TODO: do I have to do this in children too?
         let fexprs = this.state.fexprs.slice();
         fexprs.forEach((fexpr) => fexpr.outExprs.push('?'));
 
@@ -356,13 +353,14 @@ class App extends React.Component{
         const outExprs = this.state.examples.map((example) => '?');
         fexprs.push({text: firstParam,
                      outExprs: outExprs,
-                     children: []});
+                     thenChildren: [],
+                     elseChildren: []});
 
         this.setState({fexprs: fexprs});
     }
 
-    //adds a child column to a fexpr
-    addChildColumn(parentFexpr){
+    //adds a then column to a fexpr
+    addThenChild(parentFexpr){
         const firstParam = this.state.params.length ? this.state.params[0] : '';
         //const fexprs = this.state.fexprs.map((expr) => expr === parentFexpr ? parentFexpr : expr);
         //const fexprs = this.state.fexprs.slice();
@@ -370,9 +368,27 @@ class App extends React.Component{
         // how do I map these to the correct inTexts though?
         const outExprs = parentFexpr.outExprs.filter((outExpr) => outExpr === true).map((outExpr) => '?');
 
-        parentFexpr.children.push({text: firstParam,
-                                   outExprs: outExprs,
-                                   children: []});
+        parentFexpr.thenChildren.push({text: firstParam,
+                                       outExprs: outExprs,
+                                       thenChildren: [],
+                                       elseChildren: []});
+
+        this.setState({fexprs: this.state.fexprs});
+    }
+
+    //adds a then column to a fexpr
+    addElseChild(parentFexpr){
+        const firstParam = this.state.params.length ? this.state.params[0] : '';
+        //const fexprs = this.state.fexprs.map((expr) => expr === parentFexpr ? parentFexpr : expr);
+        //const fexprs = this.state.fexprs.slice();
+
+        // how do I map these to the correct inTexts though?
+        const outExprs = parentFexpr.outExprs.filter((outExpr) => outExpr === true).map((outExpr) => '?');
+
+        parentFexpr.elseChildren.push({text: firstParam,
+                                       outExprs: outExprs,
+                                       thenChildren: [],
+                                       elseChildren: []});
 
         this.setState({fexprs: this.state.fexprs});
     }
@@ -416,7 +432,8 @@ class App extends React.Component{
                 } else {
                     return {text: fexpr.text,
                             outExprs: fexpr.outExprs.slice(),
-                            children: filterFexpr(fexpr.children)};
+                            thenChildren: filterFexpr(fexpr.thenChildren),
+                            elseChildren: filterFexpr(fexpr.elseChildren)};
                 }
             }).filter((elem) => elem !== undefined);
         }
@@ -477,29 +494,28 @@ class App extends React.Component{
         function rotateFexprs(fexprs, boolArr, val){
             fexprs.forEach((fexpr) => {
                 let passedInvalidRows = 0;
-                let unifiedBoolArr = [];
+                let thenBoolArr = [];
+                let elseBoolArr = [];
+
                 boolArr.forEach((bool, j) => {
                     if (bool){
                         val[j].push(fexpr.outExprs[j - passedInvalidRows]);
-                        unifiedBoolArr.push(fexpr.outExprs[j - passedInvalidRows]);
+                        thenBoolArr.push(fexpr.outExprs[j - passedInvalidRows]);
+                        elseBoolArr.push(!fexpr.outExprs[j - passedInvalidRows]);
                     } else {
                         passedInvalidRows ++;
                         val[j].push(grayVal);
-                        unifiedBoolArr.push(false);
+                        thenBoolArr.push(false);
+                        elseBoolArr.push(false);
                     }
                 });
 
-                if (fexpr.children.length) { // fexpr has children
-                    rotateFexprs(fexpr.children, unifiedBoolArr, val);
+                if (fexpr.thenChildren.length || fexpr.elseChildren.length) { // fexpr has children
+                    rotateFexprs(fexpr.thenChildren, thenBoolArr, val);
+                    rotateFexprs(fexpr.elseChildren, elseBoolArr, val);
                 }
             });
 
-            /*
-              let val = new Array(numRows).fill(0).map((elem) => []);
-              arr2d.forEach((arr) => arr.forEach((elem, j) => val[j].push(elem)));
-              return val;
-            */
-            
         }
 
         let rowOutExprss = new Array(this.state.examples.length).fill(0).map((elem) => []);
@@ -535,7 +551,8 @@ class App extends React.Component{
                     params={this.state.params}
                     remFexpr={this.remFexpr} 
                     remParam={this.remParam}
-                    addChildColumn={this.addChildColumn}
+                    addThenChild={this.addThenChild}
+                    addElseChild={this.addElseChild}
                   />
                 </tbody>
               </table>
