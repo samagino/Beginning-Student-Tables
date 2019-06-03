@@ -8,6 +8,9 @@
 // value to put in child columns that don't have an outExpr for that row, not sure what this should be
 const grayVal = undefined;
 
+const colors = ['white', 'aquamarine', 'pink', 'cadetblue', 'orchid', 'coral', 'cornflowerblue',
+                'crimson', 'cyan', 'darkorange', 'fuchsia', 'lavender', 'salmon', 'yellow'];
+
 /*********************
    Functions I Want 
 *********************/
@@ -15,7 +18,7 @@ const grayVal = undefined;
 // returns a string containing one random lowercase latin character
 function randomChar(){
     const a = 0x61;
-    let char = Math.random() * 26;
+    let char = Math.round(Math.random() * 26);
     char += a;
     return String.fromCharCode(char);
 }
@@ -25,6 +28,26 @@ function randomChar(){
 function isBool(acc, elem){
     const val = acc && typeof elem == 'boolean' ;
     return val;
+}
+
+// [Fexpr] -> Number -> [{Fexpr, Style}]
+// takes a list of fexprs and an accumulator, returns flattened list of objects containing a fexpr and its associated css style
+function flattenFexprs(fexprs, acc){
+    return fexprs.map((fexpr, i) =>
+                      [{fexpr: fexpr, style: {backgroundColor: colors[acc]}},
+                       flattenFexprs(fexpr.thenChildren, trueColorIndex(acc + i)),
+                       flattenFexprs(fexpr.elseChildren, falseColorIndex(acc + i))].flat()
+                     ).flat();
+}
+    
+// Number -> Number
+function trueColorIndex(n){
+    return (n + 1) % colors.length;
+}
+
+// Number -> Number
+function falseColorIndex(n){
+    return (n + 1 + (colors.length / 2)) % colors.length;
 }
 
 /*********************
@@ -100,7 +123,7 @@ function AddElseColumnButton(props){
 //cell in a table that has a button that says "delete"
 function DelCell(props){
     return(
-        <td>
+        <td style={props.style}>
           <DelButton onClick={props.onClick}/>
         </td>
     );
@@ -109,7 +132,7 @@ function DelCell(props){
 //cell in a table that one can write an expression in
 function ExprCell(props){
     return (
-        <td>
+        <td style={props.style}>
           <input 
             type="text"
             value={props.text}
@@ -122,14 +145,8 @@ function ExprCell(props){
 function TestCell(props){
     const outText = String(props.outExpr);
 
-    function makeStyle(){
-        if (props.outExpr === grayVal) {
-            return {backgroundColor: 'gray'};
-        } else if (outText === props.wantText) {
-            return {backgroundColor: 'lightgreen'};
-        } else {
-            return {backgroundColor: 'white'};
-        }
+    if (outText === props.wantText) {
+        props.style.backgroundColor = 'palegreen';
     }
 
     function makeText(){
@@ -142,7 +159,7 @@ function TestCell(props){
 
     return (
         <td
-          style={makeStyle()}>
+          style={props.style}>
           {makeText()}
         </td>
     );
@@ -156,19 +173,23 @@ function IORow(props){
           {props.inTexts.map((inText, index) =>
                              <ExprCell
                                key={index}
+                               style={{backgroundColor: 'white'}}
                                text={inText}
                                onChange={(e) => props.inChange(e, index)}
                              />)} 
-          {props.outExprs.map((outExpr, index) => 
+          {props.cellInfos.map((cellInfo, index) => 
                             <TestCell
                               key={index}
-                              outExpr={outExpr}
+                              outExpr={cellInfo.outExpr}
+                              style={cellInfo.style}
                               wantText={props.wantText}
                             />)}
           <ExprCell
+            style={{backgroundColor: 'white'}}
             text={props.wantText}
             onChange={props.wantChange} />
           <DelCell
+            style={{backgroundColor: 'white'}}
             onClick={props.onClick}
           />
         </tr>
@@ -178,23 +199,21 @@ function IORow(props){
 
 //header, where parameters and f expressions go
 function Header(props){
-    function flattenFexprs(fexprs){
-        return fexprs.map((fexpr) => [fexpr, flattenFexprs(fexpr.thenChildren), flattenFexprs(fexpr.elseChildren)].flat()).flat();
-    }
-    
     return (
         <tr>
           {props.params.map((param, index) =>
                             <ExprCell
                               key={index}
+                              style={{backgroundColor: 'white'}}
                               text={param}
                               onChange={(e) => props.paramChange(e, index)}
                             />)}
-          {flattenFexprs(props.fexprs).map((fexpr, index) =>
+          {flattenFexprs(props.fexprs, 0).map((cellInfo, index) =>
                             <ExprCell 
                               key={index}
-                              text={fexpr.text}
-                              onChange={(e) => props.fexprChange(e, fexpr)}
+                              style={cellInfo.style}
+                              text={cellInfo.fexpr.text}
+                              onChange={(e) => props.fexprChange(e, cellInfo.fexpr)}
                             />)}
           <td>
             Want
@@ -205,27 +224,26 @@ function Header(props){
 
 //footer, where delete buttons for params and fexprs go
 function Footer(props){
-    function flattenFexprs(fexprs){
-        return fexprs.map((fexpr) => [fexpr, flattenFexprs(fexpr.thenChildren), flattenFexprs(fexpr.elseChildren)].flat()).flat();
-    }
-
     return (
         <tr>
           {props.params.map((param, index) =>
                             <DelCell
                               key={index}
+                              style={{backgroundColor: 'white'}}
                               onClick={() => props.remParam(index)}
                             />)}
-          {flattenFexprs(props.fexprs).map((fexpr, index) =>
-                                           <td key={index}>
-                                             <DelButton onClick={() => props.remFexpr(fexpr)}/>
-                                             {fexpr.outExprs.reduce(isBool, true) ?
-                                              <div>
-                                                <AddThenColumnButton onClick={() => props.addThenChild(fexpr)}/>
-                                                <AddElseColumnButton onClick={() => props.addElseChild(fexpr)}/>
-                                              </div>
-                                              : ''}
-                                           </td>)}
+          {flattenFexprs(props.fexprs, 0).map((cellInfo, index) =>
+                                                    <td
+                                                      key={index}
+                                                      style={cellInfo.style}>
+                                                      <DelButton onClick={() => props.remFexpr(cellInfo.fexpr)}/>
+                                                      {cellInfo.fexpr.outExprs.reduce(isBool, true) ?
+                                                       <div>
+                                                         <AddThenColumnButton onClick={() => props.addThenChild(cellInfo.fexpr)}/>
+                                                         <AddElseColumnButton onClick={() => props.addElseChild(cellInfo.fexpr)}/>
+                                                       </div>
+                                                       : ''}
+                                                    </td>)}
           <td>
             Can't Delete Me
           </td>
@@ -234,16 +252,16 @@ function Footer(props){
 }
 
 function Labels(props){
-    function flattenFexprs(fexprs){
-        return fexprs.map((fexpr) => [fexpr, flattenFexprs(fexpr.thenChildren), flattenFexprs(fexpr.elseChildren)].flat()).flat();
-    }
-
     return (
         <tr>
           {props.params.map((param, index) =>
                             <td key={index}>In</td>)}
-          {flattenFexprs(props.fexprs).map((fexpr, index) =>
-                            <td key={index}>Out</td>)}
+          {flattenFexprs(props.fexprs, 0).map((cellInfo, index) =>
+                                           <td
+                                             key={index}
+                                             style={cellInfo.style}>
+                                             Out
+                                           </td>)}
         </tr>
     );
 }
@@ -489,39 +507,52 @@ class App extends React.Component{
     }
     
     render(){
-        // [Fexpr] -> [Boolean] -> [N] -> [N]
+        // [Fexpr] -> [Boolean] -> String -> [N] -> [{N, String}]
         // uses side effects to build a shallow 2d array from a tree type thing
-        function rotateFexprs(fexprs, boolArr, val){
-            fexprs.forEach((fexpr) => {
+        function rotateFexprs(fexprs, boolArr, acc, rotatedExprs){
+            fexprs.forEach((fexpr, i) => {
                 let passedInvalidRows = 0;
                 let thenBoolArr = [];
                 let elseBoolArr = [];
 
                 boolArr.forEach((bool, j) => {
-                    if (bool){
-                        val[j].push(fexpr.outExprs[j - passedInvalidRows]);
-                        thenBoolArr.push(fexpr.outExprs[j - passedInvalidRows]);
-                        elseBoolArr.push(!fexpr.outExprs[j - passedInvalidRows]);
+                    if (bool) {
+                        const outExpr = fexpr.outExprs[j - passedInvalidRows];
+                        let style = {backgroundColor: colors[acc]};
+
+                        if (outExpr === true) {
+                            style.color = colors[trueColorIndex(acc + i)];
+                        } else if (outExpr === false) {
+                            style.color = colors[falseColorIndex(acc + i)];
+                        }
+
+                        rotatedExprs[j].push({outExpr: outExpr, style: style});
+                        thenBoolArr.push(outExpr);
+                        elseBoolArr.push(!outExpr);
                     } else {
                         passedInvalidRows ++;
-                        val[j].push(grayVal);
+                        rotatedExprs[j].push({outExpr: grayVal, style: {backgroundColor: 'gray'}});
                         thenBoolArr.push(false);
                         elseBoolArr.push(false);
                     }
                 });
 
                 if (fexpr.thenChildren.length || fexpr.elseChildren.length) { // fexpr has children
-                    rotateFexprs(fexpr.thenChildren, thenBoolArr, val);
-                    rotateFexprs(fexpr.elseChildren, elseBoolArr, val);
+                    // can map true/false text color here
+                    /*
+                      dunno how to decide which color to pass
+                      can't be random, has to be same every time render is called unless a column is changed or something
+                      this method kinda sucks though
+                    */
+                    rotateFexprs(fexpr.thenChildren, thenBoolArr, trueColorIndex(acc + i), rotatedExprs);
+                    rotateFexprs(fexpr.elseChildren, elseBoolArr, falseColorIndex(acc + i), rotatedExprs);
                 }
             });
-
         }
 
-        let rowOutExprss = new Array(this.state.examples.length).fill(0).map((elem) => []);
+        let cellInfoss = new Array(this.state.examples.length).fill(0).map((elem) => []);
         const trueArr = new Array(this.state.examples.length).fill(true);
-        rotateFexprs(this.state.fexprs, trueArr, rowOutExprss);
-        //const rowOutExprss = rotateMatrix(this.state.fexprs.map((fexpr) => fexpr.outExprs), this.state.examples.length);
+        rotateFexprs(this.state.fexprs, trueArr, 0, cellInfoss);
         return (
             <div>
               <table border="1">
@@ -541,7 +572,7 @@ class App extends React.Component{
                                              key={index}
                                              inTexts={example.inTexts}
                                              wantText={example.wantText}
-                                             outExprs={rowOutExprss[index]}
+                                             cellInfos={cellInfoss[index]}
                                              inChange={(e, index) => this.inTextChange(e, example, index)} 
                                              wantChange={(e) => this.wantTextChange(e, example)}
                                              onClick={() => this.remExample(example)}
