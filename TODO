@@ -1,12 +1,25 @@
 --___TODO___--
 
 now:
-make stuff not ugly
-make boolean columns feel more like cond and less like if
+ -----------------------------------------------------------
+| make stuff not ugly                                       |
+| make boolean columns feel more like cond and less like if |
+ -----------------------------------------------------------
+
 implement recursion
     - ability to name tables
     - table name refers to function that maps a set of in examples to the corresponding want text
       - this mapping must exist, else error
+ - issues
+   - not sure how to get the function described above into the environment from which the js function eval runs
+   - could parse the fexpr functions and replace references to 'tableName(inputs)' with the corresponding values,
+       but this would only work with literals, not with variables
+     to make it work with variables I would pretty much have to write a minimal js interpreter, which I don't really
+     want to do
+   - I'd rather get back to this issue later when writing the racket interpreter, because then I'll have more control over
+     the environment
+   - alternatively I can try to better understand how eval works
+      
 
 later: 
 Make Racket Interpreter
