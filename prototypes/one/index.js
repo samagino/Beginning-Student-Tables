@@ -7,12 +7,14 @@
 *****************************/
 // value to put in child columns that don't have an outExpr for that row, not sure what this should be
 const grayVal = undefined;
+// value to use to signal errors, not sure what this should be either.
+const errorVal = undefined;
 
 const colors = ['white', 'aquamarine', 'pink', 'cadetblue', 'orchid', 'coral', 'cornflowerblue',
                 'crimson', 'cyan', 'darkorange', 'fuchsia', 'lavender', 'salmon', 'yellow'];
 
 /*********************
-   Functions I Want 
+   Functions I Want
 *********************/
 // String
 // returns a string containing one random lowercase latin character
@@ -33,21 +35,21 @@ function isBool(acc, elem){
 // [Fexpr] -> Number -> [{Fexpr, Style}]
 // takes a list of fexprs and an accumulator, returns flattened list of objects containing a fexpr and its associated css style
 function flattenFexprs(fexprs, acc){
-    return fexprs.map((fexpr, i) =>
+    return fexprs.map((fexpr) =>
                       [{fexpr: fexpr, style: {backgroundColor: colors[acc]}},
-                       flattenFexprs(fexpr.thenChildren, trueColorIndex(acc + i)),
-                       flattenFexprs(fexpr.elseChildren, falseColorIndex(acc + i))].flat()
+                       flattenFexprs(fexpr.thenChildren, trueColorIndex(acc + 1)),
+                       flattenFexprs(fexpr.elseChildren, falseColorIndex(acc + 1))].flat()
                      ).flat();
 }
     
 // Number -> Number
 function trueColorIndex(n){
-    return (n + 1) % colors.length;
+    return n % colors.length;
 }
 
 // Number -> Number
 function falseColorIndex(n){
-    return (n + 1 + (colors.length / 2)) % colors.length;
+    return (n + (colors.length / 2)) % colors.length;
 }
 
 /*********************
@@ -285,8 +287,10 @@ class App extends React.Component{
         const initParam = 'n';
         this.state = {examples: [{inTexts: ['0'], wantText: ''}],                                        // rows
                       fexprs: [{text: initParam, outExprs: ['?'], thenChildren: [], elseChildren: []}],  // function columns
-                      params: [initParam]};                                                              // variable (parameter) columns
+                      params: [initParam],                                                               // variable (parameter) columns
+                      name: 'table'};                                                                    // table name (used for recursion)
         
+        this.lookup = this.lookup.bind(this);
         this.test = this.test.bind(this);
         this.testAll = this.testAll.bind(this);
         this.addExample = this.addExample.bind(this);
@@ -301,30 +305,48 @@ class App extends React.Component{
         this.wantTextChange = this.wantTextChange.bind(this);
         this.fexprChange = this.fexprChange.bind(this);
         this.paramChange = this.paramChange.bind(this);
+        this.nameChange = this.nameChange.bind(this);
+    }
+
+    lookup(arr){
+        return this.state.examples.reduce((acc, example) => {
+            if (acc !== errorVal) {
+                return acc;
+            }
+
+            if (example.inTexts.reduce((acc, inText, index) => (acc && inText === arr[index]), true)){
+                return example.wantText;
+            }
+
+            return errorVal;
+        }, errorVal);
     }
 
     // function that actually does stuff
     // this one is pure (no side effects)
     test(fexprs, inTextss){
+        function toFalseIndex(n){
+            // minus 1 is for zero case
+            return (n * -1) - 1;
+        }
+
         const formalParams = this.state.params.join();
+        const recur = new RegExp(`${this.state.name}\\(([^\\)]+)\\)`, 'g');
         // theres 2 Ss in argss because its kinda like a 2d array of arguments
-        //const argss = this.state.examples.map((example) => `(${example.inTexts.join()})`);
         const argss = inTextss.map((inTexts) => `(${inTexts.join()})`);
-        
+
         return fexprs.map((fexpr) => {
-            // NB: I like arrow notation (e.g. '(n) => n') because it looks kinda like lambda, could use other function constructors though
-            const funct = `((${formalParams}) => ${fexpr.text})`;
+            const funct = `Function("${formalParams}", "return ${fexpr.text}")`;
             const outExprs = argss.map((args) => eval(funct + args)); // NB: this '+' means concatenate, not add
 
             let thenChildren;
             let elseChildren;
             if (outExprs.reduce(isBool, true)){
-                // these are the indices we want
-                const trueIndices = outExprs.map((outExpr, index) => outExpr ? index : -1).filter((elem) => elem != -1);
-                const falseIndices = outExprs.map((outExpr, index) => !outExpr ? index : -1).filter((elem) => elem != -1);
+                // true indices are positive, false indices are negative
+                const filterIndices = outExprs.map((outExpr, index) => outExpr ? index : toFalseIndex(index));
 
-                const trueInTextss = inTextss.filter((inText, index) => trueIndices.includes(index));
-                const falseInTextss = inTextss.filter((inText, index) => falseIndices.includes(index));
+                const trueInTextss = inTextss.filter((inText, index) => filterIndices.includes(index));
+                const falseInTextss = inTextss.filter((inText, index) => filterIndices.includes(toFalseIndex(index)));
 
                 thenChildren = this.test(fexpr.thenChildren, trueInTextss); // yay recursion
                 elseChildren = this.test(fexpr.elseChildren, falseInTextss); // yay recursion
@@ -440,6 +462,7 @@ class App extends React.Component{
     }
     
     //removes an output column
+    //has to search recursively through tree to find the right one
     remFexpr(deadFexpr){
         // [Fexpr] -> [Fexpr]
         // filters out the deadFexpr recursively through the tree
@@ -480,7 +503,7 @@ class App extends React.Component{
         //const examples = this.state.examples.map((example) => example === modExample ? modExample : example);
         //const examples = this.state.examples.slice();
         modExample.inTexts[modIndex] = e.target.value;
-        //this doesn't actually change anything, but it causes the table to rerender
+        // this doesn't actually change anything, but it causes the table to rerender
         this.setState({examples: this.state.examples});
     }
 
@@ -488,6 +511,7 @@ class App extends React.Component{
         //const examples = this.state.examples.map((example) => example === modExample ? modExample : example);
         //const examples = this.state.examples.slice();
         modExample.wantText = e.target.value;
+        // this doesn't actually change anything, but it causes the table to rerender
         this.setState({examples: this.state.examples});
     }
     
@@ -495,22 +519,28 @@ class App extends React.Component{
         //const fexprs = this.state.fexprs.map((expr) => expr === modFexpr ? modFexpr : expr);
         //const fexprs = this.state.fexprs.slice();
         modFexpr.text = e.target.value;
+        // this doesn't actually change anything, but it causes the table to rerender
         this.setState({fexprs: this.state.fexprs});
     }
 
     paramChange(e, modIndex){
         const modParam = e.target.value;
-        // this one actually does stuff
         // have to use index because params is an array of strings, not an array of objects
         const params = this.state.params.map((param, index) => index === modIndex ? modParam : param);
+        // this one actually does stuff
         this.setState({params: params});
+    }
+
+    nameChange(e){
+        // so does this one
+        this.setState({name: e.target.value});
     }
     
     render(){
         // [Fexpr] -> [Boolean] -> String -> [N] -> [{N, String}]
         // uses side effects to build a shallow 2d array from a tree type thing
         function rotateFexprs(fexprs, boolArr, acc, rotatedExprs){
-            fexprs.forEach((fexpr, i) => {
+            fexprs.forEach((fexpr) => {
                 let passedInvalidRows = 0;
                 let thenBoolArr = [];
                 let elseBoolArr = [];
@@ -521,9 +551,9 @@ class App extends React.Component{
                         let style = {backgroundColor: colors[acc]};
 
                         if (outExpr === true) {
-                            style.color = colors[trueColorIndex(acc + i)];
+                            style.color = colors[trueColorIndex(acc + 1)];
                         } else if (outExpr === false) {
-                            style.color = colors[falseColorIndex(acc + i)];
+                            style.color = colors[falseColorIndex(acc + 1)];
                         }
 
                         rotatedExprs[j].push({outExpr: outExpr, style: style});
@@ -538,14 +568,13 @@ class App extends React.Component{
                 });
 
                 if (fexpr.thenChildren.length || fexpr.elseChildren.length) { // fexpr has children
-                    // can map true/false text color here
                     /*
                       dunno how to decide which color to pass
                       can't be random, has to be same every time render is called unless a column is changed or something
                       this method kinda sucks though
                     */
-                    rotateFexprs(fexpr.thenChildren, thenBoolArr, trueColorIndex(acc + i), rotatedExprs);
-                    rotateFexprs(fexpr.elseChildren, elseBoolArr, falseColorIndex(acc + i), rotatedExprs);
+                    rotateFexprs(fexpr.thenChildren, thenBoolArr, trueColorIndex(acc + 1), rotatedExprs);
+                    rotateFexprs(fexpr.elseChildren, elseBoolArr, falseColorIndex(acc + 1), rotatedExprs);
                 }
             });
         }
@@ -555,6 +584,10 @@ class App extends React.Component{
         rotateFexprs(this.state.fexprs, trueArr, 0, cellInfoss);
         return (
             <div>
+              <input 
+                type="text"
+                value={this.state.name}
+                onChange={this.nameChange} />
               <table border="1">
                 <tbody>
                   <Labels
