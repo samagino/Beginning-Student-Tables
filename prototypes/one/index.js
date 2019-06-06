@@ -9,6 +9,9 @@
 const grayVal = undefined;
 // value to use to signal errors, not sure what this should be either.
 const errorVal = undefined;
+// global CSS stuff
+const inputHeight = '34px';
+const tableBorders = '1';
 
 const colors = ['white', 'aquamarine', 'pink', 'cadetblue', 'orchid', 'coral', 'cornflowerblue',
                 'crimson', 'cyan', 'darkorange', 'fuchsia', 'lavender', 'salmon', 'yellow'];
@@ -38,10 +41,9 @@ function flattenFexprs(fexprs, acc){
     return fexprs.map((fexpr) =>
                       [{fexpr: fexpr, style: {backgroundColor: colors[acc]}},
                        flattenFexprs(fexpr.thenChildren, trueColorIndex(acc + 1)),
-                       flattenFexprs(fexpr.elseChildren, falseColorIndex(acc + 1))].flat()
-                     ).flat();
+                       flattenFexprs(fexpr.elseChildren, falseColorIndex(acc + 1))].flat()).flat();
 }
-    
+
 // Number -> Number
 function trueColorIndex(n){
     return n % colors.length;
@@ -111,10 +113,24 @@ function AddElseColumnButton(props){
     );
 }
 
+/*** Inputs ***/
+// changes width according to length of text it holds
+function DynamicInput(props){
+    return (
+        <input
+          style={props.style}
+          size={props.value.length + 1}
+          type={'text'}
+          value={props.value}
+          onChange={props.onChange} />
+    );
+}
+
 /*** Cells ***/
 //cell that contains the output of a relevent fexpr applied to relevent inputs
 function TestCell(props){
     const outText = String(props.outExpr);
+    props.style.height = inputHeight;
 
     if (outText === props.wantText) {
         props.style.backgroundColor = 'palegreen';
@@ -130,6 +146,7 @@ function TestCell(props){
 
     return (
         <td
+          border={'1'}
           style={props.style}>
           {makeText()}
         </td>
@@ -158,9 +175,13 @@ function Parameters(props){
 
           <table border={'0'} style={{float: 'left', clear: 'both'}}>
             <tbody>
+              <tr>
+                <td style={{height: '34px'}}>
+                </td>
+              </tr>
               {props.examples.map((example, i) =>
                                   <tr key={i}>
-                                    <td>
+                                  <td style={{height: '36px'}}>
                                       <RemButton
                                         style={{}}
                                         title={'Remove Example (row)'}
@@ -172,16 +193,18 @@ function Parameters(props){
             </tbody>
           </table>
 
-          <table border={'1'} style={{float: 'right', clear: 'right'}}>
+          <table border={tableBorders} style={{minWidth: '180px', float: 'right', clear: 'right'}}>
             <tbody>
               <tr>
                 {props.params.map((param, i) =>
-                                  <td key={i}>
+                                  <td
+                                    key={i}
+                                    border={'1'}>
                                     <RemButton
                                       style={{float: 'right'}}
                                       title={'Remove Parameter (in column)'}
                                       onClick={() => props.remParam(i)} />
-                                    <input
+                                    <DynamicInput
                                       style={{float: 'left'}}
                                       type={'text'}
                                       value={param}
@@ -192,11 +215,12 @@ function Parameters(props){
               {props.examples.map((example, i) =>
                                   <tr key={i}>
                                     {example.inTexts.map((inText, j) =>
-                                                         <td key={j}>
-                                                           <input
+                                                         <td
+                                                           key={j}
+                                                           border={'1'}>
+                                                           <DynamicInput
                                                              type={'text'}
-                                                             style={{}}
-                                                             text={inText}
+                                                             value={inText}
                                                              onChange={(e) => props.inTextChange(e, example, j)}
                                                            />
                                                          </td>
@@ -271,22 +295,38 @@ function Functs(props){
             style={{clear: 'left', float: 'right'}}
             title={'Add Function (out column)'}
             onClick={props.addFexpr}/>
-          <table border={'1'} style={{clear: 'both'}}>
+          <table border={tableBorders} style={{minWidth: '200px', clear: 'both'}}>
             <tbody>
               <tr>
-                {props.fexprs.map((fexpr, i) =>
-                                  <td key={i}>
-                                    <RemButton
-                                      style={{float: 'right'}}
-                                      title={'Remove Function (out column)'}
-                                      onClick={() => props.remFexpr(fexpr)}/>
-                                    <input
-                                      style={{float: 'left'}}
-                                      type={'text'}
-                                      value={fexpr.text}
-                                      onChange={(e) => props.fexprChange(e, fexpr)} />
-                                  </td>
-                                  )}
+                {flattenFexprs(props.fexprs, 0).map((headInfo, i) =>
+                                                    <td
+                                                      key={i}
+                                                      style={headInfo.style}
+                                                      border={'1'}>
+                                                      <div style={{float: 'right'}}>
+                                                        <RemButton
+                                                          title={'Remove Function (out column)'}
+                                                          onClick={() => props.remFexpr(headInfo.fexpr)}/>
+                                                        {headInfo.fexpr.outExprs.reduce(isBool, true) ?
+                                                         <div style={{float: 'right'}}>
+                                                           <AddButton
+                                                             title={'Add Then Child'}
+                                                             onClick={() => props.addThenChild(headInfo.fexpr)}
+                                                           />
+                                                           <AddButton
+                                                             title={'Add Else Child'}
+                                                             onClick={() => props.addElseChild(headInfo.fexpr)}
+                                                           />
+                                                         </div>
+                                                         : '' }
+                                                      </div>
+                                                      <DynamicInput
+                                                        style={{float: 'left'}}
+                                                        type={'text'}
+                                                        value={headInfo.fexpr.text}
+                                                        onChange={(e) => props.fexprChange(e, headInfo.fexpr)} />
+                                                    </td>
+                                                   )}
               </tr>
               {cellInfoss.map((cellInfos, i) =>
                               <tr key={i}>
@@ -320,12 +360,20 @@ function Wants(props){
           <img
             style={{float: 'left'}}
             src={'./images/wants.png'}/>
-          <table border={'1'} style={{clear: 'both'}}>
+          <div style={{height: '20px', clear: 'left', float: 'left'}}>
+            {/* offset plus buttons in other sections */}
+          </div>
+          <table border={tableBorders} style={{minWidth: '200px', clear: 'both'}}>
             <tbody>
+              <tr>
+                <td style={{height: inputHeight}}>
+                    Can't Delete Me
+                </td>
+              </tr>
               {props.examples.map((example, i) =>
                                   <tr key={i}>
-                                    <td>
-                                      <input
+                                    <td border={'1'}>
+                                      <DynamicInput
                                         style={{float: 'left'}}
                                         type={'text'}
                                         value={example.wantText}
@@ -342,7 +390,7 @@ function Wants(props){
 function Concise(props){
     return (
         <div>
-          <input
+          <DynamicInput
             style={{float: 'left'}}
             type={'text'}
             value={props.name}
