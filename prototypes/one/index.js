@@ -57,49 +57,39 @@ function falseColorIndex(n){
 *********************/
 
 /*** Buttons ***/
-//button that says "Delete"
-function DelButton(props){
-    return (
-        <button onClick={props.onClick}>
-          Delete
-        </button>
-    );
-}
-
-//button that says "Test"
+//button that probably tests a table
 function TestButton(props){
     return (
-        <button
-          onClick={props.onClick}>
-          Test
-        </button>
+        <input
+          type={'image'}
+          style={props.style}
+          src={'./images/check.png'}
+          title={props.title}
+          onClick={props.onClick}/>
     );
 }
 
-//button that says "Add Row"
-function AddRowButton(props){
+// Button that probably adds something
+function AddButton(props){
     return (
-        <button onClick={props.onClick}>
-          Add Row
-        </button>
+        <input
+          type={'image'}
+          style={props.style}
+          src={'./images/plus.png'}
+          title={props.title}
+          onClick={props.onClick}/>
     );
 }
 
-//button that says "Add Column"
-function AddInColumnButton(props){
+// Button that probably removes something
+function RemButton(props){
     return (
-        <button onClick={props.onClick}>
-          Add In Column
-        </button>
-    );
-}
-
-//button that says "Add Out Column"
-function AddOutColumnButton(props){
-    return (
-        <button onClick={props.onClick}>
-          Add Out Column
-        </button>
+        <input
+          type={'image'}
+          style={props.style}
+          src={'./images/cross.png'}
+          title={props.title}
+          onClick={props.onClick}/>
     );
 }
 
@@ -122,27 +112,6 @@ function AddElseColumnButton(props){
 }
 
 /*** Cells ***/
-//cell in a table that has a button that says "delete"
-function DelCell(props){
-    return(
-        <td style={props.style}>
-          <DelButton onClick={props.onClick}/>
-        </td>
-    );
-}
-
-//cell in a table that one can write an expression in
-function ExprCell(props){
-    return (
-        <td style={props.style}>
-          <input 
-            type="text"
-            value={props.text}
-            onChange={props.onChange} />
-        </td>
-    );
-}
-
 //cell that contains the output of a relevent fexpr applied to relevent inputs
 function TestCell(props){
     const outText = String(props.outExpr);
@@ -167,104 +136,252 @@ function TestCell(props){
     );
 }
 
-/*** Rows ***/
-//value mapping row
-function IORow(props){
+/*** Table Sections ***/
+function Parameters(props){
+    /*
+      Props: examples, params
+             paramChange(e, index), inTextChange(e, example, index), addParam(), addExample() remParam(index), remExample(example)
+     */
+
+    const style={backgroundColor: 'white'};
+    
     return (
-        <tr>
-          {props.inTexts.map((inText, index) =>
-                             <ExprCell
-                               key={index}
-                               style={{backgroundColor: 'white'}}
-                               text={inText}
-                               onChange={(e) => props.inChange(e, index)}
-                             />)} 
-          {props.cellInfos.map((cellInfo, index) => 
-                            <TestCell
-                              key={index}
-                              outExpr={cellInfo.outExpr}
-                              style={cellInfo.style}
-                              wantText={props.wantText}
-                            />)}
-          <ExprCell
-            style={{backgroundColor: 'white'}}
-            text={props.wantText}
-            onChange={props.wantChange} />
-          <DelCell
-            style={{backgroundColor: 'white'}}
-            onClick={props.onClick}
+        <div
+          style={{float: 'left'}}>
+          <img
+            style={{float: 'left'}}
+            src={'./images/parameters.png'}/>
+          <AddButton
+            style={{clear: 'left', float: 'right'}}
+            title={'Add Parameter (in column)'}
+            onClick={props.addParam}/>
+
+          <table border={'0'} style={{float: 'left', clear: 'both'}}>
+            <tbody>
+              {props.examples.map((example, i) =>
+                                  <tr key={i}>
+                                    <td>
+                                      <RemButton
+                                        style={{}}
+                                        title={'Remove Example (row)'}
+                                        onClick={() => props.remExample(example)}
+                                      />
+                                    </td>
+                                  </tr>
+                                 )}
+            </tbody>
+          </table>
+
+          <table border={'1'} style={{float: 'right', clear: 'right'}}>
+            <tbody>
+              <tr>
+                {props.params.map((param, i) =>
+                                  <td key={i}>
+                                    <RemButton
+                                      style={{float: 'right'}}
+                                      title={'Remove Parameter (in column)'}
+                                      onClick={() => props.remParam(i)} />
+                                    <input
+                                      style={{float: 'left'}}
+                                      type={'text'}
+                                      value={param}
+                                      onChange={(e) => props.paramChange(e, i)} />
+                                  </td>
+                                 )}
+              </tr>
+              {props.examples.map((example, i) =>
+                                  <tr key={i}>
+                                    {example.inTexts.map((inText, j) =>
+                                                         <td key={j}>
+                                                           <input
+                                                             type={'text'}
+                                                             style={{}}
+                                                             text={inText}
+                                                             onChange={(e) => props.inTextChange(e, example, j)}
+                                                           />
+                                                         </td>
+                                                        )}
+                                  </tr>
+                                 )}
+            </tbody>
+          </table>
+          <AddButton
+            style={{clear: 'both', float: 'left'}}
+            title={'Add Example (row)'}
+            onClick={props.addExample}
           />
-        </tr>
+        </div>
     );
 }
 
+function Functs(props){
+    /*
+      Props: numRows, fexprs, wantTexts
+             fexprChange(e, fexpr), addFexpr(), addThenChild(fexpr), addElseChild(fexpr), remFexpr(fexpr)
+     */
 
-//header, where parameters and f expressions go
-function Header(props){
+    // [Fexpr] -> [Boolean] -> String -> [N] -> [{N, String}]
+    // uses side effects to build a shallow 2d array from a tree type thing
+    function rotateFexprs(fexprs, boolArr, acc, rotatedExprs){
+        fexprs.forEach((fexpr) => {
+            let passedInvalidRows = 0;
+            let thenBoolArr = [];
+            let elseBoolArr = [];
+
+            boolArr.forEach((bool, j) => {
+                if (bool) {
+                    const outExpr = fexpr.outExprs[j - passedInvalidRows];
+                    let style = {backgroundColor: colors[acc]};
+
+                    if (outExpr === true) {
+                        style.color = colors[trueColorIndex(acc + 1)];
+                    } else if (outExpr === false) {
+                        style.color = colors[falseColorIndex(acc + 1)];
+                    }
+
+                    rotatedExprs[j].push({outExpr: outExpr, style: style});
+                    thenBoolArr.push(outExpr);
+                    elseBoolArr.push(!outExpr);
+                } else {
+                    passedInvalidRows ++;
+                    rotatedExprs[j].push({outExpr: grayVal, style: {backgroundColor: 'gray'}});
+                    thenBoolArr.push(false);
+                    elseBoolArr.push(false);
+                }
+            });
+
+            if (fexpr.thenChildren.length || fexpr.elseChildren.length) { // fexpr has children
+                rotateFexprs(fexpr.thenChildren, thenBoolArr, trueColorIndex(acc + 1), rotatedExprs);
+                rotateFexprs(fexpr.elseChildren, elseBoolArr, falseColorIndex(acc + 1), rotatedExprs);
+            }
+        });
+    }
+
+    let cellInfoss = new Array(props.numRows).fill(0).map((elem) => []);
+    const trueArr = new Array(props.numRows).fill(true);
+    rotateFexprs(props.fexprs, trueArr, 0, cellInfoss);
+
     return (
-        <tr>
-          {props.params.map((param, index) =>
-                            <ExprCell
-                              key={index}
-                              style={{backgroundColor: 'white'}}
-                              text={param}
-                              onChange={(e) => props.paramChange(e, index)}
-                            />)}
-          {flattenFexprs(props.fexprs, 0).map((cellInfo, index) =>
-                            <ExprCell 
-                              key={index}
-                              style={cellInfo.style}
-                              text={cellInfo.fexpr.text}
-                              onChange={(e) => props.fexprChange(e, cellInfo.fexpr)}
-                            />)}
-          <td>
-            Want
-          </td>
-        </tr>
+        <div
+          style={{float: 'left'}}>
+          <img
+            style={{float: 'left'}}
+            src={'./images/functions.png'}/>
+          <AddButton
+            style={{clear: 'left', float: 'right'}}
+            title={'Add Function (out column)'}
+            onClick={props.addFexpr}/>
+          <table border={'1'} style={{clear: 'both'}}>
+            <tbody>
+              <tr>
+                {props.fexprs.map((fexpr, i) =>
+                                  <td key={i}>
+                                    <RemButton
+                                      style={{float: 'right'}}
+                                      title={'Remove Function (out column)'}
+                                      onClick={() => props.remFexpr(fexpr)}/>
+                                    <input
+                                      style={{float: 'left'}}
+                                      type={'text'}
+                                      value={fexpr.text}
+                                      onChange={(e) => props.fexprChange(e, fexpr)} />
+                                  </td>
+                                  )}
+              </tr>
+              {cellInfoss.map((cellInfos, i) =>
+                              <tr key={i}>
+                                {cellInfos.map((cellInfo, j) =>
+                                               <TestCell
+                                                 key={j}
+                                                 style={cellInfo.style}
+                                                 outExpr={cellInfo.outExpr}
+                                                 wantText={props.wantTexts[i]}
+                                               />
+                                              )}
+                              </tr>
+                             )}
+            </tbody>
+          </table>
+        </div>
     );
 }
 
-//footer, where delete buttons for params and fexprs go
-function Footer(props){
+function Wants(props){
+    /*
+      Props: examples
+             wantTextChange(e, example)
+    */
+
+    const style={backgroundColor: 'white'};
+
     return (
-        <tr>
-          {props.params.map((param, index) =>
-                            <DelCell
-                              key={index}
-                              style={{backgroundColor: 'white'}}
-                              onClick={() => props.remParam(index)}
-                            />)}
-          {flattenFexprs(props.fexprs, 0).map((cellInfo, index) =>
-                                                    <td
-                                                      key={index}
-                                                      style={cellInfo.style}>
-                                                      <DelButton onClick={() => props.remFexpr(cellInfo.fexpr)}/>
-                                                      {cellInfo.fexpr.outExprs.reduce(isBool, true) ?
-                                                       <div>
-                                                         <AddThenColumnButton onClick={() => props.addThenChild(cellInfo.fexpr)}/>
-                                                         <AddElseColumnButton onClick={() => props.addElseChild(cellInfo.fexpr)}/>
-                                                       </div>
-                                                       : ''}
-                                                    </td>)}
-          <td>
-            Can't Delete Me
-          </td>
-        </tr>
+        <div
+          style={{float: 'left'}}>
+          <img
+            style={{float: 'left'}}
+            src={'./images/wants.png'}/>
+          <table border={'1'} style={{clear: 'both'}}>
+            <tbody>
+              {props.examples.map((example, i) =>
+                                  <tr key={i}>
+                                    <td>
+                                      <input
+                                        style={{float: 'left'}}
+                                        type={'text'}
+                                        value={example.wantText}
+                                        onChange={(e) => props.wantTextChange(e, example)} />
+                                    </td>
+                                  </tr>
+                                 )}
+            </tbody>
+          </table>
+        </div>
     );
 }
 
-function Labels(props){
+function Concise(props){
     return (
-        <tr>
-          {props.params.map((param, index) =>
-                            <td key={index}>In</td>)}
-          {flattenFexprs(props.fexprs, 0).map((cellInfo, index) =>
-                                           <td
-                                             key={index}
-                                             style={cellInfo.style}>
-                                             Out
-                                           </td>)}
-        </tr>
+        <div>
+          <input
+            style={{float: 'left'}}
+            type={'text'}
+            value={props.name}
+            onChange={props.nameChange} />
+          <TestButton
+            style={{float: 'left'}}
+            title={'Run Functions'}
+            onClick={props.testAll}/>
+
+          <span style={{clear: 'left', float: 'left'}}>
+            <Parameters
+              params={props.params}
+              examples={props.examples}
+
+              paramChange={props.paramChange}
+              addParam={props.addParam}
+              remParam={props.remParam}
+
+              inTextChange={props.inTextChange}
+              addExample={props.addExample}
+              remExample={props.remExample}
+            />
+            <Functs
+              fexprs={props.fexprs}
+              numRows={props.examples.length}
+              wantTexts={props.examples.map((example) => example.wantText)}
+
+              fexprChange={props.fexprChange}
+              addFexpr={props.addFexpr}
+              addThenChild={props.addThenChild}
+              addElseChild={props.addElseChild}
+              remFexpr={props.remFexpr}
+            />
+            <Wants
+              examples={props.examples}
+              wantTextChange={props.wantTextChange}
+            />
+          </span>
+        </div>
     );
 }
 
@@ -290,7 +407,6 @@ class App extends React.Component{
                       params: [initParam],                                                               // variable (parameter) columns
                       name: 'table'};                                                                    // table name (used for recursion)
         
-        this.lookup = this.lookup.bind(this);
         this.test = this.test.bind(this);
         this.testAll = this.testAll.bind(this);
         this.addExample = this.addExample.bind(this);
@@ -308,36 +424,36 @@ class App extends React.Component{
         this.nameChange = this.nameChange.bind(this);
     }
 
-    lookup(arr){
-        return this.state.examples.reduce((acc, example) => {
-            if (acc !== errorVal) {
-                return acc;
-            }
-
-            if (example.inTexts.reduce((acc, inText, index) => (acc && inText === arr[index]), true)){
-                return example.wantText;
-            }
-
-            return errorVal;
-        }, errorVal);
-    }
-
     // function that actually does stuff
     // this one is pure (no side effects)
     test(fexprs, inTextss){
+        function makeLookup(table){
+            function lookup() {
+                return table.reduce((acc, example) => {
+                    if (acc !== errorVal) {
+                        return acc;
+                    }
+
+                    if (example.inTexts.reduce((acc, inText, index) => (acc && inText === String(arguments[index])), true)){
+                        return example.wantText;
+                    }
+
+                    return errorVal;
+                }, errorVal);
+            }
+
+            return lookup;
+        }
+
         function toFalseIndex(n){
             // minus 1 is for zero case
             return (n * -1) - 1;
         }
 
-        const formalParams = this.state.params.join();
-        const recur = new RegExp(`${this.state.name}\\(([^\\)]+)\\)`, 'g');
-        // theres 2 Ss in argss because its kinda like a 2d array of arguments
-        const argss = inTextss.map((inTexts) => `(${inTexts.join()})`);
-
         return fexprs.map((fexpr) => {
-            const funct = `Function("${formalParams}", "return ${fexpr.text}")`;
-            const outExprs = argss.map((args) => eval(funct + args)); // NB: this '+' means concatenate, not add
+            const lookup = makeLookup(this.state.examples);
+            const funct = new Function([this.state.name].concat(this.state.params), `return ${fexpr.text}`);
+            const outExprs = inTextss.map((args) => funct.apply(undefined, [lookup].concat(args.map(eval)))); // NB: this '+' means concatenate, not add
 
             let thenChildren;
             let elseChildren;
@@ -537,95 +653,33 @@ class App extends React.Component{
     }
     
     render(){
-        // [Fexpr] -> [Boolean] -> String -> [N] -> [{N, String}]
-        // uses side effects to build a shallow 2d array from a tree type thing
-        function rotateFexprs(fexprs, boolArr, acc, rotatedExprs){
-            fexprs.forEach((fexpr) => {
-                let passedInvalidRows = 0;
-                let thenBoolArr = [];
-                let elseBoolArr = [];
-
-                boolArr.forEach((bool, j) => {
-                    if (bool) {
-                        const outExpr = fexpr.outExprs[j - passedInvalidRows];
-                        let style = {backgroundColor: colors[acc]};
-
-                        if (outExpr === true) {
-                            style.color = colors[trueColorIndex(acc + 1)];
-                        } else if (outExpr === false) {
-                            style.color = colors[falseColorIndex(acc + 1)];
-                        }
-
-                        rotatedExprs[j].push({outExpr: outExpr, style: style});
-                        thenBoolArr.push(outExpr);
-                        elseBoolArr.push(!outExpr);
-                    } else {
-                        passedInvalidRows ++;
-                        rotatedExprs[j].push({outExpr: grayVal, style: {backgroundColor: 'gray'}});
-                        thenBoolArr.push(false);
-                        elseBoolArr.push(false);
-                    }
-                });
-
-                if (fexpr.thenChildren.length || fexpr.elseChildren.length) { // fexpr has children
-                    /*
-                      dunno how to decide which color to pass
-                      can't be random, has to be same every time render is called unless a column is changed or something
-                      this method kinda sucks though
-                    */
-                    rotateFexprs(fexpr.thenChildren, thenBoolArr, trueColorIndex(acc + 1), rotatedExprs);
-                    rotateFexprs(fexpr.elseChildren, elseBoolArr, falseColorIndex(acc + 1), rotatedExprs);
-                }
-            });
-        }
-
-        let cellInfoss = new Array(this.state.examples.length).fill(0).map((elem) => []);
-        const trueArr = new Array(this.state.examples.length).fill(true);
-        rotateFexprs(this.state.fexprs, trueArr, 0, cellInfoss);
         return (
-            <div>
-              <input 
-                type="text"
-                value={this.state.name}
-                onChange={this.nameChange} />
-              <table border="1">
-                <tbody>
-                  <Labels
-                    params={this.state.params}
-                    fexprs={this.state.fexprs}
-                  />
-                  <Header 
-                    fexprs={this.state.fexprs} 
-                    params={this.state.params}
-                    fexprChange={this.fexprChange} 
-                    paramChange={this.paramChange}
-                  />
-                  {this.state.examples.map((example, index) => 
-                                           <IORow
-                                             key={index}
-                                             inTexts={example.inTexts}
-                                             wantText={example.wantText}
-                                             cellInfos={cellInfoss[index]}
-                                             inChange={(e, index) => this.inTextChange(e, example, index)} 
-                                             wantChange={(e) => this.wantTextChange(e, example)}
-                                             onClick={() => this.remExample(example)}
-                                           />)}
-                  <Footer
-                    fexprs={this.state.fexprs}
-                    params={this.state.params}
-                    remFexpr={this.remFexpr} 
-                    remParam={this.remParam}
-                    addThenChild={this.addThenChild}
-                    addElseChild={this.addElseChild}
-                  />
-                </tbody>
-              </table>
-              <TestButton onClick={this.testAll} />
-              <AddRowButton onClick={this.addExample} />
-              <AddInColumnButton onClick={this.addParam}/>
-              <AddOutColumnButton onClick={this.addFexpr} />
-            </div>
-	);
+            <Concise
+              examples={this.state.examples}
+              fexprs={this.state.fexprs}
+              params={this.state.params}
+              name={this.state.name}
+
+              inTextChange={this.inTextChange}
+              wantTextChange={this.wantTextChange}
+              addExample={this.addExample}
+              remExample={this.remExample}
+              
+              fexprChange={this.fexprChange}
+              addFexpr={this.addFexpr}
+              addThenChild={this.addThenChild}
+              addElseChild={this.addElseChild}
+              remFexpr={this.remFexpr}
+
+              paramChange={this.paramChange}
+              addParam={this.addParam}
+              remParam={this.remParam}
+
+              nameChange={this.nameChange}
+
+              testAll={this.testAll}
+            />
+        );
     }
 }
 
