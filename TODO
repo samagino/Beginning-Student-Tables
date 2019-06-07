@@ -1,12 +1,10 @@
 --___TODO___--
 
 now:
-make stuff not ugly
-make boolean columns feel more like cond and less like if
-implement recursion
-    - ability to name tables
-    - table name refers to function that maps a set of in examples to the corresponding want text
-      - this mapping must exist, else error
+ -----------------------------------------------------------
+| make stuff not ugly                                       |
+| make boolean columns feel more like cond and less like if |
+ -----------------------------------------------------------
 
 later: 
 Make Racket Interpreter
