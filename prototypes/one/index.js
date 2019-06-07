@@ -10,11 +10,11 @@ const grayVal = undefined;
 // value to use to signal errors, not sure what this should be either.
 const errorVal = undefined;
 // global CSS stuff
-const inputHeight = '34px';
+const cellHeight = '30px';
 const tableBorders = '1';
 
-const colors = ['white', 'aquamarine', 'pink', 'cadetblue', 'orchid', 'coral', 'cornflowerblue',
-                'crimson', 'cyan', 'darkorange', 'fuchsia', 'lavender', 'salmon', 'yellow'];
+const colors = ['white', 'pink', 'coral', 'cadetblue', 'yellow', 'cornflowerblue', 'mediumpurple',
+                'crimson', 'cyan', 'orchid', 'fuchsia', 'blueviolet', 'salmon', 'gold'];
 
 /*********************
    Functions I Want
@@ -33,15 +33,6 @@ function randomChar(){
 function isBool(acc, elem){
     const val = acc && typeof elem == 'boolean' ;
     return val;
-}
-
-// [Fexpr] -> Number -> [{Fexpr, Style}]
-// takes a list of fexprs and an accumulator, returns flattened list of objects containing a fexpr and its associated css style
-function flattenFexprs(fexprs, acc){
-    return fexprs.map((fexpr) =>
-                      [{fexpr: fexpr, style: {backgroundColor: colors[acc]}},
-                       flattenFexprs(fexpr.thenChildren, trueColorIndex(acc + 1)),
-                       flattenFexprs(fexpr.elseChildren, falseColorIndex(acc + 1))].flat()).flat();
 }
 
 // Number -> Number
@@ -78,6 +69,18 @@ function AddButton(props){
           type={'image'}
           style={props.style}
           src={'./images/plus.png'}
+          title={props.title}
+          onClick={props.onClick}/>
+    );
+}
+
+// Button from image given from path
+function PathButton(props){
+    return (
+        <input
+          type={'image'}
+          style={props.style}
+          src={props.path}
           title={props.title}
           onClick={props.onClick}/>
     );
@@ -130,7 +133,7 @@ function DynamicInput(props){
 //cell that contains the output of a relevent fexpr applied to relevent inputs
 function TestCell(props){
     const outText = String(props.outExpr);
-    props.style.height = inputHeight;
+    props.style.height = cellHeight;
 
     if (outText === props.wantText) {
         props.style.backgroundColor = 'palegreen';
@@ -199,6 +202,7 @@ function Parameters(props){
                 {props.params.map((param, i) =>
                                   <td
                                     key={i}
+                                    style={{height: cellHeight}}
                                     border={'1'}>
                                     <RemButton
                                       style={{float: 'right'}}
@@ -217,6 +221,7 @@ function Parameters(props){
                                     {example.inTexts.map((inText, j) =>
                                                          <td
                                                            key={j}
+                                                           style={{height: cellHeight}}
                                                            border={'1'}>
                                                            <DynamicInput
                                                              type={'text'}
@@ -281,6 +286,17 @@ function Functs(props){
         });
     }
 
+    // [Fexpr] -> Number -> [{Fexpr, Style}]
+    // takes a list of fexprs and an accumulator, returns flattened list of objects containing a fexpr and its associated css style
+    function flattenFexprs(fexprs, acc){
+        return fexprs.map((fexpr) =>
+                          [{fexpr: fexpr, style: {backgroundColor: colors[acc]},
+                            thenColor: colors[trueColorIndex(acc + 1)], elseColor: colors[falseColorIndex(acc + 1)]},
+                           flattenFexprs(fexpr.thenChildren, trueColorIndex(acc + 1)),
+                           flattenFexprs(fexpr.elseChildren, falseColorIndex(acc + 1))].flat()).flat();
+    }
+
+
     let cellInfoss = new Array(props.numRows).fill(0).map((elem) => []);
     const trueArr = new Array(props.numRows).fill(true);
     rotateFexprs(props.fexprs, trueArr, 0, cellInfoss);
@@ -301,7 +317,7 @@ function Functs(props){
                 {flattenFexprs(props.fexprs, 0).map((headInfo, i) =>
                                                     <td
                                                       key={i}
-                                                      style={headInfo.style}
+                                                      style={{...headInfo.style, height: cellHeight}}
                                                       border={'1'}>
                                                       <div style={{float: 'right'}}>
                                                         <RemButton
@@ -309,11 +325,13 @@ function Functs(props){
                                                           onClick={() => props.remFexpr(headInfo.fexpr)}/>
                                                         {headInfo.fexpr.outExprs.reduce(isBool, true) ?
                                                          <div style={{float: 'right'}}>
-                                                           <AddButton
+                                                           <PathButton
+                                                             path={'./images/pluses/' + headInfo.thenColor + 'plus.png'}
                                                              title={'Add Then Child'}
                                                              onClick={() => props.addThenChild(headInfo.fexpr)}
                                                            />
-                                                           <AddButton
+                                                           <PathButton
+                                                             path={'./images/pluses/' + headInfo.elseColor + 'plus.png'}
                                                              title={'Add Else Child'}
                                                              onClick={() => props.addElseChild(headInfo.fexpr)}
                                                            />
@@ -366,13 +384,15 @@ function Wants(props){
           <table border={tableBorders} style={{minWidth: '200px', clear: 'both'}}>
             <tbody>
               <tr>
-                <td style={{height: inputHeight}}>
+                <td style={{height: cellHeight}}>
                     Can't Delete Me
                 </td>
               </tr>
               {props.examples.map((example, i) =>
                                   <tr key={i}>
-                                    <td border={'1'}>
+                                    <td
+                                      style={{height: cellHeight}}
+                                      border={'1'}>
                                       <DynamicInput
                                         style={{float: 'left'}}
                                         type={'text'}
@@ -734,7 +754,7 @@ class App extends React.Component{
 //thing that decides what to render and where
 const domContainer = document.querySelector('#table_method_container');
 ReactDOM.render(<App />,
-		domContainer);
+                domContainer);
 
 //ReactDOM.render(<App />,
 //		document.getElementById('root'));
