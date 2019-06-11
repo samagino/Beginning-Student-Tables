@@ -8,13 +8,17 @@
 // value to put in child columns that don't have an outExpr for that row, not sure what this should be
 const grayVal = undefined;
 // value to use to signal errors, not sure what this should be either.
-const errorVal = undefined;
+const errorVal = 'error';
+// value to set a wantExpr to in the case of syntax error
+const wantSynError = Infinity;
+// image path
+const imgPath = './images/';
 // global CSS stuff
 const cellHeight = '30px';
 const tableBorders = '1';
 
-const colors = ['white', 'pink', 'coral', 'cadetblue', 'yellow', 'cornflowerblue', 'mediumpurple',
-                'crimson', 'cyan', 'orchid', 'fuchsia', 'blueviolet', 'salmon', 'gold'];
+const colors = ['white',   'coral',  'cadetblue', 'pink', 'yellow',     'cornflowerblue', 'mediumpurple',
+                'crimson', 'orchid', 'fuchsia',   'cyan', 'blueviolet', 'salmon',         'gold'];
 
 /*********************
    Functions I Want
@@ -56,7 +60,7 @@ function TestButton(props){
         <input
           type={'image'}
           style={props.style}
-          src={'./images/check.png'}
+          src={imgPath + 'check.png'}
           title={props.title}
           onClick={props.onClick}/>
     );
@@ -68,19 +72,19 @@ function AddButton(props){
         <input
           type={'image'}
           style={props.style}
-          src={'./images/plus.png'}
+          src={imgPath + 'plus.png'}
           title={props.title}
           onClick={props.onClick}/>
     );
 }
 
-// Button from image given from path
-function PathButton(props){
+// Button with a non-green plus on it
+function PlusButton(props){
     return (
         <input
           type={'image'}
           style={props.style}
-          src={props.path}
+          src={imgPath + 'pluses/' + props.color + 'plus.png'}
           title={props.title}
           onClick={props.onClick}/>
     );
@@ -92,30 +96,11 @@ function RemButton(props){
         <input
           type={'image'}
           style={props.style}
-          src={'./images/cross.png'}
+          src={imgPath + 'cross.png'}
           title={props.title}
           onClick={props.onClick}/>
     );
 }
-
-//button that says "Add Then Column"
-function AddThenColumnButton(props){
-    return (
-        <button onClick={props.onClick}>
-          Add Then Column
-        </button>
-    );
-}
-
-//button that says "Add Else Column"
-function AddElseColumnButton(props){
-    return (
-        <button onClick={props.onClick}>
-          Add Else Column
-        </button>
-    );
-}
-
 /*** Inputs ***/
 // changes width according to length of text it holds
 function DynamicInput(props){
@@ -132,26 +117,47 @@ function DynamicInput(props){
 /*** Cells ***/
 //cell that contains the output of a relevent fexpr applied to relevent inputs
 function TestCell(props){
-    const outText = String(props.outExpr);
-    props.style.height = cellHeight;
-
-    if (outText === props.wantText) {
-        props.style.backgroundColor = 'palegreen';
-    }
-
     function makeText(){
         if (props.outExpr === grayVal) {
             return '';
         } else {
-            return outText;
+            return String(props.outExpr);
         }
     }
+
+    function makeImg(){
+        let wantExpr;
+        try {
+            wantExpr = eval(props.wantText);
+        } catch (e) {
+            if (e instanceof SyntaxError) {
+                wantExpr = wantSynError;
+            }
+        }
+
+        if (props.outExpr === wantExpr) {
+            return <img
+                     src={imgPath + 'smileyface.png'}
+                     style={{float: 'right'}}
+                     title={"Yay! It's right!"}/>;
+        } else if (props.outExpr === errorVal) {
+            return <img
+                     src={imgPath + 'frowneyface.png'}
+                     style={{float: 'right'}}
+                     title={"Oh no! You got an error!"}/>;
+        } else {
+            return '';
+        }
+    }
+
+    let style = {... props.style, height: cellHeight};
 
     return (
         <td
           border={'1'}
-          style={props.style}>
+          style={style}>
           {makeText()}
+          {makeImg()}
         </td>
     );
 }
@@ -170,7 +176,7 @@ function Parameters(props){
           style={{float: 'left'}}>
           <img
             style={{float: 'left'}}
-            src={'./images/parameters.png'}/>
+            src={imgPath + 'parameters.png'}/>
           <AddButton
             style={{clear: 'left', float: 'right'}}
             title={'Add Parameter (in column)'}
@@ -252,10 +258,15 @@ function Functs(props){
     // [Fexpr] -> [Boolean] -> String -> [N] -> [{N, String}]
     // uses side effects to build a shallow 2d array from a tree type thing
     function rotateFexprs(fexprs, boolArr, acc, rotatedExprs){
-        fexprs.forEach((fexpr) => {
+        function rotateFexpr(fexpr, boolArr, acc, rotatedExprs) {
             let passedInvalidRows = 0;
             let thenBoolArr = [];
             let elseBoolArr = [];
+
+            // null elseChild case
+            if (fexpr === null) {
+                return;
+            }
 
             boolArr.forEach((bool, j) => {
                 if (bool) {
@@ -279,21 +290,30 @@ function Functs(props){
                 }
             });
 
-            if (fexpr.thenChildren.length || fexpr.elseChildren.length) { // fexpr has children
+            if (fexpr.thenChildren.length || fexpr.elseChild !== null) { // fexpr has children
                 rotateFexprs(fexpr.thenChildren, thenBoolArr, trueColorIndex(acc + 1), rotatedExprs);
-                rotateFexprs(fexpr.elseChildren, elseBoolArr, falseColorIndex(acc + 1), rotatedExprs);
+                rotateFexpr(fexpr.elseChild, elseBoolArr, falseColorIndex(acc + 1), rotatedExprs);
             }
-        });
+        }
+
+        fexprs.forEach((fexpr) => rotateFexpr(fexpr, boolArr, acc, rotatedExprs));
     }
 
     // [Fexpr] -> Number -> [{Fexpr, Style}]
     // takes a list of fexprs and an accumulator, returns flattened list of objects containing a fexpr and its associated css style
     function flattenFexprs(fexprs, acc){
-        return fexprs.map((fexpr) =>
-                          [{fexpr: fexpr, style: {backgroundColor: colors[acc]},
-                            thenColor: colors[trueColorIndex(acc + 1)], elseColor: colors[falseColorIndex(acc + 1)]},
-                           flattenFexprs(fexpr.thenChildren, trueColorIndex(acc + 1)),
-                           flattenFexprs(fexpr.elseChildren, falseColorIndex(acc + 1))].flat()).flat();
+        function flattenFexpr(fexpr, acc){
+            if (fexpr === null) {
+                return null;
+            } else {
+                return [{fexpr: fexpr, style: {backgroundColor: colors[acc]},
+                         thenColor: colors[trueColorIndex(acc + 1)], elseColor: colors[falseColorIndex(acc + 1)]},
+                        flattenFexprs(fexpr.thenChildren, trueColorIndex(acc + 1)),
+                        flattenFexpr(fexpr.elseChild, falseColorIndex(acc + 1))].filter((elem) => elem !== null).flat();
+            }
+        }
+
+        return fexprs.map((fexpr) => flattenFexpr(fexpr, acc)).flat();
     }
 
 
@@ -306,7 +326,7 @@ function Functs(props){
           style={{float: 'left'}}>
           <img
             style={{float: 'left'}}
-            src={'./images/functions.png'}/>
+            src={imgPath + 'functions.png'}/>
           <AddButton
             style={{clear: 'left', float: 'right'}}
             title={'Add Function (out column)'}
@@ -325,16 +345,18 @@ function Functs(props){
                                                           onClick={() => props.remFexpr(headInfo.fexpr)}/>
                                                         {headInfo.fexpr.outExprs.reduce(isBool, true) ?
                                                          <div style={{float: 'right'}}>
-                                                           <PathButton
-                                                             path={'./images/pluses/' + headInfo.thenColor + 'plus.png'}
+                                                           <PlusButton
+                                                             color={headInfo.thenColor}
                                                              title={'Add Then Child'}
                                                              onClick={() => props.addThenChild(headInfo.fexpr)}
                                                            />
-                                                           <PathButton
-                                                             path={'./images/pluses/' + headInfo.elseColor + 'plus.png'}
-                                                             title={'Add Else Child'}
-                                                             onClick={() => props.addElseChild(headInfo.fexpr)}
-                                                           />
+                                                           {headInfo.fexpr.elseChild === null ?
+                                                            <PlusButton
+                                                              color={headInfo.elseColor}
+                                                              title={'Add Else Child'}
+                                                              onClick={() => props.addElseChild(headInfo.fexpr)}
+                                                            />
+                                                            : ''}
                                                          </div>
                                                          : '' }
                                                       </div>
@@ -377,7 +399,7 @@ function Wants(props){
           style={{float: 'left'}}>
           <img
             style={{float: 'left'}}
-            src={'./images/wants.png'}/>
+            src={imgPath + 'wants.png'}/>
           <div style={{height: '20px', clear: 'left', float: 'left'}}>
             {/* offset plus buttons in other sections */}
           </div>
@@ -456,7 +478,7 @@ function Concise(props){
 /*
   Notes:
   #inTexts == #params
-  #outExprs == #examples (for now at least)
+  #outExprs == #examples (well not for child fexprs)
   -----------------------
   |#inTexts != #outExprs|
   -----------------------
@@ -470,10 +492,10 @@ class App extends React.Component{
     constructor(props){
         super(props);
         const initParam = 'n';
-        this.state = {examples: [{inTexts: ['0'], wantText: ''}],                                        // rows
-                      fexprs: [{text: initParam, outExprs: ['?'], thenChildren: [], elseChildren: []}],  // function columns
-                      params: [initParam],                                                               // variable (parameter) columns
-                      name: 'table'};                                                                    // table name (used for recursion)
+        this.state = {examples: [{inTexts: ['0'], wantText: '?'}],                                    // rows
+                      fexprs: [{text: initParam, outExprs: [0], thenChildren: [], elseChild: null}], // function columns
+                      params: [initParam],                                                           // variable (parameter) columns
+                      name: 'table'};                                                                // table name (used for recursion)
         
         this.test = this.test.bind(this);
         this.testAll = this.testAll.bind(this);
@@ -494,7 +516,7 @@ class App extends React.Component{
 
     // function that actually does stuff
     // this one is pure (no side effects)
-    test(fexprs, inTextss){
+    test(fexpr, inTextss){
         function makeLookup(table){
             function lookup() {
                 return table.reduce((acc, example) => {
@@ -518,38 +540,73 @@ class App extends React.Component{
             return (n * -1) - 1;
         }
 
-        return fexprs.map((fexpr) => {
-            const lookup = makeLookup(this.state.examples);
-            const funct = new Function([this.state.name].concat(this.state.params), `return ${fexpr.text}`);
-            const outExprs = inTextss.map((args) => funct.apply(undefined, [lookup].concat(args.map(eval)))); // NB: this '+' means concatenate, not add
+        // case for null elseChild
+        if (fexpr === null){
+            return null;
+        }
+        
+        const lookup = makeLookup(this.state.examples);
 
-            let thenChildren;
-            let elseChildren;
-            if (outExprs.reduce(isBool, true)){
-                // true indices are positive, false indices are negative
-                const filterIndices = outExprs.map((outExpr, index) => outExpr ? index : toFalseIndex(index));
-
-                const trueInTextss = inTextss.filter((inText, index) => filterIndices.includes(index));
-                const falseInTextss = inTextss.filter((inText, index) => filterIndices.includes(toFalseIndex(index)));
-
-                thenChildren = this.test(fexpr.thenChildren, trueInTextss); // yay recursion
-                elseChildren = this.test(fexpr.elseChildren, falseInTextss); // yay recursion
-            } else {
-                thenChildren = [];
-                elseChildren = [];
+        let synError = false;
+        let funct;
+        // check for errors in function
+        try {
+            funct = new Function([this.state.name].concat(this.state.params), `return ${fexpr.text}`);
+        } catch (e) {
+            if (e instanceof SyntaxError) {
+                synError = true;
             }
+        }
 
-            return {text: fexpr.text,             // doesn't change
-                    outExprs: outExprs,           // changes
-                    thenChildren: thenChildren,   // changes
-                    elseChildren: elseChildren};  // changes
-        });
+        let outExprs;
+        if (! synError){
+            outExprs = inTextss.map((args, i) => {
+                let val;
+                // check for errors in inputs
+                try {
+                    val = funct.apply(undefined, [lookup].concat(args.map(eval)));
+                } catch (e) {
+                    if (e instanceof SyntaxError) {
+                        val = fexpr.outExprs[i];
+                    } else if (e instanceof ReferenceError) {
+                        val = errorVal;
+                    }
+                }
+
+                return val;
+            });
+        } else {
+            outExprs = fexpr.outExprs;
+        }
+
+        let thenChildren;
+        let elseChild;
+        if (outExprs.reduce(isBool, true)){
+            // true indices are positive, false indices are negative
+            const filterIndices = outExprs.map((outExpr, index) => outExpr ? index : toFalseIndex(index));
+
+            const trueInTextss = inTextss.filter((inText, index) => filterIndices.includes(index));
+            const falseInTextss = inTextss.filter((inText, index) => filterIndices.includes(toFalseIndex(index)));
+
+            thenChildren = fexpr.thenChildren.map((thenChild) => this.test(thenChild, trueInTextss));
+            elseChild = this.test(fexpr.elseChild, falseInTextss); // yay recursion
+
+        } else {
+            thenChildren = [];
+            elseChild = null;
+        }
+
+        return {text: fexpr.text,             // doesn't change
+                outExprs: outExprs,           // changes
+                thenChildren: thenChildren,   // changes
+                elseChild: elseChild};  // changes
 
     }
 
     // this one has side effects
     testAll(){
-        const fexprs = this.test(this.state.fexprs, this.state.examples.map((example) => example.inTexts));
+        const inTextss = this.state.examples.map((example) => example.inTexts);
+        const fexprs = this.state.fexprs.map((fexpr) => this.test(fexpr, inTextss));
         this.setState({fexprs: fexprs});
     }
     
@@ -558,7 +615,7 @@ class App extends React.Component{
         const examples = this.state.examples.slice();
         const inTexts = this.state.params.map((param) => '0');
         examples.push({inTexts: inTexts,
-                       wantText: ''});
+                       wantText: '?'});
 
         // need to maintain #outExprs == #examples
         // TODO: do I have to do this in children too?
@@ -578,7 +635,7 @@ class App extends React.Component{
         fexprs.push({text: firstParam,
                      outExprs: outExprs,
                      thenChildren: [],
-                     elseChildren: []});
+                     elseChild: null});
 
         this.setState({fexprs: fexprs});
     }
@@ -595,7 +652,7 @@ class App extends React.Component{
         parentFexpr.thenChildren.push({text: firstParam,
                                        outExprs: outExprs,
                                        thenChildren: [],
-                                       elseChildren: []});
+                                       elseChild: null});
 
         this.setState({fexprs: this.state.fexprs});
     }
@@ -603,16 +660,16 @@ class App extends React.Component{
     //adds a then column to a fexpr
     addElseChild(parentFexpr){
         const firstParam = this.state.params.length ? this.state.params[0] : '';
-        //const fexprs = this.state.fexprs.map((expr) => expr === parentFexpr ? parentFexpr : expr);
-        //const fexprs = this.state.fexprs.slice();
 
-        // how do I map these to the correct inTexts though?
-        const outExprs = parentFexpr.outExprs.filter((outExpr) => outExpr === true).map((outExpr) => '?');
+        // only add else child if none currently exists
+        if (parentFexpr.elseChild === null) {
+            const outExprs = parentFexpr.outExprs.filter((outExpr) => outExpr === true).map((outExpr) => '?');
 
-        parentFexpr.elseChildren.push({text: firstParam,
-                                       outExprs: outExprs,
-                                       thenChildren: [],
-                                       elseChildren: []});
+            parentFexpr.elseChild = {text: firstParam,
+                                     outExprs: outExprs,
+                                     thenChildren: [],
+                                     elseChild: null};
+        }
 
         this.setState({fexprs: this.state.fexprs});
     }
@@ -648,23 +705,25 @@ class App extends React.Component{
     //removes an output column
     //has to search recursively through tree to find the right one
     remFexpr(deadFexpr){
-        // [Fexpr] -> [Fexpr]
+        // Fexpr -> Fexpr
         // filters out the deadFexpr recursively through the tree
-        function filterFexpr(fexprs){
-            return fexprs.map((fexpr) => {
-                if (fexpr === deadFexpr){
-                    return undefined;
-                } else {
-                    return {text: fexpr.text,
-                            outExprs: fexpr.outExprs.slice(),
-                            thenChildren: filterFexpr(fexpr.thenChildren),
-                            elseChildren: filterFexpr(fexpr.elseChildren)};
-                }
-            }).filter((elem) => elem !== undefined);
+        function killFexpr(fexpr){
+            if (fexpr === null) {
+                return null;
+            }
+            
+            if (fexpr === deadFexpr){
+                return fexpr.elseChild;
+            } else {
+                return {text: fexpr.text,
+                        outExprs: fexpr.outExprs.slice(),
+                        thenChildren: fexpr.thenChildren.map(killFexpr).filter((elem) => elem !== null),
+                        elseChild: killFexpr(fexpr.elseChild)};
+            }
         }
         
         //filter out the fexpr we don't want from the fexprs
-        const fexprs = filterFexpr(this.state.fexprs);
+        const fexprs = this.state.fexprs.map(killFexpr).filter((elem) => elem !== null);
         this.setState({fexprs: fexprs});
     }
 
@@ -728,16 +787,22 @@ class App extends React.Component{
               params={this.state.params}
               name={this.state.name}
 
-              inTextChange={this.inTextChange}
+              inTextChange={(e, modExample, modIndex) => {this.inTextChange(e, modExample, modIndex);
+                                                          this.testAll();}}
               wantTextChange={this.wantTextChange}
               addExample={this.addExample}
-              remExample={this.remExample}
+              remExample={() => {this.remExample();
+                                 this.testAll();}}
               
-              fexprChange={this.fexprChange}
+              fexprChange={(e, modFexpr) => {this.fexprChange(e, modFexpr);
+                                             this.testAll();}}
               addFexpr={this.addFexpr}
-              addThenChild={this.addThenChild}
-              addElseChild={this.addElseChild}
-              remFexpr={this.remFexpr}
+              addThenChild={(parent) => {this.addThenChild(parent);
+                                         this.testAll();}}
+              addElseChild={(parent) => {this.addElseChild(parent);
+                                         this.testAll();}}
+              remFexpr={(dead) => {this.remFexpr(dead);
+                                   this.testAll();}}
 
               paramChange={this.paramChange}
               addParam={this.addParam}

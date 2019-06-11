@@ -1,10 +1,9 @@
 --___TODO___--
 
 now:
- -----------------------------------------------------------
-| make stuff not ugly                                       |
-| make boolean columns feel more like cond and less like if |
- -----------------------------------------------------------
+live updating
+error handling
+make boolean columns feel more like cond and less like if 
 
 later: 
 Make Racket Interpreter
