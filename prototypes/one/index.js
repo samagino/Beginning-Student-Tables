@@ -791,8 +791,7 @@ class App extends React.Component{
                                                           this.testAll();}}
               wantTextChange={this.wantTextChange}
               addExample={this.addExample}
-              remExample={() => {this.remExample();
-                                 this.testAll();}}
+              remExample={this.remExample}
               
               fexprChange={(e, modFexpr) => {this.fexprChange(e, modFexpr);
                                              this.testAll();}}
@@ -801,8 +800,7 @@ class App extends React.Component{
                                          this.testAll();}}
               addElseChild={(parent) => {this.addElseChild(parent);
                                          this.testAll();}}
-              remFexpr={(dead) => {this.remFexpr(dead);
-                                   this.testAll();}}
+              remFexpr={this.remFexpr}
 
               paramChange={this.paramChange}
               addParam={this.addParam}
