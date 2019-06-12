@@ -10,3 +10,21 @@ Data Definitions:
 	An Example is
 		{inputs:	[String],
 		 exprs:		[Column]}
+
+My Data Definitions:
+        A Table is
+                {examples:      [Example],
+                 fexprs:        [Fexpr],
+                 params:        [String],
+                 name:          String}
+
+        An Example is
+            {inTexts:           [String],
+             wantText:          String}
+
+        A Fexpr is one of
+            - Null
+            - {text:              String,
+               outExprs:          [Anything],
+               thenChildren:      [Fexpr],
+               elseChild:         Fexpr}
