@@ -1,9 +1,12 @@
 --___TODO___--
 
 now:
-live updating
-error handling
-make boolean columns feel more like cond and less like if 
+make error messages better
+make live updating work better
+?
 
 later: 
 Make Racket Interpreter
+
+stuff that may be nice:
+undo/redo button
