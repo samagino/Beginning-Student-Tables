@@ -621,132 +621,183 @@ class App extends React.Component{
                     name: table.name};        // doesn't change
         }
 
-        const lookups = this.state.tables.map(makeLookup);
-        const names = this.state.tables.map((table) => table.name);
+        // this one changes stuff
+        this.setState((state) => {
+            const lookups = state.tables.map(makeLookup);
+            const names = state.tables.map((table) => table.name);
 
-        const tables = this.state.tables.map((table) => testTable(table, lookups, names));
-        // this one actually changes stuff
-        this.setState({tables: tables});
+            return {tables: state.tables.map((table) => testTable(table, lookups, names))};
+        });
     }
 
     // adds a new table
     addTable(){
-        const tables = this.state.tables.slice();
-        const initParam = 'n';
-        const tableNum = tables.length + 1;
-        tables.push({examples: [{inTexts: ['0'], wantText: '?'}],
-                      fexprs: [{text: initParam, outExprs: [0], thenChildren: [], elseChild: null}],
-                      params: [initParam],
-                      name: 'table' + tableNum});
+        this.setState((state) => {
+            const oldTabs = state.tables.slice();
+            const initParam = 'n';
+            const tableNum = oldTabs.length + 1;
+            const newTab = {examples: [{inTexts: ['0'], wantText: '?'}],
+                            fexprs: [{text: initParam, outExprs: [0], thenChildren: [], elseChild: null}],
+                            params: [initParam],
+                            name: 'table' + tableNum};
 
-        this.setState({tables: tables});
+            return {tables: [...oldTabs, newTab]};
+        });
     }
 
     remTable(deadTable){
-        const tables = this.state.tables.filter((table) => table !== deadTable);
-        this.setState({tables: tables});
+        this.setState((state) => ({tables: state.tables.filter((table) => table !== deadTable)}));
     }
     
     //adds a new row
     addExample(modTable){
-        const examples = modTable.examples.slice();
-        const inTexts = modTable.params.map((param) => '0');
-        examples.push({inTexts: inTexts,
-                       wantText: '?'});
+        this.setState((state) => {
+            let newTab = {...modTable};
 
-        // need to maintain #outExprs == #examples
-        let fexprs = this.state.tables[0].fexprs.slice();
-        fexprs.forEach((fexpr) => fexpr.outExprs.push('?'));
+            const inTexts = newTab.params.map((param) => '0');
+            const examples = [...newTab.examples, {inTexts: inTexts,
+                                                   wantText: '?'}];
 
-        modTable.examples = examples;
-        modTable.fexprs = fexprs;
+            // need to maintain #outExprs == #examples
+            const fexprs = newTab.fexprs.map((fexpr) => ({...fexpr, outExprs: [...fexpr.outExprs, '?']}));
 
-        this.setState({tables: this.state.tables});
+            newTab.examples = examples;
+            newTab.fexprs = fexprs;
+
+            return {tables: state.tables.map((table) => table === modTable ? newTab : table)};
+        });
     }
     
     //adds a new out column
     addFexpr(modTable){
-        const firstParam = modTable.params.length ? modTable.params[0] : '';
+        this.setState((state) => {
+            let newTab = {...modTable};
+            const firstParam = modTable.params.length ? modTable.params[0] : '';
 
-        let fexprs = modTable.fexprs.slice();
-        const outExprs = modTable.examples.map((example) => '?');
-        fexprs.push({text: firstParam,
-                     outExprs: outExprs,
-                     thenChildren: [],
-                     elseChild: null});
+            const outExprs = modTable.examples.map((example) => '?');
+            const fexprs = [...newTab.fexprs, {text: firstParam,
+                                               outExprs: outExprs,
+                                               thenChildren: [],
+                                               elseChild: null}];
+            newTab.fexprs = fexprs;
 
-        //let tables = this.state.tables.slice();
-        //tables[0].fexprs = fexprs;
-        modTable.fexprs = fexprs;
-        
-
-        this.setState({tables: this.state.tables});
+            return {tables: state.tables.map((table) => table === modTable ? newTab : table)};
+        });
     }
 
     //adds a then column to a fexpr
     addThenChild(parentFexpr, modTable){
-        const firstParam = modTable.params.length ? modTable.params[0] : '';
-        const outExprs = parentFexpr.outExprs.filter((outExpr) => outExpr === true).map((outExpr) => '?');
+        function replaceParent(curParent, newParent){
+            // null elseChild case
+            if (curParent === null){
+                return null;
+            }
 
-        parentFexpr.thenChildren.push({text: firstParam,
-                                       outExprs: outExprs,
-                                       thenChildren: [],
-                                       elseChild: null});
+            if (curParent === parentFexpr){
+                return newParent;
+            } else {
+                return {...curParent,
+                        thenChildren: curParent.thenChildren.map((child) => replaceParent(child, newParent)),
+                        elseChild: replaceParent(curParent.elseChild, newParent)};
+            }
+        }
 
-        // this doesn't change anything, just rerenders
-        this.setState({tables: this.state.tables});
+        this.setState((state) => {
+            let newTab = {...modTable};
+            let newParent = {...parentFexpr};
+
+            const firstParam = newTab.params.length ? modTable.params[0] : '';
+            const outExprs = newParent.outExprs.filter((outExpr) => outExpr === true).map((outExpr) => '?');
+
+            // this is pretty much push, but oh well
+            newParent.thenChildren = [...newParent.thenChildren, {text: firstParam,
+                                                                  outExprs: outExprs,
+                                                                  thenChildren: [],
+                                                                  elseChild: null}];
+
+            newTab.fexprs = newTab.fexprs.map((fexpr) => replaceParent(fexpr, newParent));
+
+            return {tables: state.tables.map((table) => table === modTable ? newTab : table)};
+        });
     }
 
     //adds a then column to a fexpr
     addElseChild(parentFexpr, modTable){
-        //const firstParam = this.state.tables[0].params.length ? this.state.tables[0].params[0] : '';
-        const firstParam = modTable.params.length ? modTable.params[0] : '';
+        function replaceParent(curParent, newParent){
+            // null elseChild case
+            if (curParent === null){
+                return null;
+            }
 
-        // only add else child if none currently exists
-        if (parentFexpr.elseChild === null) {
-            const outExprs = parentFexpr.outExprs.filter((outExpr) => outExpr === true).map((outExpr) => '?');
-
-            parentFexpr.elseChild = {text: firstParam,
-                                     outExprs: outExprs,
-                                     thenChildren: [],
-                                     elseChild: null};
+            if (curParent === parentFexpr){
+                return newParent;
+            } else {
+                return {...curParent,
+                        thenChildren: curParent.thenChildren.map((child) => replaceParent(child, newParent)),
+                        elseChild: replaceParent(curParent.elseChild, newParent)};
+            }
         }
 
-        // this doesn't change anything, just rerenders
-        this.setState({tables: this.state.tables});
+        this.setState((state) => {
+            let newTab = {...modTable};
+            let newParent = {...parentFexpr};
+
+            // only add else child if none currently exists
+            if (newParent.elseChild === null) {
+                const firstParam = newTab.params.length ? modTable.params[0] : '';
+                const outExprs = newParent.outExprs.filter((outExpr) => outExpr === true).map((outExpr) => '?');
+
+                newParent.elseChild = {text: firstParam,
+                                       outExprs: outExprs,
+                                       thenChildren: [],
+                                       elseChild: null};
+            }
+
+            newTab.fexprs = newTab.fexprs.map((fexpr) => replaceParent(fexpr, newParent));
+
+            return {tables: state.tables.map((table) => table === modTable ? newTab : table)};
+        });
     }
 
     // adds a new in column
     addParam(modTable){
-        //const params = this.state.tables[0].params.slice();
-        const params = modTable.params.slice();
-        params.push(randomChar());
+        this.setState((state) => {
+            let newTab = {...modTable};
 
-        // need to maintain #inTexts == #params
-        let examples = modTable.examples.slice();
-        examples.forEach((example) => example.inTexts.push('0'));
+            //const params = this.state.tables[0].params.slice();
+            const params = newTab.params.slice();
+            params.push(randomChar());
 
-        modTable.params = params;
-        modTable.examples = examples;
+            // need to maintain #inTexts == #params
+            let examples = newTab.examples.slice();
+            examples.forEach((example) => example.inTexts.push('0'));
 
-        this.setState({tables: this.state.tables});
+            newTab.params = params;
+            newTab.examples = examples;
+
+            return {tables: state.tables.map((table) => table === modTable ? newTab : table)};
+        });
     }
     
     //removes a row
     remExample(deadExample, modTable){
-        // get index of example we wanna remove so we can remove all the corresponding outExprs
-        const deadIndex = modTable.examples.indexOf(deadExample);
-        //filter out the example we don't want from the examples
-        const examples = modTable.examples.filter((example) => example !== deadExample);
+        this.setState((state) => {
+            let newTab = {...modTable};
+            
+            // get index of example we wanna remove so we can remove all the corresponding outExprs
+            const deadIndex = newTab.examples.indexOf(deadExample);
+            //filter out the example we don't want from the examples
+            const examples = newTab.examples.filter((example) => example !== deadExample);
 
-        // gotta maintain #outExprs == #examples
-        let fexprs = this.state.tables[0].fexprs.slice();
-        fexprs.forEach((fexpr) => fexpr.outExprs.splice(deadIndex, 1));
+            // gotta maintain #outExprs == #examples
+            let fexprs = this.state.tables[0].fexprs.slice();
+            fexprs.forEach((fexpr) => fexpr.outExprs.splice(deadIndex, 1));
 
-        modTable.fexprs = fexprs;
-        modTable.examples = examples;
+            newTab.fexprs = fexprs;
+            newTab.examples = examples;
 
-        this.setState({tables: this.state.tables});
+            return {tables: state.tables.map((table) => table === modTable ? newTab : table)};
+        });
     }
     
     //removes an output column
@@ -770,58 +821,98 @@ class App extends React.Component{
             }
         }
         
-        //filter out the fexpr we don't want from the fexprs
-        const fexprs = modTable.fexprs.map(killFexpr).filter((elem) => elem !== null);
+        this.setState((state) => {
+            let newTab = {...modTable};
+            //filter out the fexpr we don't want from the fexprs
+            const fexprs = newTab.fexprs.map(killFexpr).filter((elem) => elem !== null);
 
-        modTable.fexprs = fexprs;
-        this.setState({tables: this.state.tables});
+            newTab.fexprs = fexprs;
+
+            return {tables: state.tables.map((table) => table === modTable ? newTab : table)};
+        });
     }
 
     // removes an input column
     remParam(deadIndex, modTable){
-        //let params = this.state.tables[0].params.slice();
-        let params = modTable.params.slice();
-        params.splice(deadIndex, 1);
+        this.setState((state) => {
+            let newTab = {...modTable};
+            
+            //let params = this.state.tables[0].params.slice();
+            let params = newTab.params.slice();
+            params.splice(deadIndex, 1);
 
-        //gotta maintain #inTexts == #params
-        let examples = modTable.examples.slice();
-        examples.forEach((example) => example.inTexts.splice(deadIndex, 1));
+            //gotta maintain #inTexts == #params
+            let examples = newTab.examples.slice();
+            examples.forEach((example) => example.inTexts.splice(deadIndex, 1));
 
-        modTable.params = params;
-        modTable.examples = examples;
+            newTab.params = params;
+            newTab.examples = examples;
 
-        this.setState({tables: this.state.tables});
+            return {tables: state.tables.map((table) => table === modTable ? newTab : table)};
+        });
     }
     
     //handles changes caused by updating a text field
     //modExample refers to the modified row, modIndex referes to the modified inText
     inTextChange(e, modExample, modIndex, modTable){
-        modExample.inTexts[modIndex] = e.target.value;
-        this.setState({tables: this.state.tables});
+        let newExample = {...modExample};
+        newExample.inTexts[modIndex] = e.target.value;
+
+        this.setState((state) => {
+            const newTab = {...modTable, examples: modTable.examples.map((example) => example === modExample ? newExample : example)};
+            return {tables: state.tables.map((table) => table === modTable ? newTab : table)};
+        });
     }
 
     wantTextChange(e, modExample, modTable){
-        modExample.wantText = e.target.value;
-        this.setState({tables: this.state.tables});
+        let newExample = {...modExample};
+        newExample.wantText = e.target.value;
+
+        this.setState((state) => {
+            const newTab = {...modTable, examples: modTable.examples.map((example) => example === modExample ? newExample : example)};
+            return {tables: state.tables.map((table) => table === modTable ? newTab : table)};
+        });
     }
     
     fexprChange(e, modFexpr, modTable){
-        modFexpr.text = e.target.value;
-        this.setState({tables: this.state.tables});
+        function replaceFexpr(curFexpr, newFexpr){
+            // null elseChild case
+            if (curFexpr === null){
+                return null;
+            }
+
+            if (curFexpr === modFexpr){
+                return newFexpr;
+            } else {
+                return {...curFexpr,
+                        thenChildren: curFexpr.thenChildren.map((child) => replaceFexpr(child, newFexpr)),
+                        elseChild: replaceFexpr(curFexpr.elseChild, newFexpr)};
+            }
+        }
+
+        let newFexpr = {...modFexpr};
+        newFexpr.text = e.target.value;
+
+        this.setState((state) => {
+            const newTab = {...modTable, fexprs: modTable.fexprs.map((fexpr) => replaceFexpr(fexpr, newFexpr))};
+            return {tables: state.tables.map((table) => table === modTable ? newTab : table)};
+        });
     }
 
     paramChange(e, modIndex, modTable){
-        const modParam = e.target.value;
-        const params = modTable.params.map((param, index) => index === modIndex ? modParam : param);
+        const newParam = e.target.value;
 
-        modTable.params = params;
-
-        this.setState({tables: this.state.tables});
+        this.setState((state) =>{
+            const newTab = {...modTable, params: modTable.params.map((param, index) => index === modIndex ? newParam : param)};
+            return {tables: state.tables.map((table) => table === modTable ? newTab : table)};
+        });
     }
 
     nameChange(e, modTable){
-        modTable.name = e.target.value;
-        this.setState({tables: this.state.tables});
+        const newName = e.target.value;
+        this.setState((state) => {
+            return {tables: state.tables.map((table) => table === modTable ? {...table, name: newName} : table)};
+        });
     }
     
     render(){
@@ -842,27 +933,37 @@ class App extends React.Component{
 
                                        inTextChange={(e, modExample, modIndex) => {this.inTextChange(e, modExample, modIndex, table);
                                                                                    this.testAll();}}
-                                       wantTextChange={(e, example) => this.wantTextChange(e, example, table)}
-                                       addExample={() => this.addExample(table)}
-                                       remExample={(example) => this.remExample(example, table)}
+                                       wantTextChange={(e, example) =>            {this.wantTextChange(e, example, table);
+                                                                                   this.testAll();}}
+                                       addExample={() =>                          {this.addExample(table);
+                                                                                   this.testAll();}}
+                                       remExample={(example) =>                   {this.remExample(example, table);
+                                                                                   this.testAll();}}
                                        
-                                       fexprChange={(e, modFexpr) => {this.fexprChange(e, modFexpr, table);
-                                                                      this.testAll();}}
-                                       addFexpr={() => this.addFexpr(table)}
-                                       addThenChild={(parent) => {this.addThenChild(parent, table);
-                                                                  this.testAll();}}
-                                       addElseChild={(parent) => {this.addElseChild(parent, table);
-                                                                  this.testAll();}}
-                                       remFexpr={(fexpr) => this.remFexpr(fexpr, table)}
+                                       fexprChange={(e, modFexpr) =>              {this.fexprChange(e, modFexpr, table);
+                                                                                   this.testAll();}}
+                                       addFexpr={() =>                            {this.addFexpr(table);
+                                                                                   this.testAll();}}
+                                       addThenChild={(parent) =>                  {this.addThenChild(parent, table);
+                                                                                   this.testAll();}}
+                                       addElseChild={(parent) =>                  {this.addElseChild(parent, table);
+                                                                                   this.testAll();}}
+                                       remFexpr={(fexpr) =>                       {this.remFexpr(fexpr, table);
+                                                                                   this.testAll();}}
 
-                                       paramChange={(e, index) => this.paramChange(e, index, table)}
-                                       addParam={() => this.addParam(table)}
-                                       remParam={(index) => this.remParam(index, table)}
+                                       paramChange={(e, index) =>                 {this.paramChange(e, index, table);
+                                                                                   this.testAll();}}
+                                       addParam={() =>                            {this.addParam(table);
+                                                                                   this.testAll();}}
+                                       remParam={(index) =>                       {this.remParam(index, table);
+                                                                                   this.testAll();}}
 
-                                       nameChange={(e) => this.nameChange(e, table)}
+                                       nameChange={(e) =>                         {this.nameChange(e, table);
+                                                                                   this.testAll();}}
 
                                        testAll={this.testAll}
-                                       remTable={() => this.remTable(table)}
+                                       remTable={() => {this.remTable(table);
+                                                        this.testAll();}}
                                      />)}
             </div>
         );
