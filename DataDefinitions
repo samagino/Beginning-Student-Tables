@@ -19,12 +19,13 @@ My Data Definitions:
                  name:          String}
 
         An Example is
-            {inTexts:           [String],
-             wantText:          String}
+                {inTexts:           [String],
+                 wantText:          String}
 
         A Fexpr is one of
-            - Null
-            - {text:              String,
-               outExprs:          [Anything],
-               thenChildren:      [Fexpr],
-               elseChild:         Fexpr}
+                - Null
+                - {text:              String,
+                   outExprs:          [Anything],
+                   thenChildren:      [Fexpr],
+                   elseChild:         Fexpr}
+            

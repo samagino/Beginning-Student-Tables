@@ -1,11 +1,11 @@
 --___TODO___--
 
 now:
-make error messages better
-make live updating work better
+make errors better
 ?
 
 later: 
+use better colors for cond blocks
 Make Racket Interpreter
 
 stuff that may be nice:
