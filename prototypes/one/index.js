@@ -32,11 +32,15 @@ function randomChar(){
     return String.fromCharCode(char);
 }
 
-// Boolean -> N -> Boolean
-// returns true if elem is a Boolean and acc is true, else returns false
-function isBool(acc, elem){
-    const val = acc && typeof elem == 'boolean' ;
-    return val;
+// [Anything] -> Boolean
+// returns true if exprs has at least one member and all of its members are boooleans
+//    otherwise returns false
+function allBools(exprs){
+    if (exprs.length == 0) {
+        return false;
+    }
+
+    return exprs.reduce((acc, expr) => acc && typeof expr === 'boolean', true);
 }
 
 // Number -> Number
@@ -120,15 +124,22 @@ function TestCell(props){
     function makeText(){
         if (props.outExpr === grayVal) {
             return '';
+        } else if (props.outExpr instanceof Error) {
+            return props.outExpr.message;
         } else {
             return String(props.outExpr);
         }
     }
 
     function makeImg(){
+        
         let wantExpr;
         try {
-            wantExpr = eval(props.wantText);
+            if (props.wantText === ''){
+                wantExpr = '';
+            } else {
+                wantExpr = eval(props.wantText);
+            }
         } catch (e) {
             if (e instanceof SyntaxError) {
                 wantExpr = wantSynError;
@@ -140,7 +151,7 @@ function TestCell(props){
                      src={imgPath + 'smileyface.png'}
                      style={{float: 'right'}}
                      title={"Yay! It's right!"}/>;
-        } else if (props.outExpr === errorVal) {
+        } else if (props.outExpr instanceof Error) {
             return <img
                      src={imgPath + 'frowneyface.png'}
                      style={{float: 'right'}}
@@ -343,7 +354,7 @@ function Functs(props){
                                                         <RemButton
                                                           title={'Remove Function (out column)'}
                                                           onClick={() => props.remFexpr(headInfo.fexpr)}/>
-                                                        {headInfo.fexpr.outExprs.reduce(isBool, true) ?
+                                                        {allBools(headInfo.fexpr.outExprs) ?
                                                          <div style={{float: 'right'}}>
                                                            <PlusButton
                                                              color={headInfo.thenColor}
@@ -496,7 +507,7 @@ class App extends React.Component{
     constructor(props){
         super(props);
         const initParam = 'n';
-        this.state = {tables: [{examples: [{inTexts: ['0'], wantText: '?'}],                                   // rows
+        this.state = {tables: [{examples: [{inTexts: ['0'], wantText: ''}],                                   // rows
                                 fexprs: [{text: initParam, outExprs: [0], thenChildren: [], elseChild: null}], // function columns
                                 params: [initParam],                                                           // variable (parameter) columns
                                 name: 'table'}]};                                                              // table name (used for recursion)
@@ -523,7 +534,8 @@ class App extends React.Component{
     testAll(){
         function makeLookup(table) {
             function lookup() {
-                return table.examples.reduce((acc, example) => {
+                let errorVal = undefined;
+                let expr = table.examples.reduce((acc, example) => {
                     if (acc !== errorVal) {
                         return acc;
                     }
@@ -534,6 +546,13 @@ class App extends React.Component{
 
                     return errorVal;
                 }, errorVal);
+
+                if (expr === errorVal){
+                    throw new Error([...arguments].join() + ' is not an example in ' + table.name);
+                } else {
+                    return expr;
+                }
+
             }
 
             return lookup;
@@ -567,19 +586,19 @@ class App extends React.Component{
             let outExprs;
             if (! synError){
                 outExprs = inTextss.map((args, i) => {
-                    let val;
+                    let expr;
                     // check for errors in inputs
                     try {
-                        val = funct.apply(undefined, lookups.concat(args.map(eval)));
+                        expr = funct.apply(undefined, lookups.concat(args.map(eval)));
                     } catch (e) {
                         if (e instanceof SyntaxError) {
-                            val = fexpr.outExprs[i];
-                        } else if (e instanceof ReferenceError) {
-                            val = errorVal;
+                            return fexpr.outExprs[i];
+                        } else {
+                            return e;
                         }
                     }
 
-                    return val;
+                    return expr;
                 });
             } else {
                 outExprs = fexpr.outExprs;
@@ -587,7 +606,7 @@ class App extends React.Component{
 
             let thenChildren;
             let elseChild;
-            if (outExprs.reduce(isBool, true)){
+            if (allBools(outExprs)) {
                 // true indices are positive, false indices are negative
                 const filterIndices = outExprs.map((outExpr, index) => outExpr ? index : toFalseIndex(index));
 
@@ -636,7 +655,7 @@ class App extends React.Component{
             const oldTabs = state.tables.slice();
             const initParam = 'n';
             const tableNum = oldTabs.length + 1;
-            const newTab = {examples: [{inTexts: ['0'], wantText: '?'}],
+            const newTab = {examples: [{inTexts: ['0'], wantText: ''}],
                             fexprs: [{text: initParam, outExprs: [0], thenChildren: [], elseChild: null}],
                             params: [initParam],
                             name: 'table' + tableNum};
@@ -656,7 +675,7 @@ class App extends React.Component{
 
             const inTexts = newTab.params.map((param) => '0');
             const examples = [...newTab.examples, {inTexts: inTexts,
-                                                   wantText: '?'}];
+                                                   wantText: ''}];
 
             // need to maintain #outExprs == #examples
             const fexprs = newTab.fexprs.map((fexpr) => ({...fexpr, outExprs: [...fexpr.outExprs, '?']}));
@@ -745,7 +764,7 @@ class App extends React.Component{
             // only add else child if none currently exists
             if (newParent.elseChild === null) {
                 const firstParam = newTab.params.length ? modTable.params[0] : '';
-                const outExprs = newParent.outExprs.filter((outExpr) => outExpr === true).map((outExpr) => '?');
+                const outExprs = newParent.outExprs.filter((outExpr) => outExpr === false).map((outExpr) => '?');
 
                 newParent.elseChild = {text: firstParam,
                                        outExprs: outExprs,
@@ -790,7 +809,7 @@ class App extends React.Component{
             const examples = newTab.examples.filter((example) => example !== deadExample);
 
             // gotta maintain #outExprs == #examples
-            let fexprs = this.state.tables[0].fexprs.slice();
+            let fexprs = newTab.fexprs.slice();
             fexprs.forEach((fexpr) => fexpr.outExprs.splice(deadIndex, 1));
 
             newTab.fexprs = fexprs;

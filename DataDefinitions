@@ -25,11 +25,7 @@ My Data Definitions:
         A Fexpr is one of
                 - Null
                 - {text:              String,
-                   outExprs:          [outExpr],
+                   outExprs:          [Anything],
                    thenChildren:      [Fexpr],
                    elseChild:         Fexpr}
-
-        An outExpr is
-                {error: Boolean
-                 expr: Antything}
             
