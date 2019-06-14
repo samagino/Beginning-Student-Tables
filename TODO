@@ -1,12 +1,10 @@
 --___TODO___--
 
 now:
-make errors better
-?
+Make Racket BSL Interpreter
 
 later: 
 use better colors for cond blocks
-Make Racket Interpreter
 
 stuff that may be nice:
 undo/redo button
