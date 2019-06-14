@@ -7,8 +7,6 @@
 *****************************/
 // value to put in child columns that don't have an outExpr for that row, not sure what this should be
 const grayVal = undefined;
-// value to use to signal errors, not sure what this should be either.
-const errorVal = 'error';
 // value to set a wantExpr to in the case of syntax error
 const wantSynError = Infinity;
 // image path
@@ -124,6 +122,8 @@ function TestCell(props){
     function makeText(){
         if (props.outExpr === grayVal) {
             return '';
+        } else if (props.outExpr instanceof Function) {
+            return 'function';
         } else if (props.outExpr instanceof Error) {
             return props.outExpr.message;
         } else {
@@ -132,7 +132,6 @@ function TestCell(props){
     }
 
     function makeImg(){
-        
         let wantExpr;
         try {
             if (props.wantText === ''){
@@ -534,7 +533,7 @@ class App extends React.Component{
     testAll(){
         function makeLookup(table) {
             function lookup() {
-                let errorVal = undefined;
+                const errorVal = undefined;
                 let expr = table.examples.reduce((acc, example) => {
                     if (acc !== errorVal) {
                         return acc;
@@ -558,7 +557,7 @@ class App extends React.Component{
             return lookup;
         }
 
-        // Fexpr -> [String] -> [[String]] -> [Function] -> [String] -> Fexpr
+        // Fexpr -> [[String]] -> [String] -> [Function] -> [String] -> Fexpr
         // function that actually does stuff
         // this one is pure (no side effects)
         function testFexpr(fexpr, inTextss, params, lookups, names){
@@ -592,16 +591,16 @@ class App extends React.Component{
                         expr = funct.apply(undefined, lookups.concat(args.map(eval)));
                     } catch (e) {
                         if (e instanceof SyntaxError) {
-                            return fexpr.outExprs[i];
+                            return fexpr.outExprs[i]; // don't change this outExpr
                         } else {
-                            return e;
+                            return e; // return the error
                         }
                     }
 
                     return expr;
                 });
             } else {
-                outExprs = fexpr.outExprs;
+                outExprs = fexpr.outExprs; // don't change any of this fexpr's outExprs
             }
 
             let thenChildren;
@@ -640,7 +639,7 @@ class App extends React.Component{
                     name: table.name};        // doesn't change
         }
 
-        // this one changes stuff
+        // this changes stuff
         this.setState((state) => {
             const lookups = state.tables.map(makeLookup);
             const names = state.tables.map((table) => table.name);
@@ -664,6 +663,7 @@ class App extends React.Component{
         });
     }
 
+    // removes a table
     remTable(deadTable){
         this.setState((state) => ({tables: state.tables.filter((table) => table !== deadTable)}));
     }
@@ -824,6 +824,7 @@ class App extends React.Component{
     remFexpr(deadFexpr, modTable){
         // Fexpr -> Fexpr
         // filters out the deadFexpr recursively through the tree
+        // this is pretty violent
         function killFexpr(fexpr){
             // null elseChild case
             if (fexpr === null) {
