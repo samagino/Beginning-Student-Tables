@@ -38,7 +38,7 @@ function allBools(exprs){
         return false;
     }
 
-    return exprs.reduce((acc, expr) => acc && typeof expr === 'boolean', true);
+    return exprs.every((expr) => typeof expr === 'boolean');
 }
 
 // Number -> Number
