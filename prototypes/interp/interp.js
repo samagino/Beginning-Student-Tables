@@ -158,7 +158,7 @@ class App extends React.Component{
         }
 
         // Program -> String
-        function toString(prog) {
+        function unParse(prog) {
             switch (prog.type) {
             case RNUM_T:
                 return prog.value;
@@ -170,10 +170,12 @@ class App extends React.Component{
                 if (prog.value === null) {
                     return '()';
                 } else {
-                    return '(' + toString(prog.value.a) + ' . ' + toString(prog.value.d) + ')';
+                    return '(' + unParse(prog.value.a) + ' . ' + unParse(prog.value.d) + ')';
                 }
             case VAR_T:
                 return 'variable';
+            case FUNCT_T:
+                return 'function';
             case APP_T:
                 return 'application';
             default:
@@ -486,7 +488,7 @@ class App extends React.Component{
             error = e;
         }
 
-        this.setState((state) => ({expr: toString(expr), error: error}));
+        this.setState((state) => ({expr: unParse(expr), error: error}));
     }
 
 

@@ -1,6 +1,9 @@
 --___TODO___--
 
 now:
+Make symbol/list parser
+Put functions in environmnet
+
 Make Racket BSL Interpreter
 
 later: 
