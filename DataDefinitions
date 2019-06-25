@@ -29,3 +29,71 @@ My Data Definitions:
                    thenChildren:      [Fexpr],
                    elseChild:         Fexpr}
             
+New Data Definitions:
+        A Table is
+                {examples:      [Example],
+                 fexprs:        [Fexpr],
+                 params:        [String],
+                 name:          String}
+
+        An Example is
+                {inTexts:           [String],
+                 wantText:          String}
+
+        A Fexpr is
+                {text:              String,
+                 outExprs:          [outExpr], (not strictly necessary)
+                 thenChildren:      [Fexpr]}
+
+        An outExpr is one of
+                - Program
+                - Error
+
+        A Program is one of
+                -  Variable
+                -  Application
+                -  RFunction
+                -  RNum
+                -  RBool
+                -  RString
+                -  RList
+                -  RSym
+
+        A Variable is a
+                {value: String,
+                 type:  0}
+
+        An Application is a
+                {value: {funct: Variable,
+                         args:  [Program]},
+                 type:  1}
+
+        A RFunction is a
+                {value: Function
+                 type:  2}
+
+        An RNum is a
+                {value: Number,
+                 type:  3}
+
+        An RBool is a
+                {value: Boolean,
+                 type:  4}
+
+        An RString is a
+                {value: String,
+                 type:  5}
+
+        An RList is a
+                {value: List,
+                 type:  6}
+
+        A List is one of
+                - Null
+                - {a: Program,
+                   d: RList}
+
+        An RSym is a
+                {value: string,
+                 type: 7}
+                 

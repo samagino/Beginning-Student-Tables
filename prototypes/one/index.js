@@ -7,8 +7,6 @@
 *****************************/
 // value to put in child columns that don't have an outExpr for that row, not sure what this should be
 const grayVal = undefined;
-// value to set a wantExpr to in the case of syntax error
-const wantSynError = Infinity;
 // image path
 const imgPath = './images/';
 // global CSS stuff
@@ -33,12 +31,12 @@ function randomChar(){
 // [Anything] -> Boolean
 // returns true if exprs has at least one member and all of its members are boooleans
 //    otherwise returns false
-function allBools(exprs){
-    if (exprs.length == 0) {
+function allBools(progs){
+    if (progs.length == 0) {
         return false;
     }
 
-    return exprs.reduce((acc, expr) => acc && typeof expr === 'boolean', true);
+    return progs.every((prog) => prog.type == RBOOL_T);
 }
 
 // Number -> Number
@@ -49,6 +47,547 @@ function trueColorIndex(n){
 // Number -> Number
 function falseColorIndex(n){
     return (n + (colors.length / 2)) % colors.length;
+}
+
+/****************
+   Interpreter
+****************/
+
+const VAR_T =     0;
+const APP_T =     1;
+const FUNCT_T =   2;
+const RNUM_T =    3;
+const RBOOL_T =   4;
+const RSTRING_T = 5;
+const RLIST_T =   6;
+const RSYM_T =    7;
+
+const initEnv = [
+    // functions
+    {name: '+', binding: {type: FUNCT_T,
+                          value: plus}},
+    {name: '-', binding: {type: FUNCT_T,
+                          value: minus}},
+    {name: '*', binding: {type: FUNCT_T,
+                          value: times}},
+    {name: '/', binding: {type: FUNCT_T,
+                          value: divide}},
+    {name: 'car', binding: {type: FUNCT_T,
+                            value: car}},
+    {name: 'cdr', binding: {type: FUNCT_T,
+                            value: cdr}},
+    {name: 'cons', binding: {type: FUNCT_T,
+                             value: cons}},
+    {name: 'not', binding: {type: FUNCT_T,
+                             value: not}},
+    {name: 'eqv?', binding: {type: FUNCT_T,
+                             value: iseqv}},
+    {name: 'null?', binding: {type: FUNCT_T,
+                              value: isnull}},
+    {name: 'empty?', binding: {type: FUNCT_T,
+                               value: isnull}},
+    {name: '=', binding: {type: FUNCT_T,
+                          value: equalsign}},
+    {name: '>', binding: {type: FUNCT_T,
+                          value: gtsign}},
+    {name: '>=', binding: {type: FUNCT_T,
+                           value: gesign}},
+    {name: '<', binding: {type: FUNCT_T,
+                          value: ltsign}},
+    {name: '<=', binding: {type: FUNCT_T,
+                           value: lesign}},
+    // constants
+    {name: 'null', binding: {type: RLIST_T,
+                             value: null}},
+    {name: 'empty', binding: {type: RLIST_T,
+                              value: null}},
+];
+// String -> {prog: Program, rest: String}
+// parses all expressions except quoted expressions
+function parse(text) {
+    const varRE = /^[a-zA-Z\+\-\*\/\?=><]+/; // change me
+    const appRE = /^\(/;
+    const numRE = /^\-?\d+/; // this one doesn't permit fractions
+    const boolRE = /^#[tf]/;
+    const strRE = /^"[^"]*"/;
+    const quoteRE = /^'/;
+
+    if (varRE.test(text)) {
+        let matches = text.match(varRE);
+        let name = matches[0];
+        let rest = text.slice(name.length).trim();
+        let variable = {value: name, type: VAR_T};
+
+        return {prog: variable, rest: rest};
+
+    } else if (numRE.test(text)) {
+        let matches = text.match(numRE);
+        let numStr = matches[0];
+        let rest = text.slice(numStr.length).trim();
+        let num = {value: +numStr, type: RNUM_T};
+
+        return {prog: num, rest: rest};
+
+    } else if (boolRE.test(text)) {
+        let matches = text.match(boolRE);
+        let boolStr = matches[0];
+        let rest = text.slice(2).trim();
+        let bool = {value: boolStr == '#t', type: RBOOL_T};
+
+        return {prog: bool, rest: rest};
+
+    } else if (strRE.test(text)) {
+        let matches = text.match(strRE);
+        let str = {value: matches[0], type: RSTRING_T};
+        let rest = text.slice(matches[0].length).trim();
+
+        return {prog: str, rest: rest};
+
+    } else if (appRE.test(text)) {
+        text = text.slice(1).trim(); // remove open paren
+        let parseFunct = parse(text); // parse function
+        let funct = parseFunct.prog; // get function
+        text = parseFunct.rest; // get past function
+        let args = [];
+
+        while (text[0] != ')') {
+            let parseArg = parse(text);
+            args = [...args, parseArg.prog];
+            text = parseArg.rest;
+        }
+
+        let app = {value: {funct: funct, args: args}, type: APP_T};
+        let rest = text.slice(1).trim(); // remove close paren
+
+        return {prog: app, rest: rest};
+
+    } else if (quoteRE.test(text)) {
+        return parseQ(text);
+    }
+
+    throw 'Invalid Syntax: \"' + text + '\"';
+}
+
+// String -> {prog: Program, rest: String}
+// parses quoted expressions
+function parseQ(text) {
+    const symRE = /^'?[a-zA-Z\+\-\*\/\?=><#"]+/; // change me
+    const listRE = /^'?\s*\(/;
+    const numRE = /^'?\-?\d+/; // this one doesn't permit fractions
+    const boolRE = /^#[tf]/;
+    const strRE = /^"[^"]*"/;
+
+
+    if (listRE.test(text)) {
+        text = text.slice(text.match(listRE)[0].length).trim(); // remove quote, open paren
+        let listArr = [];
+
+        while (text[0] != ')') {
+            let cur = parseQ(text);
+            listArr = [cur.prog, ...listArr]; // listArr is constructed backwards
+            text = cur.rest;
+        }
+
+        let rest = text.slice(1).trim();
+        let prog = listArr.reduce((acc, cur) => ({value: {a: cur, d: acc}, type: RLIST_T}), {value: null, type: RLIST_T}); // turn listArr into an Rlist
+
+        return {prog: prog, rest: rest};
+
+    } else if (numRE.test(text)) {
+        let matches = text.match(numRE);
+        let numStr = matches[0];
+        let rest = text.slice(numStr.length).trim();
+        let num = {value: +numStr, type: RNUM_T};
+
+        return {prog: num, rest: rest};
+
+    } else if (boolRE.test(text)) {
+        let matches = text.match(boolRE);
+        let boolStr = matches[0];
+        let rest = text.slice(2).trim();
+        let bool = {value: boolStr == '#t', type: RBOOL_T};
+
+        return {prog: bool, rest: rest};
+
+    } else if (strRE.test(text)) {
+        let matches = text.match(strRE);
+        let str = {value: matches[0], type: RSTRING_T};
+        let rest = text.slice(matches[0].length).trim();
+
+        return {prog: str, rest: rest};
+
+    } else if (symRE.test(text)) {
+        let matches = text.match(symRE);
+        let value = matches[0];
+        value = value[0] == '\'' ? value : '\'' + value;
+        let sym = {value: value, type: RSYM_T};
+        let rest = text.slice(matches[0].length).trim();
+
+        return {prog: sym, rest: rest};
+    }
+
+    throw 'Invalid Syntax: \"' + text + '\"';
+}
+
+/***
+    Environment: [Variable]
+    Variable:    {name:    String,
+                  binding: Program} 
+***/
+
+// Program -> Environment -> Program
+function interp(prog, env) {
+    function lookup(name) {
+        let val = env.reduce((acc, variable) => {
+            if (acc != undefined) {
+                return acc;
+            }
+
+            return variable.name == name ? variable.binding : undefined;
+        }, undefined);
+
+        if (val == undefined){
+            throw new ReferenceError(name + ' isn\'t defined');
+        }
+
+        return val;
+    }
+
+    switch(prog.type) {
+    case RNUM_T:
+        return prog;
+    case RBOOL_T:
+        return prog;
+    case RSTRING_T:
+        return prog;
+    case RLIST_T:
+        return prog;
+    case RSYM_T:
+        return prog;
+    case VAR_T:
+        return lookup(prog.value);
+    case FUNCT_T:
+        return prog;
+    case APP_T:
+        let args = prog.value.args;
+        let funct = interp(prog.value.funct, env);
+
+        typeCheck(funct, FUNCT_T);
+
+        return funct.value(args, env);
+
+    default:
+        throw "Interpreter Error " + unParse(prog);
+    }
+}
+
+// Program -> String
+function unParse(prog) {
+    switch (prog.type) {
+    case RNUM_T:
+        return prog.value;
+    case RBOOL_T:
+        return '#' + (prog.value ? 't' : 'f');
+    case RSTRING_T:
+        return prog.value;
+    case RLIST_T:
+        if (prog.value === null) {
+            return '\'()';
+        } else {
+            return '(cons ' + unParse(prog.value.a) + ' ' + unParse(prog.value.d) + ')';
+        }
+    case RSYM_T:
+        return prog.value;
+    case VAR_T:
+        return 'variable';
+    case FUNCT_T:
+        return 'function';
+    case APP_T:
+        return 'application';
+    default:
+        return 'error or something';
+    }
+    
+}
+
+function typeCheck(prog, type){
+    let typeString = '';
+    switch (type) {
+    case VAR_T:
+        typeString = 'variable';
+        break;
+    case APP_T:
+        typeString = 'application';
+        break;
+    case FUNCT_T:
+        typeString = 'function';
+        break;
+    case RNUM_T:
+        typeString = 'number';
+        break;
+    case RBOOL_T:
+        typeString = 'boolean';
+        break;
+    case RSTRING_T:
+        typeString = 'string';
+        break;
+    case RLIST_T:
+        typeString = 'list';
+        break;
+    default:
+        typeString = '???';
+    }
+
+    if (prog.type != type){
+        throw new TypeError(prog.value + ' ain\'t a ' + typeString);
+    }
+}
+
+function plus(args, env) {
+    return args.reduce((acc, cur) => {
+        let accVal = interp(acc, env);
+        let curVal = interp(cur, env);
+
+        typeCheck(accVal, RNUM_T);
+        typeCheck(curVal, RNUM_T);
+
+        return {value: accVal.value + curVal.value,
+                type: RNUM_T};
+    });
+}
+function minus(args, env) {
+    return args.reduce((acc, cur) => {
+        let accVal = interp(acc, env);
+        let curVal = interp(cur, env);
+
+        typeCheck(accVal, RNUM_T);
+        typeCheck(curVal, RNUM_T);
+
+        return {value: accVal.value - curVal.value,
+                type: RNUM_T};
+    });
+}
+function times(args, env) {
+    return args.reduce((acc, cur) => {
+        let accVal = interp(acc, env);
+        let curVal = interp(cur, env);
+
+        typeCheck(accVal, RNUM_T);
+        typeCheck(curVal, RNUM_T);
+
+        return {value: accVal.value * curVal.value,
+                type: RNUM_T};
+    });
+}
+function divide(args, env) {
+    if (args.length == 1) {
+        let firstVal = interp(args[0], env);
+
+        typeCheck(firstVal, RNUM_T);
+
+        return {value: 1 / firstVal.value,
+                type: RNUM_T};
+    } else if (args.length == 2) {
+        let firstVal = interp(args[0], env);
+        let secondVal = interp(args[1], env);
+
+        typeCheck(firstVal, RNUM_T);
+        typeCheck(secondVal, RNUM_T);
+
+        return {value: firstVal.value / secondVal.value,
+                type: RNUM_T};
+    }
+
+    args.forEach((cur) => typeCheck(cur, RNUM_T));
+    return {value: false, type: RBOOL_T};
+}
+function car(args, env) {
+    if (args.length != 1) {
+        throw "aritry mismatch";
+    }
+
+    let firstVal = interp(args[0], env);
+
+    typeCheck(firstVal, RLIST_T);
+
+    return firstVal.value.a;
+}
+function cdr(args, env) {
+    if (args.length != 1) {
+        throw "arity mismatch";
+    }
+
+    let firstVal = interp(args[0], env);
+
+    typeCheck(firstVal, RLIST_T);
+
+    return firstVal.value.d;
+}
+function cons(args, env) {
+    if (args.length != 2) {
+        throw "arity mismatch";
+    }
+
+    let firstVal = interp(args[0], env);
+    let secondVal = interp(args[1], env);
+
+    return {value: {a: firstVal, d: secondVal},
+            type: RLIST_T};
+}
+function not(args, env) {
+    if (args.length != 1) {
+        throw "arity mismatch";
+    }
+
+    let firstVal = interp(args[0], env);
+
+    return {value: firstVal.value === false,
+            type: RBOOL_T};
+}
+function iseqv(args, env) {
+    if (args.length != 2) {
+        throw "arity mismatch";
+    }
+
+    let firstVal = interp(args[0], env);
+    let secondVal = interp(args[1], env);
+
+    return {value: firstVal.value === secondVal.value,
+            type: RBOOL_T};
+}
+function and(args, env) {
+    interpArgs = args.map((prog) => interp(prog, env));
+
+    return interpArgs.reduce((acc, cur) => {
+        return acc.value !== false ? cur : {value: false, type: RBOOL_T};
+    }, {value: true, type: RBOOL_T});
+
+}
+function or(args, env) {
+    interpArgs = args.map((prog) => interp(prog, env));
+
+    return interpArgs.reduce((acc, cur) => {
+        return acc.value !== false ? acc : cur;
+    }, {value: true, type: RBOOL_T});
+
+}
+function rif(args, env) {
+    if (args.length != 3) {
+        throw "arity mismatch";
+    }
+
+    let firstVal = interp(args[0], env);
+    let secondVal = interp(args[1], env);
+    let thirdVal = interp(args[2], env);
+
+    typeCheck(firstVal, RBOOL_T);
+
+    return firstVal.value ? secondVal : thirdVal;
+}
+function isnull(args, env) {
+    if (args.length != 1) {
+        throw "arity mismatch";
+    }
+
+    let firstVal = interp(args[0], env);
+
+    return {value: firstVal.value === null && firstVal.type == RLIST_T,
+            type: RBOOL_T};
+}
+function equalsign(args, env) {
+    let interpArgs = args.map((elem) => interp(elem, env));
+    interpArgs.forEach((cur) => typeCheck(cur, RNUM_T)); 
+
+    let val = interpArgs.reduce((acc, cur) => {
+        
+        if (acc.value === false) {
+            return {value: false, type: RBOOL_T};
+        }
+
+        return acc.value == cur.value ? acc : {value: false, type: RBOOL_T};
+    });
+
+    if (val.value === false){
+        return val;
+    } else {
+        return {value: true, type: RBOOL_T};
+    }
+}
+function gtsign(args, env) {
+    let interpArgs = args.map((elem) => interp(elem, env));
+    interpArgs.forEach((cur) => typeCheck(cur, RNUM_T)); 
+
+    let val = interpArgs.reduce((acc, cur) => {
+        
+        if (acc.value === false) {
+            return {value: false, type: RBOOL_T};
+        }
+
+        return acc.value > cur.value ? acc : {value: false, type: RBOOL_T};
+    });
+
+    if (val.value === false){
+        return val;
+    } else {
+        return {value: true, type: RBOOL_T};
+    }
+}
+function gesign(args, env) {
+    let interpArgs = args.map((elem) => interp(elem, env));
+    interpArgs.forEach((cur) => typeCheck(cur, RNUM_T)); 
+
+    let val = interpArgs.reduce((acc, cur) => {
+        
+        if (acc.value === false) {
+            return {value: false, type: RBOOL_T};
+        }
+
+        return acc.value >= cur.value ? acc : {value: false, type: RBOOL_T};
+    });
+
+    if (val.value === false){
+        return val;
+    } else {
+        return {value: true, type: RBOOL_T};
+    }
+}
+function ltsign(args, env) {
+    let interpArgs = args.map((elem) => interp(elem, env));
+    interpArgs.forEach((cur) => typeCheck(cur, RNUM_T)); 
+
+    let val = interpArgs.reduce((acc, cur) => {
+        
+        if (acc.value === false) {
+            return {value: false, type: RBOOL_T};
+        }
+
+        return acc.value < cur.value ? acc : {value: false, type: RBOOL_T};
+    });
+
+    if (val.value === false){
+        return val;
+    } else {
+        return {value: true, type: RBOOL_T};
+    }
+}
+function lesign(args, env) {
+    let interpArgs = args.map((elem) => interp(elem, env));
+    interpArgs.forEach((cur) => typeCheck(cur, RNUM_T)); 
+
+    let val = interpArgs.reduce((acc, cur) => {
+        
+        if (acc.value === false) {
+            return {value: false, type: RBOOL_T};
+        }
+
+        return acc.value <= cur.value ? acc : {value: false, type: RBOOL_T};
+    });
+
+    if (val.value === false){
+        return val;
+    } else {
+        return {value: true, type: RBOOL_T};
+    }
 }
 
 /*********************
@@ -122,39 +661,46 @@ function TestCell(props){
     function makeText(){
         if (props.outExpr === grayVal) {
             return '';
-        } else if (props.outExpr instanceof Function) {
-            return 'function';
         } else if (props.outExpr instanceof Error) {
             return props.outExpr.message;
         } else {
-            return String(props.outExpr);
+            return unParse(props.outExpr);
         }
     }
 
     function makeImg(){
+        // value to set a wantExpr to in the case of error
+        const wantError = Infinity;
         let wantExpr;
         try {
             if (props.wantText === ''){
-                wantExpr = '';
+                wantExpr = {value: '""', type: RSTRING_T};
             } else {
-                wantExpr = eval(props.wantText);
+                let parsedWant = parse(props.wantText);
+                if (parsedWant.rest != '') {
+                    throw new SyntaxError('Parsing Error');
+                }
+
+                wantExpr = parsedWant.prog;
             }
         } catch (e) {
-            if (e instanceof SyntaxError) {
-                wantExpr = wantSynError;
-            }
+            wantExpr = wantError;
         }
 
-        if (props.outExpr === wantExpr) {
-            return <img
-                     src={imgPath + 'smileyface.png'}
-                     style={{float: 'right'}}
-                     title={"Yay! It's right!"}/>;
+        if (props.outExpr === grayVal) {
+            return '';
+        } else if (wantExpr === wantError) {
+            return '';
         } else if (props.outExpr instanceof Error) {
             return <img
                      src={imgPath + 'frowneyface.png'}
                      style={{float: 'right'}}
                      title={"Oh no! You got an error!"}/>;
+        } else if (props.outExpr.value === wantExpr.value) {
+            return <img
+                     src={imgPath + 'smileyface.png'}
+                     style={{float: 'right'}}
+                     title={"Yay! It's right!"}/>;
         } else {
             return '';
         }
@@ -262,7 +808,7 @@ function Parameters(props){
 function Functs(props){
     /*
       Props: numRows, fexprs, wantTexts
-             fexprChange(e, fexpr), addFexpr(), addThenChild(fexpr), addElseChild(fexpr), remFexpr(fexpr)
+             fexprChange(e, fexpr), addFexpr(), addThenChild(fexpr), remFexpr(fexpr)
      */
 
     // [Fexpr] -> [Boolean] -> String -> [N] -> [{N, String}]
@@ -271,38 +817,29 @@ function Functs(props){
         function rotateFexpr(fexpr, boolArr, acc, rotatedExprs) {
             let passedInvalidRows = 0;
             let thenBoolArr = [];
-            let elseBoolArr = [];
-
-            // null elseChild case
-            if (fexpr === null) {
-                return;
-            }
 
             boolArr.forEach((bool, j) => {
                 if (bool) {
                     const outExpr = fexpr.outExprs[j - passedInvalidRows];
                     let style = {backgroundColor: colors[acc]};
 
-                    if (outExpr === true) {
+                    if (outExpr.value === true) {
                         style.color = colors[trueColorIndex(acc + 1)];
-                    } else if (outExpr === false) {
+                    } else if (outExpr.value === false) {
                         style.color = colors[falseColorIndex(acc + 1)];
                     }
 
                     rotatedExprs[j].push({outExpr: outExpr, style: style});
-                    thenBoolArr.push(outExpr);
-                    elseBoolArr.push(!outExpr);
+                    thenBoolArr.push(outExpr.value);
                 } else {
                     passedInvalidRows ++;
                     rotatedExprs[j].push({outExpr: grayVal, style: {backgroundColor: 'gray'}});
                     thenBoolArr.push(false);
-                    elseBoolArr.push(false);
                 }
             });
 
-            if (fexpr.thenChildren.length || fexpr.elseChild !== null) { // fexpr has children
+            if (fexpr.thenChildren.length) { // fexpr has children
                 rotateFexprs(fexpr.thenChildren, thenBoolArr, trueColorIndex(acc + 1), rotatedExprs);
-                rotateFexpr(fexpr.elseChild, elseBoolArr, falseColorIndex(acc + 1), rotatedExprs);
             }
         }
 
@@ -317,9 +854,8 @@ function Functs(props){
                 return null;
             } else {
                 return [{fexpr: fexpr, style: {backgroundColor: colors[acc]},
-                         thenColor: colors[trueColorIndex(acc + 1)], elseColor: colors[falseColorIndex(acc + 1)]},
-                        flattenFexprs(fexpr.thenChildren, trueColorIndex(acc + 1)),
-                        flattenFexpr(fexpr.elseChild, falseColorIndex(acc + 1))].filter((elem) => elem !== null).flat();
+                         thenColor: colors[trueColorIndex(acc + 1)]},
+                        flattenFexprs(fexpr.thenChildren, trueColorIndex(acc + 1))].filter((elem) => elem !== null).flat();
             }
         }
 
@@ -360,13 +896,6 @@ function Functs(props){
                                                              title={'Add Then Child'}
                                                              onClick={() => props.addThenChild(headInfo.fexpr)}
                                                            />
-                                                           {headInfo.fexpr.elseChild === null ?
-                                                            <PlusButton
-                                                              color={headInfo.elseColor}
-                                                              title={'Add Else Child'}
-                                                              onClick={() => props.addElseChild(headInfo.fexpr)}
-                                                            />
-                                                            : ''}
                                                          </div>
                                                          : '' }
                                                       </div>
@@ -477,7 +1006,6 @@ function Concise(props){
               fexprChange={props.fexprChange}
               addFexpr={props.addFexpr}
               addThenChild={props.addThenChild}
-              addElseChild={props.addElseChild}
               remFexpr={props.remFexpr}
             />
             <Wants
@@ -507,7 +1035,7 @@ class App extends React.Component{
         super(props);
         const initParam = 'n';
         this.state = {tables: [{examples: [{inTexts: ['0'], wantText: ''}],                                   // rows
-                                fexprs: [{text: initParam, outExprs: [0], thenChildren: [], elseChild: null}], // function columns
+                                fexprs: [{text: '0', outExprs: [{value: 0, type: RNUM_T}], thenChildren: []}], // function columns
                                 params: [initParam],                                                           // variable (parameter) columns
                                 name: 'table'}]};                                                              // table name (used for recursion)
         
@@ -517,7 +1045,6 @@ class App extends React.Component{
         this.addExample = this.addExample.bind(this);
         this.addFexpr = this.addFexpr.bind(this);
         this.addThenChild = this.addThenChild.bind(this);
-        this.addElseChild = this.addElseChild.bind(this);
         this.addParam = this.addParam.bind(this);
         this.remExample = this.remExample.bind(this);
         this.remFexpr = this.remFexpr.bind(this);
@@ -532,106 +1059,96 @@ class App extends React.Component{
     // this one has side effects
     testAll(){
         function makeLookup(table) {
-            function lookup() {
+            function lookup(args, env) {
                 const errorVal = undefined;
+                let interpArgs = args.map((arg) => interp(arg, env));
+
                 let expr = table.examples.reduce((acc, example) => {
                     if (acc !== errorVal) {
                         return acc;
                     }
 
-                    if (example.inTexts.reduce((acc, inText, index) => (acc && inText === String(arguments[index])), true)){
-                        return eval(example.wantText);
+                    if (example.inTexts.reduce((acc, inText, i) => {
+                        let inProg = parse(inText);
+
+                        if (inProg.rest != '') {
+                            throw 'Parse Error';
+                        }
+
+                        let inExpr = interp(inProg.prog, env);
+
+                        return acc && inExpr.value === interpArgs[i].value;
+
+                    }, true)) {
+                        let wantProg = parse(example.wantText);
+
+                        if (wantProg.rest != '') {
+                            throw 'Parse Error';
+                        }
+
+                        return interp(wantProg.prog, env);
                     }
 
                     return errorVal;
                 }, errorVal);
 
-                if (expr === errorVal){
-                    throw new Error([...arguments].join() + ' is not an example in ' + table.name);
-                } else {
-                    return expr;
+                if (expr === errorVal) {
+                    throw new Error(interpArgs.map(unParse).join + ' is not an example in ' + table.name);
                 }
 
+                return expr;
             }
 
             return lookup;
         }
 
-        // Fexpr -> [[String]] -> [String] -> [Function] -> [String] -> Fexpr
-        // function that actually does stuff
-        // this one is pure (no side effects)
-        function testFexpr(fexpr, inTextss, params, lookups, names){
-            function toFalseIndex(n){
-                // minus 1 is for zero case
-                return (n * -1) - 1;
-            }
-
-            // case for null elseChild
-            if (fexpr === null){
-                return null;
-            }
-            
-            let synError = false;
-            let funct;
-            // check for errors in function
-            try {
-                funct = new Function(names.concat(params), `return ${fexpr.text}`);
-            } catch (e) {
-                if (e instanceof SyntaxError) {
-                    synError = true;
-                }
-            }
-
-            let outExprs;
-            if (! synError){
-                outExprs = inTextss.map((args, i) => {
-                    let expr;
-                    // check for errors in inputs
-                    try {
-                        expr = funct.apply(undefined, lookups.concat(args.map(eval)));
-                    } catch (e) {
-                        if (e instanceof SyntaxError) {
-                            return fexpr.outExprs[i]; // don't change this outExpr
-                        } else {
-                            return e; // return the error
-                        }
-                    }
-
-                    return expr;
-                });
-            } else {
-                outExprs = fexpr.outExprs; // don't change any of this fexpr's outExprs
-            }
-
-            let thenChildren;
-            let elseChild;
-            if (allBools(outExprs)) {
-                // true indices are positive, false indices are negative
-                const filterIndices = outExprs.map((outExpr, index) => outExpr ? index : toFalseIndex(index));
-
-                const trueInTextss = inTextss.filter((inTexts, index) => filterIndices.includes(index));
-                const falseInTextss = inTextss.filter((inTexts, index) => filterIndices.includes(toFalseIndex(index)));
-
-                thenChildren = fexpr.thenChildren.map((thenChild) => testFexpr(thenChild, trueInTextss, params, lookups, names));
-                elseChild = testFexpr(fexpr.elseChild, falseInTextss, params, lookups, names); // yay recursion
-
-            } else {
-                thenChildren = [];
-                elseChild = null;
-            }
-
-            return {text: fexpr.text,           // doesn't change
-                    outExprs: outExprs,         // changes
-                    thenChildren: thenChildren, // changes
-                    elseChild: elseChild};      // changes
-
-        }
 
         // Table -> [Function] -> [String] -> Table
         // this one is also pure
-        function testTable(table, lookups, names){
+        function testTable(table, env){
+            // Fexpr -> [[String]] -> [String] -> [Function] -> [String] -> Fexpr
+            // function that actually does stuff
+            // this one is pure (no side effects)
+            function testFexpr(fexpr, inTextss, params){
+                let outExprs = inTextss.map((inTexts, i) => {
+                    let localBindings = inTexts.map((inText, j) => {
+                        let parsedText = parse(inText);
+                        if (parsedText.rest != '') {
+                            throw new SyntaxError('Parsing error');
+                        }
+
+                        return {name: params[j], binding: parsedText.prog};
+                    });
+
+                    const localEnv = [...env, ...localBindings];
+
+                    let parsedFexpr = parse(fexpr.text);
+
+                    if (parsedFexpr.rest != '') {
+                        throw new SyntaxError('Parsing error');
+                    }
+
+                    return interp(parsedFexpr.prog, localEnv);
+                });
+
+                let thenChildren;
+                if (allBools(outExprs)) {
+                    const filterIndices = outExprs.map((outExpr, index) => outExpr.value ? index : -1);
+                    const trueInTextss = inTextss.filter((inTexts, index) => filterIndices.includes(index));
+                    thenChildren = fexpr.thenChildren.map((thenChild) => testFexpr(thenChild, trueInTextss, params));
+
+                } else {
+                    thenChildren = [];
+                }
+
+                return {text: fexpr.text,           // doesn't change
+                        outExprs: outExprs,         // changes
+                        thenChildren: thenChildren}; // changes
+
+            }
+
             const inTextss = table.examples.map((example) => example.inTexts);
-            const fexprs = table.fexprs.map((fexpr) => testFexpr(fexpr, inTextss, table.params, lookups, names));
+            const fexprs = table.fexprs.map((fexpr) => testFexpr(fexpr, inTextss, table.params));
 
             return {examples: table.examples, // doesn't change
                     fexprs: fexprs,           // changes
@@ -639,12 +1156,14 @@ class App extends React.Component{
                     name: table.name};        // doesn't change
         }
 
+
         // this changes stuff
         this.setState((state) => {
-            const lookups = state.tables.map(makeLookup);
-            const names = state.tables.map((table) => table.name);
+            const lookups = state.tables.map((table) => ({name: table.name, binding: {type: FUNCT_T,
+                                                                                      value: makeLookup(table)}}));
+            const globalEnv = [...initEnv, ...lookups];
 
-            return {tables: state.tables.map((table) => testTable(table, lookups, names))};
+            return {tables: state.tables.map((table) => testTable(table, globalEnv))};
         });
     }
 
@@ -655,7 +1174,7 @@ class App extends React.Component{
             const initParam = 'n';
             const tableNum = oldTabs.length + 1;
             const newTab = {examples: [{inTexts: ['0'], wantText: ''}],
-                            fexprs: [{text: initParam, outExprs: [0], thenChildren: [], elseChild: null}],
+                            fexprs: [{text: '0', outExprs: [{value: 0, type: RNUM_T}], thenChildren: []}],
                             params: [initParam],
                             name: 'table' + tableNum};
 
@@ -678,7 +1197,7 @@ class App extends React.Component{
                                                    wantText: ''}];
 
             // need to maintain #outExprs == #examples
-            const fexprs = newTab.fexprs.map((fexpr) => ({...fexpr, outExprs: [...fexpr.outExprs, '?']}));
+            const fexprs = newTab.fexprs.map((fexpr) => ({...fexpr, outExprs: [...fexpr.outExprs, {value: 0, type: RNUM_T}]}));
 
             newTab.examples = examples;
             newTab.fexprs = fexprs;
@@ -691,13 +1210,11 @@ class App extends React.Component{
     addFexpr(modTable){
         this.setState((state) => {
             let newTab = {...modTable};
-            const firstParam = modTable.params.length ? modTable.params[0] : '';
 
-            const outExprs = modTable.examples.map((example) => '?');
-            const fexprs = [...newTab.fexprs, {text: firstParam,
+            const outExprs = modTable.examples.map((example) => ({value: 0, type: RNUM_T}));
+            const fexprs = [...newTab.fexprs, {text: '0',
                                                outExprs: outExprs,
-                                               thenChildren: [],
-                                               elseChild: null}];
+                                               thenChildren: []}];
             newTab.fexprs = fexprs;
 
             return {tables: state.tables.map((table) => table === modTable ? newTab : table)};
@@ -707,17 +1224,11 @@ class App extends React.Component{
     //adds a then column to a fexpr
     addThenChild(parentFexpr, modTable){
         function replaceParent(curParent, newParent){
-            // null elseChild case
-            if (curParent === null){
-                return null;
-            }
-
             if (curParent === parentFexpr){
                 return newParent;
             } else {
                 return {...curParent,
-                        thenChildren: curParent.thenChildren.map((child) => replaceParent(child, newParent)),
-                        elseChild: replaceParent(curParent.elseChild, newParent)};
+                        thenChildren: curParent.thenChildren.map((child) => replaceParent(child, newParent))};
             }
         }
 
@@ -725,52 +1236,12 @@ class App extends React.Component{
             let newTab = {...modTable};
             let newParent = {...parentFexpr};
 
-            const firstParam = newTab.params.length ? modTable.params[0] : '';
-            const outExprs = newParent.outExprs.filter((outExpr) => outExpr === true).map((outExpr) => '?');
+            const outExprs = newParent.outExprs.filter((outExpr) => outExpr.value === true).map((outExpr) => ({value: 0, type: RNUM_T}));
 
             // this is pretty much push, but oh well
-            newParent.thenChildren = [...newParent.thenChildren, {text: firstParam,
+            newParent.thenChildren = [...newParent.thenChildren, {text: '0',
                                                                   outExprs: outExprs,
-                                                                  thenChildren: [],
-                                                                  elseChild: null}];
-
-            newTab.fexprs = newTab.fexprs.map((fexpr) => replaceParent(fexpr, newParent));
-
-            return {tables: state.tables.map((table) => table === modTable ? newTab : table)};
-        });
-    }
-
-    //adds a then column to a fexpr
-    addElseChild(parentFexpr, modTable){
-        function replaceParent(curParent, newParent){
-            // null elseChild case
-            if (curParent === null){
-                return null;
-            }
-
-            if (curParent === parentFexpr){
-                return newParent;
-            } else {
-                return {...curParent,
-                        thenChildren: curParent.thenChildren.map((child) => replaceParent(child, newParent)),
-                        elseChild: replaceParent(curParent.elseChild, newParent)};
-            }
-        }
-
-        this.setState((state) => {
-            let newTab = {...modTable};
-            let newParent = {...parentFexpr};
-
-            // only add else child if none currently exists
-            if (newParent.elseChild === null) {
-                const firstParam = newTab.params.length ? modTable.params[0] : '';
-                const outExprs = newParent.outExprs.filter((outExpr) => outExpr === false).map((outExpr) => '?');
-
-                newParent.elseChild = {text: firstParam,
-                                       outExprs: outExprs,
-                                       thenChildren: [],
-                                       elseChild: null};
-            }
+                                                                  thenChildren: []}];
 
             newTab.fexprs = newTab.fexprs.map((fexpr) => replaceParent(fexpr, newParent));
 
@@ -826,18 +1297,12 @@ class App extends React.Component{
         // filters out the deadFexpr recursively through the tree
         // this is pretty violent
         function killFexpr(fexpr){
-            // null elseChild case
-            if (fexpr === null) {
-                return null;
-            }
-            
             if (fexpr === deadFexpr){
-                return fexpr.elseChild;
+                return null;
             } else {
                 return {text: fexpr.text,
                         outExprs: fexpr.outExprs.slice(),
-                        thenChildren: fexpr.thenChildren.map(killFexpr).filter((elem) => elem !== null),
-                        elseChild: killFexpr(fexpr.elseChild)};
+                        thenChildren: fexpr.thenChildren.map(killFexpr).filter((elem) => elem !== null)};
             }
         }
         
@@ -896,17 +1361,11 @@ class App extends React.Component{
     
     fexprChange(e, modFexpr, modTable){
         function replaceFexpr(curFexpr, newFexpr){
-            // null elseChild case
-            if (curFexpr === null){
-                return null;
-            }
-
             if (curFexpr === modFexpr){
                 return newFexpr;
             } else {
                 return {...curFexpr,
-                        thenChildren: curFexpr.thenChildren.map((child) => replaceFexpr(child, newFexpr)),
-                        elseChild: replaceFexpr(curFexpr.elseChild, newFexpr)};
+                        thenChildren: curFexpr.thenChildren.map((child) => replaceFexpr(child, newFexpr))};
             }
         }
 
@@ -951,39 +1410,56 @@ class App extends React.Component{
                                        params={table.params}
                                        name={table.name}
 
-                                       inTextChange={(e, modExample, modIndex) => {this.inTextChange(e, modExample, modIndex, table);
-                                                                                   this.testAll();}}
-                                       wantTextChange={(e, example) =>            {this.wantTextChange(e, example, table);
-                                                                                   this.testAll();}}
-                                       addExample={() =>                          {this.addExample(table);
-                                                                                   this.testAll();}}
-                                       remExample={(example) =>                   {this.remExample(example, table);
-                                                                                   this.testAll();}}
+                                       /* inTextChange={(e, modExample, modIndex) => {this.inTextChange(e, modExample, modIndex, table); */
+                                       /*                                             this.testAll();}} */
+                                       /* wantTextChange={(e, example) =>            {this.wantTextChange(e, example, table); */
+                                       /*                                             this.testAll();}} */
+                                       /* addExample={() =>                          {this.addExample(table); */
+                                       /*                                             this.testAll();}} */
+                                       /* remExample={(example) =>                   {this.remExample(example, table); */
+                                       /*                                             this.testAll();}} */
                                        
-                                       fexprChange={(e, modFexpr) =>              {this.fexprChange(e, modFexpr, table);
-                                                                                   this.testAll();}}
-                                       addFexpr={() =>                            {this.addFexpr(table);
-                                                                                   this.testAll();}}
-                                       addThenChild={(parent) =>                  {this.addThenChild(parent, table);
-                                                                                   this.testAll();}}
-                                       addElseChild={(parent) =>                  {this.addElseChild(parent, table);
-                                                                                   this.testAll();}}
-                                       remFexpr={(fexpr) =>                       {this.remFexpr(fexpr, table);
-                                                                                   this.testAll();}}
+                                       /* fexprChange={(e, modFexpr) =>              {this.fexprChange(e, modFexpr, table); */
+                                       /*                                             this.testAll();}} */
+                                       /* addFexpr={() =>                            {this.addFexpr(table); */
+                                       /*                                             this.testAll();}} */
+                                       /* addThenChild={(parent) =>                  {this.addThenChild(parent, table); */
+                                       /*                                             this.testAll();}} */
+                                       /* remFexpr={(fexpr) =>                       {this.remFexpr(fexpr, table); */
+                                       /*                                             this.testAll();}} */
 
-                                       paramChange={(e, index) =>                 {this.paramChange(e, index, table);
-                                                                                   this.testAll();}}
-                                       addParam={() =>                            {this.addParam(table);
-                                                                                   this.testAll();}}
-                                       remParam={(index) =>                       {this.remParam(index, table);
-                                                                                   this.testAll();}}
+                                       /* paramChange={(e, index) =>                 {this.paramChange(e, index, table); */
+                                       /*                                             this.testAll();}} */
+                                       /* addParam={() =>                            {this.addParam(table); */
+                                       /*                                             this.testAll();}} */
+                                       /* remParam={(index) =>                       {this.remParam(index, table); */
+                                       /*                                             this.testAll();}} */
 
-                                       nameChange={(e) =>                         {this.nameChange(e, table);
-                                                                                   this.testAll();}}
+                                       /* nameChange={(e) =>                         {this.nameChange(e, table); */
+                                       /*                                             this.testAll();}} */
+
+                                       /* testAll={this.testAll} */
+                                       /* remTable={() => {this.remTable(table); */
+                                       /*                  this.testAll();}} */
+
+                                       inTextChange={(e, modExample, modIndex) => this.inTextChange(e, modExample, modIndex, table)}
+                                       wantTextChange={(e, example) =>            {this.wantTextChange(e, example, table);}}
+                                       addExample={() =>                          {this.addExample(table);}}
+                                       remExample={(example) =>                   {this.remExample(example, table);}}
+                                       
+                                       fexprChange={(e, modFexpr) =>              {this.fexprChange(e, modFexpr, table);}}
+                                       addFexpr={() =>                            {this.addFexpr(table);}}
+                                       addThenChild={(parent) =>                  {this.addThenChild(parent, table);}}
+                                       remFexpr={(fexpr) =>                       {this.remFexpr(fexpr, table);}}
+
+                                       paramChange={(e, index) =>                 {this.paramChange(e, index, table);}}
+                                       addParam={() =>                            {this.addParam(table);}}
+                                       remParam={(index) =>                       {this.remParam(index, table);}}
+
+                                       nameChange={(e) =>                         {this.nameChange(e, table);}}
 
                                        testAll={this.testAll}
-                                       remTable={() => {this.remTable(table);
-                                                        this.testAll();}}
+                                       remTable={() => {this.remTable(table);}}
                                      />)}
             </div>
         );
