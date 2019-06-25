@@ -64,7 +64,7 @@ New Data Definitions:
                  type:  0}
 
         An Application is a
-                {value: {funct: Variable,
+                {value: {funct: RFunction,
                          args:  [Program]},
                  type:  1}
 

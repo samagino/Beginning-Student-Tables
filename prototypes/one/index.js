@@ -13,8 +13,7 @@ const imgPath = './images/';
 const cellHeight = '30px';
 const tableBorders = '1';
 
-const colors = ['white',   'coral',  'cadetblue', 'pink', 'yellow',     'cornflowerblue', 'mediumpurple',
-                'crimson', 'orchid', 'fuchsia',   'cyan', 'blueviolet', 'salmon',         'gold'];
+const colors = ['white', 'orchid', 'pink', 'cornflowerblue', 'mediumpurple', 'fuchsia', 'blueviolet', 'salmon', 'gold'];
 
 /*********************
    Functions I Want
@@ -28,8 +27,8 @@ function randomChar(){
     return String.fromCharCode(char);
 }
 
-// [Anything] -> Boolean
-// returns true if exprs has at least one member and all of its members are boooleans
+// [Program] -> Boolean
+// returns true if progs has at least one member and all of its members are boooleans
 //    otherwise returns false
 function allBools(progs){
     if (progs.length == 0) {
@@ -39,14 +38,33 @@ function allBools(progs){
     return progs.every((prog) => prog.type == RBOOL_T);
 }
 
-// Number -> Number
-function trueColorIndex(n){
-    return n % colors.length;
-}
+// Program -> Program -> Boolean
+// checks if two programs are equivalent, recurs on lists and applications
+// may not quite work on functions because I use js functions, not data represented closures or something
+//    thus 2 functions are only equal if they're a reference to the same object
+function deepEquals(proga, progb) {
+    if (proga.type != progb.type) {
+        return false;
+    }
 
-// Number -> Number
-function falseColorIndex(n){
-    return (n + (colors.length / 2)) % colors.length;
+    if (proga.type == RLIST_T) {
+        if (proga.value == null || progb.value == null) {
+            return proga.value == progb.value;
+        }
+        return deepEquals(proga.value.a, progb.value.a) && deepEquals(proga.value.d, progb.value.d);
+    }
+
+    // this case will prolly never even happen...
+    if (proga.type == APP_T) {
+        if (proga.value.args.length != progb.value.args.length) {
+            return false;
+        }
+        let functCheck = deepEquals(proga.value.funct, progb.value.funct);
+        let argCheck = proga.value.args.map((arga, i) => deepEquals(arga, progb.value.args[i])).every((elem) => elem);
+        return functCheck && argCheck;
+    }
+
+    return proga.value === progb.value;
 }
 
 /****************
@@ -78,8 +96,14 @@ const initEnv = [
                             value: cdr}},
     {name: 'cons', binding: {type: FUNCT_T,
                              value: cons}},
+    {name: 'list', binding: {type: FUNCT_T,
+                             value: list}},
     {name: 'not', binding: {type: FUNCT_T,
                              value: not}},
+    {name: 'and', binding: {type: FUNCT_T,
+                             value: and}},
+    {name: 'or', binding: {type: FUNCT_T,
+                             value: or}},
     {name: 'eqv?', binding: {type: FUNCT_T,
                              value: iseqv}},
     {name: 'null?', binding: {type: FUNCT_T,
@@ -165,7 +189,7 @@ function parse(text) {
         return parseQ(text);
     }
 
-    throw 'Invalid Syntax: \"' + text + '\"';
+    throw new SyntaxError('Invalid Syntax: \"' + text + '\"');
 }
 
 // String -> {prog: Program, rest: String}
@@ -277,7 +301,7 @@ function interp(prog, env) {
         return funct.value(args, env);
 
     default:
-        throw "Interpreter Error " + unParse(prog);
+        throw new TypeError("Unknown Type " + prog.value);
     }
 }
 
@@ -307,9 +331,24 @@ function unParse(prog) {
     default:
         return 'error or something';
     }
-    
 }
 
+// String -> Program
+// parses text and checks for syntax errors based on what's returned
+function parseCheck(text) {
+    let parsed = parse(text);
+
+    switch (parsed.rest) {
+    case '':
+        break;
+    default:
+        throw new SyntaxError('Parsing Error');
+    }
+
+    return parsed.prog;
+}
+
+// Program -> Number -> Side Effect Maybe
 function typeCheck(prog, type){
     let typeString = '';
     switch (type) {
@@ -334,48 +373,41 @@ function typeCheck(prog, type){
     case RLIST_T:
         typeString = 'list';
         break;
+    case RSYM_T:
+        typeString = 'symbol';
     default:
         typeString = '???';
     }
 
     if (prog.type != type){
-        throw new TypeError(prog.value + ' ain\'t a ' + typeString);
+        throw new TypeError(unParse(prog) + ' ain\'t a ' + typeString);
     }
 }
 
 function plus(args, env) {
-    return args.reduce((acc, cur) => {
-        let accVal = interp(acc, env);
-        let curVal = interp(cur, env);
+    let argVals = args.map((elem) => interp(elem, env));
+    argVals.forEach((cur) => typeCheck(cur, RNUM_T)); 
 
-        typeCheck(accVal, RNUM_T);
-        typeCheck(curVal, RNUM_T);
-
-        return {value: accVal.value + curVal.value,
+    return argVals.reduce((acc, cur) => {
+        return {value: acc.value + cur.value,
                 type: RNUM_T};
     });
 }
 function minus(args, env) {
-    return args.reduce((acc, cur) => {
-        let accVal = interp(acc, env);
-        let curVal = interp(cur, env);
+    let argVals = args.map((elem) => interp(elem, env));
+    argVals.forEach((cur) => typeCheck(cur, RNUM_T)); 
 
-        typeCheck(accVal, RNUM_T);
-        typeCheck(curVal, RNUM_T);
-
-        return {value: accVal.value - curVal.value,
+    return argVals.reduce((acc, cur) => {
+        return {value: acc.value - cur.value,
                 type: RNUM_T};
     });
 }
 function times(args, env) {
-    return args.reduce((acc, cur) => {
-        let accVal = interp(acc, env);
-        let curVal = interp(cur, env);
+    let argVals = args.map((elem) => interp(elem, env));
+    argVals.forEach((cur) => typeCheck(cur, RNUM_T)); 
 
-        typeCheck(accVal, RNUM_T);
-        typeCheck(curVal, RNUM_T);
-
-        return {value: accVal.value * curVal.value,
+    return argVals.reduce((acc, cur) => {
+        return {value: acc.value * cur.value,
                 type: RNUM_T};
     });
 }
@@ -403,7 +435,7 @@ function divide(args, env) {
 }
 function car(args, env) {
     if (args.length != 1) {
-        throw "aritry mismatch";
+        throw new Error('arity mismatch');
     }
 
     let firstVal = interp(args[0], env);
@@ -414,7 +446,7 @@ function car(args, env) {
 }
 function cdr(args, env) {
     if (args.length != 1) {
-        throw "arity mismatch";
+        throw new Error('arity mismatch');
     }
 
     let firstVal = interp(args[0], env);
@@ -425,18 +457,33 @@ function cdr(args, env) {
 }
 function cons(args, env) {
     if (args.length != 2) {
-        throw "arity mismatch";
+        throw new Error('arity mismatch');
     }
 
     let firstVal = interp(args[0], env);
     let secondVal = interp(args[1], env);
 
+    // because BSL
+    typeCheck(secondVal, RLIST_T);
+
     return {value: {a: firstVal, d: secondVal},
             type: RLIST_T};
 }
+function list(args, env) {
+    if (args.length == 0) {
+        throw new Error('arity mismatch');
+    }
+
+    let interpArgs = args.map((arg) => interp(arg, env));
+
+    return interpArgs.reverse().reduce((acc, arg) => ({value: {a: arg, d: acc},
+                                                       type: RLIST_T}),
+                                       {value: null,
+                                        type: RLIST_T});
+}
 function not(args, env) {
     if (args.length != 1) {
-        throw "arity mismatch";
+        throw new Error('arity mismatch');
     }
 
     let firstVal = interp(args[0], env);
@@ -446,7 +493,7 @@ function not(args, env) {
 }
 function iseqv(args, env) {
     if (args.length != 2) {
-        throw "arity mismatch";
+        throw new Error('arity mismatch');
     }
 
     let firstVal = interp(args[0], env);
@@ -473,7 +520,7 @@ function or(args, env) {
 }
 function rif(args, env) {
     if (args.length != 3) {
-        throw "arity mismatch";
+        throw new Error('arity mismatch');
     }
 
     let firstVal = interp(args[0], env);
@@ -486,7 +533,7 @@ function rif(args, env) {
 }
 function isnull(args, env) {
     if (args.length != 1) {
-        throw "arity mismatch";
+        throw new Error('arity mismatch');
     }
 
     let firstVal = interp(args[0], env);
@@ -674,14 +721,9 @@ function TestCell(props){
         let wantExpr;
         try {
             if (props.wantText === ''){
-                wantExpr = {value: '""', type: RSTRING_T};
+                wantExpr = wantError;
             } else {
-                let parsedWant = parse(props.wantText);
-                if (parsedWant.rest != '') {
-                    throw new SyntaxError('Parsing Error');
-                }
-
-                wantExpr = parsedWant.prog;
+                wantExpr = interp(parseCheck(props.wantText), initEnv);
             }
         } catch (e) {
             wantExpr = wantError;
@@ -689,13 +731,13 @@ function TestCell(props){
 
         if (props.outExpr === grayVal) {
             return '';
-        } else if (wantExpr === wantError) {
-            return '';
         } else if (props.outExpr instanceof Error) {
             return <img
                      src={imgPath + 'frowneyface.png'}
                      style={{float: 'right'}}
                      title={"Oh no! You got an error!"}/>;
+        } else if (wantExpr === wantError) {
+            return '';
         } else if (props.outExpr.value === wantExpr.value) {
             return <img
                      src={imgPath + 'smileyface.png'}
@@ -811,8 +853,9 @@ function Functs(props){
              fexprChange(e, fexpr), addFexpr(), addThenChild(fexpr), remFexpr(fexpr)
      */
 
-    // [Fexpr] -> [Boolean] -> String -> [N] -> [{N, String}]
+    // [Fexpr] -> [Boolean] -> String -> [outExpr] -> [{renderExpr, String}]
     // uses side effects to build a shallow 2d array from a tree type thing
+    // a renderExpr is like an outExpr except it can also be a grayVal (grayed out)
     function rotateFexprs(fexprs, boolArr, acc, rotatedExprs){
         function rotateFexpr(fexpr, boolArr, acc, rotatedExprs) {
             let passedInvalidRows = 0;
@@ -824,9 +867,7 @@ function Functs(props){
                     let style = {backgroundColor: colors[acc]};
 
                     if (outExpr.value === true) {
-                        style.color = colors[trueColorIndex(acc + 1)];
-                    } else if (outExpr.value === false) {
-                        style.color = colors[falseColorIndex(acc + 1)];
+                        style.color = colors[(acc + 1) % colors.length];
                     }
 
                     rotatedExprs[j].push({outExpr: outExpr, style: style});
@@ -839,7 +880,7 @@ function Functs(props){
             });
 
             if (fexpr.thenChildren.length) { // fexpr has children
-                rotateFexprs(fexpr.thenChildren, thenBoolArr, trueColorIndex(acc + 1), rotatedExprs);
+                rotateFexprs(fexpr.thenChildren, thenBoolArr, (acc + 1) % colors.length, rotatedExprs);
             }
         }
 
@@ -854,8 +895,8 @@ function Functs(props){
                 return null;
             } else {
                 return [{fexpr: fexpr, style: {backgroundColor: colors[acc]},
-                         thenColor: colors[trueColorIndex(acc + 1)]},
-                        flattenFexprs(fexpr.thenChildren, trueColorIndex(acc + 1))].filter((elem) => elem !== null).flat();
+                         thenColor: colors[(acc + 1) % colors.length]},
+                        flattenFexprs(fexpr.thenChildren, (acc + 1) % colors.length)].filter((elem) => elem !== null).flat();
             }
         }
 
@@ -1024,11 +1065,6 @@ function Concise(props){
   -----------------------
   |#inTexts != #outExprs|
   -----------------------
-  
-  Questions:
-  should outExprs be in examples (rows) or fexprs (output columns)?
-  if it's in fExps then it would be easier to test if they're all bools and do stuff from there
-  but rendering is more annoying, so prolly should be in fexprs
 */
 class App extends React.Component{
     constructor(props){
@@ -1060,6 +1096,10 @@ class App extends React.Component{
     testAll(){
         function makeLookup(table) {
             function lookup(args, env) {
+                if (args.length != table.params.length) {
+                    throw new Error('Arity Mismatch, expected ' + table.params.length + ' argument' + (table.params.length == 1 ? 's' : ''));
+                }
+                
                 const errorVal = undefined;
                 let interpArgs = args.map((arg) => interp(arg, env));
 
@@ -1069,31 +1109,18 @@ class App extends React.Component{
                     }
 
                     if (example.inTexts.reduce((acc, inText, i) => {
-                        let inProg = parse(inText);
-
-                        if (inProg.rest != '') {
-                            throw 'Parse Error';
-                        }
-
-                        let inExpr = interp(inProg.prog, env);
-
-                        return acc && inExpr.value === interpArgs[i].value;
+                        let inExpr = interp(parseCheck(inText), env);
+                        return acc && deepEquals(inExpr, interpArgs[i]);
 
                     }, true)) {
-                        let wantProg = parse(example.wantText);
-
-                        if (wantProg.rest != '') {
-                            throw 'Parse Error';
-                        }
-
-                        return interp(wantProg.prog, env);
+                        return interp(parseCheck(example.wantText), env);
                     }
 
                     return errorVal;
                 }, errorVal);
 
                 if (expr === errorVal) {
-                    throw new Error(interpArgs.map(unParse).join + ' is not an example in ' + table.name);
+                    throw new ReferenceError(interpArgs.map(unParse).join() + ' is not an example in ' + table.name);
                 }
 
                 return expr;
@@ -1111,24 +1138,25 @@ class App extends React.Component{
             // this one is pure (no side effects)
             function testFexpr(fexpr, inTextss, params){
                 let outExprs = inTextss.map((inTexts, i) => {
-                    let localBindings = inTexts.map((inText, j) => {
-                        let parsedText = parse(inText);
-                        if (parsedText.rest != '') {
-                            throw new SyntaxError('Parsing error');
+
+                    try {
+                        let localBindings = inTexts.map((inText, j) => {
+                            let val = interp(parseCheck(inText), initEnv);
+                            return {name: params[j], binding: val};
+                        });
+
+                        const localEnv = [...env, ...localBindings];
+
+                        var outExpr = interp(parseCheck(fexpr.text), localEnv);
+                    } catch (e) {
+                        if (e instanceof SyntaxError) {
+                            outExpr = fexpr.outExprs[i];
+                        } else {
+                            outExpr = e;
                         }
-
-                        return {name: params[j], binding: parsedText.prog};
-                    });
-
-                    const localEnv = [...env, ...localBindings];
-
-                    let parsedFexpr = parse(fexpr.text);
-
-                    if (parsedFexpr.rest != '') {
-                        throw new SyntaxError('Parsing error');
                     }
 
-                    return interp(parsedFexpr.prog, localEnv);
+                    return outExpr;
                 });
 
                 let thenChildren;
@@ -1160,7 +1188,7 @@ class App extends React.Component{
         // this changes stuff
         this.setState((state) => {
             const lookups = state.tables.map((table) => ({name: table.name, binding: {type: FUNCT_T,
-                                                                                      value: makeLookup(table)}}));
+                                                                                      value: makeLookup(table, unParse)}}));
             const globalEnv = [...initEnv, ...lookups];
 
             return {tables: state.tables.map((table) => testTable(table, globalEnv))};
@@ -1410,56 +1438,37 @@ class App extends React.Component{
                                        params={table.params}
                                        name={table.name}
 
-                                       /* inTextChange={(e, modExample, modIndex) => {this.inTextChange(e, modExample, modIndex, table); */
-                                       /*                                             this.testAll();}} */
-                                       /* wantTextChange={(e, example) =>            {this.wantTextChange(e, example, table); */
-                                       /*                                             this.testAll();}} */
-                                       /* addExample={() =>                          {this.addExample(table); */
-                                       /*                                             this.testAll();}} */
-                                       /* remExample={(example) =>                   {this.remExample(example, table); */
-                                       /*                                             this.testAll();}} */
+                                       inTextChange={(e, modExample, modIndex) => {this.inTextChange(e, modExample, modIndex, table);
+                                                                                   this.testAll();}}
+                                       wantTextChange={(e, example) =>            {this.wantTextChange(e, example, table);
+                                                                                   this.testAll();}}
+                                       addExample={() =>                          {this.addExample(table);
+                                                                                   this.testAll();}}
+                                       remExample={(example) =>                   {this.remExample(example, table);
+                                                                                   this.testAll();}}
                                        
-                                       /* fexprChange={(e, modFexpr) =>              {this.fexprChange(e, modFexpr, table); */
-                                       /*                                             this.testAll();}} */
-                                       /* addFexpr={() =>                            {this.addFexpr(table); */
-                                       /*                                             this.testAll();}} */
-                                       /* addThenChild={(parent) =>                  {this.addThenChild(parent, table); */
-                                       /*                                             this.testAll();}} */
-                                       /* remFexpr={(fexpr) =>                       {this.remFexpr(fexpr, table); */
-                                       /*                                             this.testAll();}} */
+                                       fexprChange={(e, modFexpr) =>              {this.fexprChange(e, modFexpr, table);
+                                                                                   this.testAll();}}
+                                       addFexpr={() =>                            {this.addFexpr(table);
+                                                                                   this.testAll();}}
+                                       addThenChild={(parent) =>                  {this.addThenChild(parent, table);
+                                                                                   this.testAll();}}
+                                       remFexpr={(fexpr) =>                       {this.remFexpr(fexpr, table);
+                                                                                   this.testAll();}}
 
-                                       /* paramChange={(e, index) =>                 {this.paramChange(e, index, table); */
-                                       /*                                             this.testAll();}} */
-                                       /* addParam={() =>                            {this.addParam(table); */
-                                       /*                                             this.testAll();}} */
-                                       /* remParam={(index) =>                       {this.remParam(index, table); */
-                                       /*                                             this.testAll();}} */
+                                       paramChange={(e, index) =>                 {this.paramChange(e, index, table);
+                                                                                   this.testAll();}}
+                                       addParam={() =>                            {this.addParam(table);
+                                                                                   this.testAll();}}
+                                       remParam={(index) =>                       {this.remParam(index, table);
+                                                                                   this.testAll();}}
 
-                                       /* nameChange={(e) =>                         {this.nameChange(e, table); */
-                                       /*                                             this.testAll();}} */
-
-                                       /* testAll={this.testAll} */
-                                       /* remTable={() => {this.remTable(table); */
-                                       /*                  this.testAll();}} */
-
-                                       inTextChange={(e, modExample, modIndex) => this.inTextChange(e, modExample, modIndex, table)}
-                                       wantTextChange={(e, example) =>            {this.wantTextChange(e, example, table);}}
-                                       addExample={() =>                          {this.addExample(table);}}
-                                       remExample={(example) =>                   {this.remExample(example, table);}}
-                                       
-                                       fexprChange={(e, modFexpr) =>              {this.fexprChange(e, modFexpr, table);}}
-                                       addFexpr={() =>                            {this.addFexpr(table);}}
-                                       addThenChild={(parent) =>                  {this.addThenChild(parent, table);}}
-                                       remFexpr={(fexpr) =>                       {this.remFexpr(fexpr, table);}}
-
-                                       paramChange={(e, index) =>                 {this.paramChange(e, index, table);}}
-                                       addParam={() =>                            {this.addParam(table);}}
-                                       remParam={(index) =>                       {this.remParam(index, table);}}
-
-                                       nameChange={(e) =>                         {this.nameChange(e, table);}}
+                                       nameChange={(e) =>                         {this.nameChange(e, table);
+                                                                                   this.testAll();}}
 
                                        testAll={this.testAll}
-                                       remTable={() => {this.remTable(table);}}
+                                       remTable={() => {this.remTable(table);
+                                                        this.testAll();}}
                                      />)}
             </div>
         );
