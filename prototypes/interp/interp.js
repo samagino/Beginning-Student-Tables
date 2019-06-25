@@ -21,16 +21,17 @@ class App extends React.Component{
         const RBOOL_T =   4;
         const RSTRING_T = 5;
         const RLIST_T =   6;
+        const RSYM_T =    7;
         
         // String -> {prog: Program, rest: String}
+        // parses all expressions except quoted expressions
         function parse(text) {
-            const varRE = /^[a-zA-Z\+\-\*\/\?=></>]+/; // change me
+            const varRE = /^[a-zA-Z\+\-\*\/\?=><]+/; // change me
             const appRE = /^\(/;
-            const endAppRE = /^\)/;
             const numRE = /^\-?\d+/; // this one doesn't permit fractions
             const boolRE = /^#[tf]/;
             const strRE = /^"[^"]*"/;
-            const listRE = /^'\s*\(/;
+            const quoteRE = /^'/;
 
             if (varRE.test(text)) {
                 let matches = text.match(varRE);
@@ -81,27 +82,69 @@ class App extends React.Component{
 
                 return {prog: app, rest: rest};
 
-            } else if (listRE.test(text)) {
-                text = text.slice(1).trim(); // remove quote
-                text = text.slice(1).trim(); // remove open paren
+            } else if (quoteRE.test(text)) {
+                return parseQ(text);
+            }
 
-                let parseTerm = parse(text);
+            throw 'Invalid Syntax: \"' + text + '\"';
+        }
 
-                let a, d;
-                let rest, rec = parseTerm;
-                a = parseTerm.prog;
+        // String -> {prog: Program, rest: String}
+        // parses quoted expressions
+        function parseQ(text) {
+            const symRE = /^'?[a-zA-Z\+\-\*\/\?=><#"]+/; // change me
+            const listRE = /^'?\s*\(/;
+            const numRE = /^'?\-?\d+/; // this one doesn't permit fractions
+            const boolRE = /^#[tf]/;
+            const strRE = /^"[^"]*"/;
 
-                if (parseTerm.rest[0] == ')') {
-                    d = {value: null, type: RLIST_T};
-                    rest = parseTerm.rest.slice(1).trim();
-                } else {
-                    rec = parse('\'(' + parseTerm.rest);
-                    d = rec.prog;
-                    rest = rec.rest;
+
+            if (listRE.test(text)) {
+                text = text.slice(text.match(listRE)[0].length).trim(); // remove quote, open paren
+                let listArr = [];
+
+                while (text[0] != ')') {
+                    let cur = parseQ(text);
+                    listArr = [cur.prog, ...listArr]; // listArr is constructed backwards
+                    text = cur.rest;
                 }
 
-                let list = {value: {a: a, d: d}, type: RLIST_T};
-                return {prog: list, rest: rest};
+                let rest = text.slice(1).trim();
+                let prog = listArr.reduce((acc, cur) => ({value: {a: cur, d: acc}, type: RLIST_T}), {value: null, type: RLIST_T}); // turn listArr into an Rlist
+
+                return {prog: prog, rest: rest};
+
+            } else if (numRE.test(text)) {
+                let matches = text.match(numRE);
+                let numStr = matches[0];
+                let rest = text.slice(numStr.length).trim();
+                let num = {value: +numStr, type: RNUM_T};
+
+                return {prog: num, rest: rest};
+
+            } else if (boolRE.test(text)) {
+                let matches = text.match(boolRE);
+                let boolStr = matches[0];
+                let rest = text.slice(2).trim();
+                let bool = {value: boolStr == '#t', type: RBOOL_T};
+
+                return {prog: bool, rest: rest};
+
+            } else if (strRE.test(text)) {
+                let matches = text.match(strRE);
+                let str = {value: matches[0], type: RSTRING_T};
+                let rest = text.slice(matches[0].length).trim();
+
+                return {prog: str, rest: rest};
+
+            } else if (symRE.test(text)) {
+                let matches = text.match(symRE);
+                let value = matches[0];
+                value = value[0] == '\'' ? value : '\'' + value;
+                let sym = {value: value, type: RSYM_T};
+                let rest = text.slice(matches[0].length).trim();
+
+                return {prog: sym, rest: rest};
             }
 
             throw 'Invalid Syntax: \"' + text + '\"';
@@ -109,23 +152,23 @@ class App extends React.Component{
 
         /***
             Environment: [Variable]
-            Variable:    {symbol:  String,
+            Variable:    {name:    String,
                           binding: Program} 
          ***/
 
         // Program -> Environment -> Program
         function interp(prog, env) {
-            function lookup(sym) {
+            function lookup(name) {
                 let val = env.reduce((acc, variable) => {
                     if (acc != undefined) {
                         return acc;
                     }
 
-                    return variable.symbol == sym ? variable.binding : undefined;
+                    return variable.name == name ? variable.binding : undefined;
                 }, undefined);
 
                 if (val == undefined){
-                    throw new ReferenceError(sym + ' isn\'t defined');
+                    throw new ReferenceError(name + ' isn\'t defined');
                 }
 
                 return val;
@@ -140,6 +183,8 @@ class App extends React.Component{
                 return prog;
             case RLIST_T:
                 return prog;
+            case RSYM_T:
+                return prog;
             case VAR_T:
                 return lookup(prog.value);
             case FUNCT_T:
@@ -150,7 +195,7 @@ class App extends React.Component{
 
                 typeCheck(funct, FUNCT_T);
 
-                return funct.value.call(undefined, args, env);
+                return funct.value(args, env);
 
             default:
                 throw "Interpreter Error " + String(prog);
@@ -168,10 +213,12 @@ class App extends React.Component{
                 return prog.value;
             case RLIST_T:
                 if (prog.value === null) {
-                    return '()';
+                    return '\'()';
                 } else {
-                    return '(' + unParse(prog.value.a) + ' . ' + unParse(prog.value.d) + ')';
+                    return '(cons ' + unParse(prog.value.a) + ' ' + unParse(prog.value.d) + ')';
                 }
+            case RSYM_T:
+                return prog.value;
             case VAR_T:
                 return 'variable';
             case FUNCT_T:
@@ -184,7 +231,7 @@ class App extends React.Component{
             
         }
 
-        function typeCheck(thing, type){
+        function typeCheck(prog, type){
             let typeString = '';
             switch (type) {
             case VAR_T:
@@ -212,8 +259,8 @@ class App extends React.Component{
                 typeString = '???';
             }
 
-            if (thing.type != type){
-                throw new TypeError(thing.value + ' ain\'t a ' + typeString);
+            if (prog.type != type){
+                throw new TypeError(prog.value + ' ain\'t a ' + typeString);
             }
         }
 
@@ -436,50 +483,48 @@ class App extends React.Component{
         program = parse(this.state.text);
 
         if (program.rest !== '') {
-            error = new Error('Parse Error');
+            error = new Error('Parse Error ' + program.rest);
         }
 
         //console.log(program);
         let expr = '';
         let initEnv = [
             // functions
-            {symbol: '+', binding: {type: FUNCT_T,
-                                    value: plus}},
-            {symbol: '-', binding: {type: FUNCT_T,
-                                    value: minus}},
-            {symbol: '*', binding: {type: FUNCT_T,
-                                    value: times}},
-            {symbol: '/', binding: {type: FUNCT_T,
-                                    value: divide}},
-            {symbol: 'car', binding: {type: FUNCT_T,
-                                      value: car}},
-            {symbol: 'cdr', binding: {type: FUNCT_T,
-                                      value: cdr}},
-            {symbol: 'cons', binding: {type: FUNCT_T,
-                                       value: cons}},
-            {symbol: 'eqv?', binding: {type: FUNCT_T,
-                                       value: iseqv}},
-            {symbol: 'null?', binding: {type: FUNCT_T,
-                                        value: isnull}},
-            {symbol: 'empty?', binding: {type: FUNCT_T,
-                                         value: isnull}},
-            {symbol: '=', binding: {type: FUNCT_T,
-                                    value: equalsign}},
-            {symbol: '>', binding: {type: FUNCT_T,
-                                    value: gtsign}},
-            {symbol: '>=', binding: {type: FUNCT_T,
-                                     value: gesign}},
-            {symbol: '<', binding: {type: FUNCT_T,
-                                    value: ltsign}},
-            {symbol: '<=', binding: {type: FUNCT_T,
-                                     value: lesign}},
+            {name: '+', binding: {type: FUNCT_T,
+                                  value: plus}},
+            {name: '-', binding: {type: FUNCT_T,
+                                  value: minus}},
+            {name: '*', binding: {type: FUNCT_T,
+                                  value: times}},
+            {name: '/', binding: {type: FUNCT_T,
+                                  value: divide}},
+            {name: 'car', binding: {type: FUNCT_T,
+                                    value: car}},
+            {name: 'cdr', binding: {type: FUNCT_T,
+                                    value: cdr}},
+            {name: 'cons', binding: {type: FUNCT_T,
+                                     value: cons}},
+            {name: 'eqv?', binding: {type: FUNCT_T,
+                                     value: iseqv}},
+            {name: 'null?', binding: {type: FUNCT_T,
+                                      value: isnull}},
+            {name: 'empty?', binding: {type: FUNCT_T,
+                                       value: isnull}},
+            {name: '=', binding: {type: FUNCT_T,
+                                  value: equalsign}},
+            {name: '>', binding: {type: FUNCT_T,
+                                  value: gtsign}},
+            {name: '>=', binding: {type: FUNCT_T,
+                                   value: gesign}},
+            {name: '<', binding: {type: FUNCT_T,
+                                  value: ltsign}},
+            {name: '<=', binding: {type: FUNCT_T,
+                                   value: lesign}},
             // constants
-            {symbol: 'null', binding: {type: RLIST_T,
-                                       value: null}},
-            {symbol: 'empty', binding: {type: RLIST_T,
-                                        value: null}},
-            {symbol: 'n', binding: {type: RNUM_T,
-                                    value: 2}}
+            {name: 'null', binding: {type: RLIST_T,
+                                     value: null}},
+            {name: 'empty', binding: {type: RLIST_T,
+                                      value: null}},
         ];
 
         try {
@@ -512,7 +557,7 @@ class App extends React.Component{
                 size={100}
                 value={this.state.text}
                 onChange={this.readText} />
-                <p>{'Expr: ' + String(this.state.expr)}</p>
+              <p>{'Out: ' + String(this.state.expr)}</p>
               <p >{'Error: ' + this.state.error}</p>
             </div>
         );

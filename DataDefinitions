@@ -42,8 +42,12 @@ New Data Definitions:
 
         A Fexpr is
                 {text:              String,
-                 outExprs:          [Anything], (not strictly necessary)
+                 outExprs:          [outExpr], (not strictly necessary)
                  thenChildren:      [Fexpr]}
+
+        An outExpr is one of
+                - Program
+                - Error
 
         A Program is one of
                 -  Variable
@@ -53,6 +57,7 @@ New Data Definitions:
                 -  RBool
                 -  RString
                 -  RList
+                -  RSym
 
         A Variable is a
                 {value: String,
@@ -87,3 +92,8 @@ New Data Definitions:
                 - Null
                 - {a: Program,
                    d: RList}
+
+        An RSym is a
+                {value: string,
+                 type: 7}
+                 
