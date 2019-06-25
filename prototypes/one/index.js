@@ -13,7 +13,8 @@ const imgPath = './images/';
 const cellHeight = '30px';
 const tableBorders = '1';
 
-const colors = ['white', 'orchid', 'pink', 'cornflowerblue', 'mediumpurple', 'fuchsia', 'blueviolet', 'salmon', 'gold'];
+
+const colors = ['white', 'orchid', 'cornflowerblue', 'mediumpurple', 'fuchsia', 'blueviolet', 'salmon', 'gold'];
 
 /*********************
    Functions I Want
@@ -136,7 +137,14 @@ function parse(text) {
     const strRE = /^"[^"]*"/;
     const quoteRE = /^'/;
 
-    if (varRE.test(text)) {
+    if (numRE.test(text)) {
+        let matches = text.match(numRE);
+        let numStr = matches[0];
+        let rest = text.slice(numStr.length).trim();
+        let num = {value: +numStr, type: RNUM_T};
+
+        return {prog: num, rest: rest};
+    } else if (varRE.test(text)) {
         let matches = text.match(varRE);
         let name = matches[0];
         let rest = text.slice(name.length).trim();
@@ -144,13 +152,6 @@ function parse(text) {
 
         return {prog: variable, rest: rest};
 
-    } else if (numRE.test(text)) {
-        let matches = text.match(numRE);
-        let numStr = matches[0];
-        let rest = text.slice(numStr.length).trim();
-        let num = {value: +numStr, type: RNUM_T};
-
-        return {prog: num, rest: rest};
 
     } else if (boolRE.test(text)) {
         let matches = text.match(boolRE);
@@ -689,19 +690,6 @@ function RemButton(props){
           onClick={props.onClick}/>
     );
 }
-/*** Inputs ***/
-// changes width according to length of text it holds
-function DynamicInput(props){
-    return (
-        <input
-          style={props.style}
-          size={props.value.length + 1}
-          type={'text'}
-          value={props.value}
-          onChange={props.onChange} />
-    );
-}
-
 /*** Cells ***/
 //cell that contains the output of a relevent fexpr applied to relevent inputs
 function TestCell(props){
@@ -720,11 +708,7 @@ function TestCell(props){
         const wantError = Infinity;
         let wantExpr;
         try {
-            if (props.wantText === ''){
-                wantExpr = wantError;
-            } else {
-                wantExpr = interp(parseCheck(props.wantText), initEnv);
-            }
+            wantExpr = interp(props.wantProg, initEnv);
         } catch (e) {
             wantExpr = wantError;
         }
@@ -738,7 +722,7 @@ function TestCell(props){
                      title={"Oh no! You got an error!"}/>;
         } else if (wantExpr === wantError) {
             return '';
-        } else if (props.outExpr.value === wantExpr.value) {
+        } else if (deepEquals(props.outExpr, wantExpr)) {
             return <img
                      src={imgPath + 'smileyface.png'}
                      style={{float: 'right'}}
@@ -764,7 +748,7 @@ function TestCell(props){
 function Parameters(props){
     /*
       Props: examples, params
-             paramChange(e, index), inTextChange(e, example, index), addParam(), addExample() remParam(index), remExample(example)
+             paramChange(e, index), inProgChange(e, example, index), addParam(), addExample() remParam(index), remExample(example)
      */
 
     const style={backgroundColor: 'white'};
@@ -812,25 +796,20 @@ function Parameters(props){
                                       style={{float: 'right'}}
                                       title={'Remove Parameter (in column)'}
                                       onClick={() => props.remParam(i)} />
-                                    <DynamicInput
-                                      style={{float: 'left'}}
-                                      type={'text'}
-                                      value={param}
-                                      onChange={(e) => props.paramChange(e, i)} />
+                                    <NameField
+                                      nameChange={(text) => props.paramChange(text, i)} />
                                   </td>
                                  )}
               </tr>
               {props.examples.map((example, i) =>
                                   <tr key={i}>
-                                    {example.inTexts.map((inText, j) =>
+                                    {example.inProgs.map((inProg, j) =>
                                                          <td
                                                            key={j}
                                                            style={{height: cellHeight}}
                                                            border={'1'}>
-                                                           <DynamicInput
-                                                             type={'text'}
-                                                             value={inText}
-                                                             onChange={(e) => props.inTextChange(e, example, j)}
+                                                           <ProgField
+                                                             progChange={(prog) => props.inProgChange(prog, example, j)}
                                                            />
                                                          </td>
                                                         )}
@@ -849,7 +828,7 @@ function Parameters(props){
 
 function Functs(props){
     /*
-      Props: numRows, fexprs, wantTexts
+      Props: numRows, fexprs, wantProgs
              fexprChange(e, fexpr), addFexpr(), addThenChild(fexpr), remFexpr(fexpr)
      */
 
@@ -940,11 +919,8 @@ function Functs(props){
                                                          </div>
                                                          : '' }
                                                       </div>
-                                                      <DynamicInput
-                                                        style={{float: 'left'}}
-                                                        type={'text'}
-                                                        value={headInfo.fexpr.text}
-                                                        onChange={(e) => props.fexprChange(e, headInfo.fexpr)} />
+                                                      <ProgField
+                                                        progChange={(prog) => props.fexprChange(prog, headInfo.fexpr)} />
                                                     </td>
                                                    )}
               </tr>
@@ -955,7 +931,7 @@ function Functs(props){
                                                  key={j}
                                                  style={cellInfo.style}
                                                  outExpr={cellInfo.outExpr}
-                                                 wantText={props.wantTexts[i]}
+                                                 wantProg={props.wantProgs[i]}
                                                />
                                               )}
                               </tr>
@@ -969,7 +945,7 @@ function Functs(props){
 function Wants(props){
     /*
       Props: examples
-             wantTextChange(e, example)
+             wantProgChange(prog, example)
     */
 
     const style={backgroundColor: 'white'};
@@ -995,11 +971,8 @@ function Wants(props){
                                     <td
                                       style={{height: cellHeight}}
                                       border={'1'}>
-                                      <DynamicInput
-                                        style={{float: 'left'}}
-                                        type={'text'}
-                                        value={example.wantText}
-                                        onChange={(e) => props.wantTextChange(e, example)} />
+                                      <ProgField
+                                        progChange={(prog) => props.wantProgChange(prog, example)} />
                                     </td>
                                   </tr>
                                  )}
@@ -1012,11 +985,8 @@ function Wants(props){
 function Concise(props){
     return (
         <div style={{float: 'left', clear: 'left'}}>
-          <DynamicInput
-            style={{float: 'left'}}
-            type={'text'}
-            value={props.name}
-            onChange={props.nameChange} />
+          <NameField
+            nameChange={props.nameChange} />
           <TestButton
             style={{float: 'left'}}
             title={'Run Functions'}
@@ -1035,14 +1005,14 @@ function Concise(props){
               addParam={props.addParam}
               remParam={props.remParam}
 
-              inTextChange={props.inTextChange}
+              inProgChange={props.inProgChange}
               addExample={props.addExample}
               remExample={props.remExample}
             />
             <Functs
               fexprs={props.fexprs}
               numRows={props.examples.length}
-              wantTexts={props.examples.map((example) => example.wantText)}
+              wantProgs={props.examples.map((example) => example.wantProg)}
 
               fexprChange={props.fexprChange}
               addFexpr={props.addFexpr}
@@ -1051,27 +1021,128 @@ function Concise(props){
             />
             <Wants
               examples={props.examples}
-              wantTextChange={props.wantTextChange}
+              wantProgChange={props.wantProgChange}
             />
           </span>
         </div>
     );
 }
 
+const initProg = {value: '"hi there"', type: RSTRING_T};
+const initWantProg = {value: 1234, type: RNUM_T};
+
+// text box that contains text that becomes a program
+class ProgField extends React.Component {
+    constructor(props) {
+        super (props);
+        this.state = {text: '',
+                      style: {backgroundColor: 'pink'}}; // change me to actually use CSS
+
+        this.textChange = this.textChange.bind(this);
+    }
+
+    textChange(e) {
+        let error = false;
+        const text = e.target.value;
+
+        try {
+            var prog = parseCheck(text);
+        } catch(e) {
+            error = true;
+        }
+
+        if (error) {
+            this.setState((state) => ({text: text,
+                                       style: {backgroundColor: 'pink'}})); // also change me
+        } else {
+            this.setState((state) => ({text: text,
+                                       style: {backgroundColor: 'white'}})); // me too
+            this.props.progChange(prog);
+        }
+
+    }
+
+    render() {
+        return (
+            <input
+              style={this.state.style}
+              size={this.state.text.length + 1}
+              type={'text'}
+              value={this.state.text}
+              onChange={(e) => this.textChange(e)} />
+        );
+    }
+}
+
+// text field that contains text that will become the name of a variable at some point
+class NameField extends React.Component {
+    constructor(props) {
+        super (props);
+        this.state = {text: '',
+                      style: {backgroundColor: 'pink'}}; // change me to actually use CSS
+
+        this.textChange = this.textChange.bind(this);
+    }
+
+    textChange(e) {
+        function lookup(name, env) {
+            let val = env.reduce((acc, variable) => {
+                if (acc != undefined) {
+                    return acc;
+                }
+
+                return variable.name == name ? variable.binding : undefined;
+            }, undefined);
+
+            if (val == undefined){
+                return false;
+            }
+
+            return true;
+        }
+
+        const varRE = /^[a-zA-Z\+\-\*\/\?=><]+/; // change me
+        let text = e.target.value;
+        let badName = !varRE.test(text) || lookup(text, initEnv);
+        
+
+        if (badName) {
+            this.setState((state) => ({text: text,
+                                       style: {backgroundColor: 'pink'}})); // also change me
+        } else {
+            this.setState((state) => ({text: text,
+                                       style: {backgroundColor: 'white'}})); // and me
+            this.props.nameChange(text);
+        }
+
+    }
+
+    render() {
+        return (
+            <input
+              style={this.state.style}
+              size={this.state.text.length + 1}
+              type={'text'}
+              value={this.state.text}
+              onChange={this.textChange} />
+        );
+    }
+}
+
 /*
   Notes:
-  #inTexts == #params
+  #inProgs == #params
   #outExprs == #examples (well not for child fexprs)
   -----------------------
-  |#inTexts != #outExprs|
+  |#inProgs != #outExprs|
   -----------------------
 */
 class App extends React.Component{
     constructor(props){
         super(props);
         const initParam = 'n';
-        this.state = {tables: [{examples: [{inTexts: ['0'], wantText: ''}],                                   // rows
-                                fexprs: [{text: '0', outExprs: [{value: 0, type: RNUM_T}], thenChildren: []}], // function columns
+        this.state = {tables: [{examples: [{inProgs: [initProg], wantProg: initWantProg}],           // rows
+                                fexprs: [{prog: initProg, outExprs: [initProg], thenChildren: []}], // function columns
                                 params: [initParam],                                                           // variable (parameter) columns
                                 name: 'table'}]};                                                              // table name (used for recursion)
         
@@ -1085,8 +1156,8 @@ class App extends React.Component{
         this.remExample = this.remExample.bind(this);
         this.remFexpr = this.remFexpr.bind(this);
         this.remParam = this.remParam.bind(this);
-        this.inTextChange = this.inTextChange.bind(this);
-        this.wantTextChange = this.wantTextChange.bind(this);
+        this.inProgChange = this.inProgChange.bind(this);
+        this.wantProgChange = this.wantProgChange.bind(this);
         this.fexprChange = this.fexprChange.bind(this);
         this.paramChange = this.paramChange.bind(this);
         this.nameChange = this.nameChange.bind(this);
@@ -1108,12 +1179,12 @@ class App extends React.Component{
                         return acc;
                     }
 
-                    if (example.inTexts.reduce((acc, inText, i) => {
-                        let inExpr = interp(parseCheck(inText), env);
+                    if (example.inProgs.reduce((acc, inProg, i) => {
+                        let inExpr = interp(inProg, env);
                         return acc && deepEquals(inExpr, interpArgs[i]);
 
                     }, true)) {
-                        return interp(parseCheck(example.wantText), env);
+                        return interp(example.wantProg, env);
                     }
 
                     return errorVal;
@@ -1136,18 +1207,18 @@ class App extends React.Component{
             // Fexpr -> [[String]] -> [String] -> [Function] -> [String] -> Fexpr
             // function that actually does stuff
             // this one is pure (no side effects)
-            function testFexpr(fexpr, inTextss, params){
-                let outExprs = inTextss.map((inTexts, i) => {
+            function testFexpr(fexpr, inProgss, params){
+                let outExprs = inProgss.map((inProgs, i) => {
 
                     try {
-                        let localBindings = inTexts.map((inText, j) => {
-                            let val = interp(parseCheck(inText), initEnv);
-                            return {name: params[j], binding: val};
+                        let localBindings = inProgs.map((inProg, j) => {
+                            let inExpr = interp(inProg, initEnv);
+                            return {name: params[j], binding: inExpr};
                         });
 
                         const localEnv = [...env, ...localBindings];
 
-                        var outExpr = interp(parseCheck(fexpr.text), localEnv);
+                        var outExpr = interp(fexpr.prog, localEnv);
                     } catch (e) {
                         if (e instanceof SyntaxError) {
                             outExpr = fexpr.outExprs[i];
@@ -1162,21 +1233,21 @@ class App extends React.Component{
                 let thenChildren;
                 if (allBools(outExprs)) {
                     const filterIndices = outExprs.map((outExpr, index) => outExpr.value ? index : -1);
-                    const trueInTextss = inTextss.filter((inTexts, index) => filterIndices.includes(index));
+                    const trueInTextss = inProgss.filter((inProgs, index) => filterIndices.includes(index));
                     thenChildren = fexpr.thenChildren.map((thenChild) => testFexpr(thenChild, trueInTextss, params));
 
                 } else {
                     thenChildren = [];
                 }
 
-                return {text: fexpr.text,           // doesn't change
+                return {prog: fexpr.prog,           // doesn't change
                         outExprs: outExprs,         // changes
                         thenChildren: thenChildren}; // changes
 
             }
 
-            const inTextss = table.examples.map((example) => example.inTexts);
-            const fexprs = table.fexprs.map((fexpr) => testFexpr(fexpr, inTextss, table.params));
+            const inProgss = table.examples.map((example) => example.inProgs);
+            const fexprs = table.fexprs.map((fexpr) => testFexpr(fexpr, inProgss, table.params));
 
             return {examples: table.examples, // doesn't change
                     fexprs: fexprs,           // changes
@@ -1201,8 +1272,8 @@ class App extends React.Component{
             const oldTabs = state.tables.slice();
             const initParam = 'n';
             const tableNum = oldTabs.length + 1;
-            const newTab = {examples: [{inTexts: ['0'], wantText: ''}],
-                            fexprs: [{text: '0', outExprs: [{value: 0, type: RNUM_T}], thenChildren: []}],
+            const newTab = {examples: [{inProgs: [initProg], wantProg: initWantProg}],
+                            fexprs: [{prog: initProg, outExprs: [initProg], thenChildren: []}],
                             params: [initParam],
                             name: 'table' + tableNum};
 
@@ -1220,12 +1291,12 @@ class App extends React.Component{
         this.setState((state) => {
             let newTab = {...modTable};
 
-            const inTexts = newTab.params.map((param) => '0');
-            const examples = [...newTab.examples, {inTexts: inTexts,
-                                                   wantText: ''}];
+            const inProgs = newTab.params.map((param) => (initProg));
+            const examples = [...newTab.examples, {inProgs: inProgs,
+                                                   wantProg: initWantProg}];
 
             // need to maintain #outExprs == #examples
-            const fexprs = newTab.fexprs.map((fexpr) => ({...fexpr, outExprs: [...fexpr.outExprs, {value: 0, type: RNUM_T}]}));
+            const fexprs = newTab.fexprs.map((fexpr) => ({...fexpr, outExprs: [...fexpr.outExprs, initProg]}));
 
             newTab.examples = examples;
             newTab.fexprs = fexprs;
@@ -1239,8 +1310,8 @@ class App extends React.Component{
         this.setState((state) => {
             let newTab = {...modTable};
 
-            const outExprs = modTable.examples.map((example) => ({value: 0, type: RNUM_T}));
-            const fexprs = [...newTab.fexprs, {text: '0',
+            const outExprs = modTable.examples.map((example) => (initProg));
+            const fexprs = [...newTab.fexprs, {prog: initProg,
                                                outExprs: outExprs,
                                                thenChildren: []}];
             newTab.fexprs = fexprs;
@@ -1264,10 +1335,10 @@ class App extends React.Component{
             let newTab = {...modTable};
             let newParent = {...parentFexpr};
 
-            const outExprs = newParent.outExprs.filter((outExpr) => outExpr.value === true).map((outExpr) => ({value: 0, type: RNUM_T}));
+            const outExprs = newParent.outExprs.filter((outExpr) => outExpr.value === true).map((outExpr) => initProg);
 
             // this is pretty much push, but oh well
-            newParent.thenChildren = [...newParent.thenChildren, {text: '0',
+            newParent.thenChildren = [...newParent.thenChildren, {prog: initProg,
                                                                   outExprs: outExprs,
                                                                   thenChildren: []}];
 
@@ -1286,9 +1357,9 @@ class App extends React.Component{
             const params = newTab.params.slice();
             params.push(randomChar());
 
-            // need to maintain #inTexts == #params
+            // need to maintain #inProgs == #params
             let examples = newTab.examples.slice();
-            examples.forEach((example) => example.inTexts.push('0'));
+            examples.forEach((example) => example.inProgs.push(initProg));
 
             newTab.params = params;
             newTab.examples = examples;
@@ -1328,7 +1399,7 @@ class App extends React.Component{
             if (fexpr === deadFexpr){
                 return null;
             } else {
-                return {text: fexpr.text,
+                return {prog: fexpr.prog,
                         outExprs: fexpr.outExprs.slice(),
                         thenChildren: fexpr.thenChildren.map(killFexpr).filter((elem) => elem !== null)};
             }
@@ -1354,9 +1425,9 @@ class App extends React.Component{
             let params = newTab.params.slice();
             params.splice(deadIndex, 1);
 
-            //gotta maintain #inTexts == #params
+            //gotta maintain #inProgs == #params
             let examples = newTab.examples.slice();
-            examples.forEach((example) => example.inTexts.splice(deadIndex, 1));
+            examples.forEach((example) => example.inProgs.splice(deadIndex, 1));
 
             newTab.params = params;
             newTab.examples = examples;
@@ -1366,10 +1437,10 @@ class App extends React.Component{
     }
     
     //handles changes caused by updating a text field
-    //modExample refers to the modified row, modIndex referes to the modified inText
-    inTextChange(e, modExample, modIndex, modTable){
+    //modExample refers to the modified row, modIndex referes to the modified inProg
+    inProgChange(prog, modExample, modIndex, modTable){
         let newExample = {...modExample};
-        newExample.inTexts[modIndex] = e.target.value;
+        newExample.inProgs[modIndex] = prog;
 
         this.setState((state) => {
             const newTab = {...modTable, examples: modTable.examples.map((example) => example === modExample ? newExample : example)};
@@ -1377,9 +1448,9 @@ class App extends React.Component{
         });
     }
 
-    wantTextChange(e, modExample, modTable){
+    wantProgChange(prog, modExample, modTable){
         let newExample = {...modExample};
-        newExample.wantText = e.target.value;
+        newExample.wantProg = prog;
 
         this.setState((state) => {
             const newTab = {...modTable, examples: modTable.examples.map((example) => example === modExample ? newExample : example)};
@@ -1387,7 +1458,7 @@ class App extends React.Component{
         });
     }
     
-    fexprChange(e, modFexpr, modTable){
+    fexprChange(prog, modFexpr, modTable){
         function replaceFexpr(curFexpr, newFexpr){
             if (curFexpr === modFexpr){
                 return newFexpr;
@@ -1398,7 +1469,7 @@ class App extends React.Component{
         }
 
         let newFexpr = {...modFexpr};
-        newFexpr.text = e.target.value;
+        newFexpr.prog = prog;
 
         this.setState((state) => {
             const newTab = {...modTable, fexprs: modTable.fexprs.map((fexpr) => replaceFexpr(fexpr, newFexpr))};
@@ -1406,8 +1477,8 @@ class App extends React.Component{
         });
     }
 
-    paramChange(e, modIndex, modTable){
-        const newParam = e.target.value;
+    paramChange(text, modIndex, modTable){
+        const newParam = text;
 
         this.setState((state) =>{
             const newTab = {...modTable, params: modTable.params.map((param, index) => index === modIndex ? newParam : param)};
@@ -1415,8 +1486,8 @@ class App extends React.Component{
         });
     }
 
-    nameChange(e, modTable){
-        const newName = e.target.value;
+    nameChange(text, modTable){
+        const newName = text;
         this.setState((state) => {
             return {tables: state.tables.map((table) => table === modTable ? {...table, name: newName} : table)};
         });
@@ -1438,17 +1509,17 @@ class App extends React.Component{
                                        params={table.params}
                                        name={table.name}
 
-                                       inTextChange={(e, modExample, modIndex) => {this.inTextChange(e, modExample, modIndex, table);
+                                       inProgChange={(prog, modExample, modIndex) => {this.inProgChange(prog, modExample, modIndex, table);
                                                                                    this.testAll();}}
-                                       wantTextChange={(e, example) =>            {this.wantTextChange(e, example, table);
-                                                                                   this.testAll();}}
+                                       wantProgChange={(prog, example) =>            {this.wantProgChange(prog, example, table);
+                                                                                      this.testAll();}}
                                        addExample={() =>                          {this.addExample(table);
                                                                                    this.testAll();}}
                                        remExample={(example) =>                   {this.remExample(example, table);
                                                                                    this.testAll();}}
                                        
-                                       fexprChange={(e, modFexpr) =>              {this.fexprChange(e, modFexpr, table);
-                                                                                   this.testAll();}}
+                                       fexprChange={(prog, modFexpr) =>              {this.fexprChange(prog, modFexpr, table);
+                                                                                      this.testAll();}}
                                        addFexpr={() =>                            {this.addFexpr(table);
                                                                                    this.testAll();}}
                                        addThenChild={(parent) =>                  {this.addThenChild(parent, table);
@@ -1456,14 +1527,14 @@ class App extends React.Component{
                                        remFexpr={(fexpr) =>                       {this.remFexpr(fexpr, table);
                                                                                    this.testAll();}}
 
-                                       paramChange={(e, index) =>                 {this.paramChange(e, index, table);
+                                       paramChange={(text, index) =>                 {this.paramChange(text, index, table);
                                                                                    this.testAll();}}
                                        addParam={() =>                            {this.addParam(table);
                                                                                    this.testAll();}}
                                        remParam={(index) =>                       {this.remParam(index, table);
                                                                                    this.testAll();}}
 
-                                       nameChange={(e) =>                         {this.nameChange(e, table);
+                                       nameChange={(text) =>                         {this.nameChange(text, table);
                                                                                    this.testAll();}}
 
                                        testAll={this.testAll}
