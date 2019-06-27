@@ -1,0 +1,9 @@
+.default_input{
+    background-color: white;
+    float: left
+}
+
+.error_input{
+    background-color: pink;
+    float: left;
+}

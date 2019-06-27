@@ -9,12 +9,6 @@
 const grayVal = undefined;
 // image path
 const imgPath = './images/';
-// global CSS stuff
-const cellHeight = '30px';
-const tableBorders = '1';
-
-
-const colors = ['white', 'orchid', 'cornflowerblue', 'mediumpurple', 'fuchsia', 'blueviolet', 'salmon', 'gold'];
 
 /*********************
    Functions I Want
@@ -690,6 +684,19 @@ function RemButton(props){
           onClick={props.onClick}/>
     );
 }
+
+/*** Inputs ***/
+function DynamicInput(props) {
+    return (
+        <input
+          className={props.className}
+          size={props.text.length + 1}
+          type={'text'}
+          value={props.text}
+          onChange={props.onChange} />
+    );
+}
+
 /*** Cells ***/
 //cell that contains the output of a relevent fexpr applied to relevent inputs
 function TestCell(props){
@@ -745,87 +752,6 @@ function TestCell(props){
 }
 
 /*** Table Sections ***/
-function Parameters(props){
-    /*
-      Props: examples, params
-             paramChange(e, index), inProgChange(e, example, index), addParam(), addExample() remParam(index), remExample(example)
-     */
-
-    const style={backgroundColor: 'white'};
-    
-    return (
-        <div
-          style={{float: 'left'}}>
-          <img
-            style={{float: 'left'}}
-            src={imgPath + 'parameters.png'}/>
-          <AddButton
-            style={{clear: 'left', float: 'right'}}
-            title={'Add Parameter (in column)'}
-            onClick={props.addParam}/>
-
-          <table border={'0'} style={{float: 'left', clear: 'both'}}>
-            <tbody>
-              <tr>
-                <td style={{height: '34px'}}>
-                </td>
-              </tr>
-              {props.examples.map((example, i) =>
-                                  <tr key={i}>
-                                  <td style={{height: '36px'}}>
-                                      <RemButton
-                                        style={{}}
-                                        title={'Remove Example (row)'}
-                                        onClick={() => props.remExample(example)}
-                                      />
-                                    </td>
-                                  </tr>
-                                 )}
-            </tbody>
-          </table>
-
-          <table border={tableBorders} style={{minWidth: '180px', float: 'right', clear: 'right'}}>
-            <tbody>
-              <tr>
-                {props.params.map((param, i) =>
-                                  <td
-                                    key={i}
-                                    style={{height: cellHeight}}
-                                    border={'1'}>
-                                    <RemButton
-                                      style={{float: 'right'}}
-                                      title={'Remove Parameter (in column)'}
-                                      onClick={() => props.remParam(i)} />
-                                    <NameField
-                                      nameChange={(text) => props.paramChange(text, i)} />
-                                  </td>
-                                 )}
-              </tr>
-              {props.examples.map((example, i) =>
-                                  <tr key={i}>
-                                    {example.inProgs.map((inProg, j) =>
-                                                         <td
-                                                           key={j}
-                                                           style={{height: cellHeight}}
-                                                           border={'1'}>
-                                                           <ProgField
-                                                             progChange={(prog) => props.inProgChange(prog, example, j)}
-                                                           />
-                                                         </td>
-                                                        )}
-                                  </tr>
-                                 )}
-            </tbody>
-          </table>
-          <AddButton
-            style={{clear: 'both', float: 'left'}}
-            title={'Add Example (row)'}
-            onClick={props.addExample}
-          />
-        </div>
-    );
-}
-
 function Functs(props){
     /*
       Props: numRows, fexprs, wantProgs
@@ -942,202 +868,292 @@ function Functs(props){
     );
 }
 
-function Wants(props){
-    /*
-      Props: examples
-             wantProgChange(prog, example)
-    */
+// let's put everything in one table woo
+// state contains table name
+class Succinct extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = {tables: props.tables.map((table) => ({text: table.name,
+                                                            className: 'default_input'}))}; // change me to actually use CSS
 
-    const style={backgroundColor: 'white'};
+        this.textChange = this.textChange.bind(this);
+        this.addTable = this.addTable.bind(this);
+        this.remTable = this.remTable.bind(this);
+    }
 
+    addTable() {
+        this.setState((state) => {
+            let text = 'table' + (state.tables.length + 1);
+            const tables =  [...state.tables, {text: text,
+                                               className: 'default_input'}];
+            return {tables: tables};
+        });
+
+        this.props.addTable();
+    }
+
+    // modTab is used to refer to the table in props,
+    // modIndex is used to refer to the table in state
+    remTable(deadTab, deadIndex) {
+        this.setState((state) => {
+            const tables = state.tables.filter((table, i) => i != deadIndex);
+            return {tables: tables};
+        });
+
+        this.props.remTable(deadTab);
+    }
+
+    // same here
+    textChange(e, modTab, modIndex) {
+        function lookup(name, env) {
+            return env.reduce((acc, variable) => {
+                if (acc) {
+                    return true;
+                }
+
+                return variable.name == name;
+
+            }, false);
+        }
+
+        let text = e.target.value;
+
+        // note: null is not a Program, so these are not valid variables, but they work in this lookup funciton
+        //       because we don't actually care about the bindings here, we just want to see if the name is in
+        //       the environment
+        let tableVars = this.props.tables.filter((table) => table != modTab).map((propTab) => ({name: propTab.name, binding: null}));
+        let paramVars = modTab.params.map((param) => ({name: param, binding: null}));
+        let env = [...initEnv, ...tableVars, ...paramVars];
+
+        const varRE = /^[a-zA-Z\+\-\*\/\?=><]+$/; // change me
+        let badName = !varRE.test(text) || lookup(text, env);
+        
+        if (badName) {
+            this.setState((state) => {
+                const newTab = {text: text,
+                                className: 'error_input'};
+
+                const tables = state.tables.map((table, i) => modIndex === i ? newTab : table);
+                return {tables: tables};
+            }); 
+            // name doesn't change
+        } else {
+            this.setState((state) => {
+                const newTab = {text: text,
+                                className: 'default_input'};
+
+                const tables = state.tables.map((table, i) => modIndex === i ? newTab : table);
+                return {tables: tables};
+            }); 
+
+            // name changes
+            this.props.nameChange(text, modTab);
+        }
+    }
+
+    render() {
+        return (
+            <div>
+              <AddButton
+                onClick={this.addTable}
+                style={{float: 'right'}}
+                title={'Add a table'} />
+              {this.props.tables.map((table, i) => (
+                  <SuccinctTab
+                    key={i}
+
+                    table={table}
+                    nameClass={this.state.tables[i].className}
+                    text={this.state.tables[i].text}
+
+                    textChange={(e) => this.textChange(e, table, i)}
+                    remTable={() => this.remTable(table, i)}
+
+                    addParam={() => this.props.addParam(table)}
+                    remParam={(index) => this.props.remParam(index, table)}
+                    paramChange={(text, index) => this.props.paramChange(text, index, table)}
+                    tableNames={this.props.tables.map((table) => table.name)}
+
+
+                  />
+              ))}
+            </div>
+        );
+    }
+}
+
+function SuccinctTab(props) {
     return (
-        <div
-          style={{float: 'left'}}>
-          <img
+        <div style={{float: 'left', clear: 'left'}}>
+          <DynamicInput
+            className={props.nameClass}
+            text={props.table.name}
+            onChange={props.textChange}
+          />
+          <RemButton
             style={{float: 'left'}}
-            src={imgPath + 'wants.png'}/>
-          <div style={{height: '20px', clear: 'left', float: 'left'}}>
-            {/* offset plus buttons in other sections */}
-          </div>
-          <table border={tableBorders} style={{minWidth: '200px', clear: 'both'}}>
+            title={'Delete Table'}
+            onClick={props.remTable}/>
+          <table border={'0px'} style={{clear: 'left', float: 'left'}}>
             <tbody>
-              <tr>
-                <td style={{height: cellHeight}}>
-                    Can't Delete Me
-                </td>
-              </tr>
-              {props.examples.map((example, i) =>
-                                  <tr key={i}>
-                                    <td
-                                      style={{height: cellHeight}}
-                                      border={'1'}>
-                                      <ProgField
-                                        progChange={(prog) => props.wantProgChange(prog, example)} />
-                                    </td>
-                                  </tr>
-                                 )}
+              {/* Header row (params, fexpr progs) */}
+              <React.Fragment>
+                <tr>
+                  <React.Fragment>
+                    <ParamNames
+                      params={props.table.params}
+                      tableNames={props.tableNames}
+
+                      addParam={props.addParam}
+                      remParam={props.remParam}
+                      paramChange={props.paramChange}
+                    />
+                    {/* <FunctDefs */}
+                    {/* /> */}
+                  </React.Fragment>
+                </tr>
+                {/* Body rows (inProgs, outExprs, wantProgs) */}
+                {/* <SuccinctBod */}
+                {/* /> */}
+              </React.Fragment>
             </tbody>
           </table>
         </div>
     );
 }
 
-function Concise(props){
-    return (
-        <div style={{float: 'left', clear: 'left'}}>
-          <NameField
-            nameChange={props.nameChange} />
-          <TestButton
-            style={{float: 'left'}}
-            title={'Run Functions'}
-            onClick={props.testAll} />
-          <RemButton
-            style={{float: 'left'}}
-            title={'Remove table'}
-            onClick={props.remTable} />
-
-          <span style={{clear: 'left', float: 'left'}}>
-            <Parameters
-              params={props.params}
-              examples={props.examples}
-
-              paramChange={props.paramChange}
-              addParam={props.addParam}
-              remParam={props.remParam}
-
-              inProgChange={props.inProgChange}
-              addExample={props.addExample}
-              remExample={props.remExample}
-            />
-            <Functs
-              fexprs={props.fexprs}
-              numRows={props.examples.length}
-              wantProgs={props.examples.map((example) => example.wantProg)}
-
-              fexprChange={props.fexprChange}
-              addFexpr={props.addFexpr}
-              addThenChild={props.addThenChild}
-              remFexpr={props.remFexpr}
-            />
-            <Wants
-              examples={props.examples}
-              wantProgChange={props.wantProgChange}
-            />
-          </span>
-        </div>
-    );
-}
-
-const initProg = {value: '"hi there"', type: RSTRING_T};
-const initWantProg = {value: 1234, type: RNUM_T};
-
-// text box that contains text that becomes a program
-class ProgField extends React.Component {
+class ParamNames extends React.Component {
     constructor(props) {
-        super (props);
-        this.state = {text: '',
-                      style: {backgroundColor: 'pink'}}; // change me to actually use CSS
-
+        super(props);
+        this.state = {params: [{text: 'n',
+                                className: 'default_input'}]};
         this.textChange = this.textChange.bind(this);
+        this.addParam = this.addParam.bind(this);
+        this.remParam = this.remParam.bind(this);
     }
 
-    textChange(e) {
-        let error = false;
-        const text = e.target.value;
-
-        try {
-            var prog = parseCheck(text);
-        } catch(e) {
-            error = true;
-        }
-
-        if (error) {
-            this.setState((state) => ({text: text,
-                                       style: {backgroundColor: 'pink'}})); // also change me
-        } else {
-            this.setState((state) => ({text: text,
-                                       style: {backgroundColor: 'white'}})); // me too
-            this.props.progChange(prog);
-        }
-
-    }
-
-    render() {
-        return (
-            <input
-              style={this.state.style}
-              size={this.state.text.length + 1}
-              type={'text'}
-              value={this.state.text}
-              onChange={(e) => this.textChange(e)} />
-        );
-    }
-}
-
-// text field that contains text that will become the name of a variable at some point
-class NameField extends React.Component {
-    constructor(props) {
-        super (props);
-        this.state = {text: '',
-                      style: {backgroundColor: 'pink'}}; // change me to actually use CSS
-
-        this.textChange = this.textChange.bind(this);
-    }
-
-    textChange(e) {
+    addParam() {
         function lookup(name, env) {
-            let val = env.reduce((acc, variable) => {
-                if (acc != undefined) {
-                    return acc;
+            return env.reduce((acc, variable) => {
+                if (acc) {
+                    return true;
                 }
 
-                return variable.name == name ? variable.binding : undefined;
-            }, undefined);
+                return variable.name == name;
 
-            if (val == undefined){
-                return false;
-            }
-
-            return true;
+            }, false);
         }
 
-        const varRE = /^[a-zA-Z\+\-\*\/\?=><]+/; // change me
+        let name = randomChar();
+
+        // See note above
+        let paramVars = this.props.params.map((param) => ({name: param, binding: null}));
+        let env = [...initEnv,  paramVars];
+
+        let badName = lookup(name, env);
+
+        this.setState((state) => {
+            const params = [...state.params,
+                            {text: '',
+                             className: 'error_input'}];
+            return {params: params};
+        });
+
+        this.props.addParam();
+    }
+
+    remParam(deadIndex) {
+        this.setState((state) => {
+            const params = state.params.filter((param, i) => i != deadIndex);
+            return {params: params};
+        });
+
+        this.props.remParam(deadIndex);
+    }
+
+    textChange(e, modIndex) {
+        function lookup(name, env) {
+            return env.reduce((acc, variable) => {
+                if (acc) {
+                    return true;
+                }
+
+                return variable.name == name;
+
+            }, false);
+        }
+
         let text = e.target.value;
-        let badName = !varRE.test(text) || lookup(text, initEnv);
-        
+
+        // See note above
+        let paramVars = this.props.params.filter((param, i) => i != modIndex).map((param) => ({name: param, binding: null}));
+        let tableVars = this.props.tableNames.map((name) => ({name: name, binding: null}));
+        let env = [...initEnv, ...tableVars, ...paramVars];
+
+        const varRE = /^[a-zA-Z\+\-\*\/\?=><]+$/; // change me
+        let badName = !varRE.test(text) || lookup(text, env);
 
         if (badName) {
-            this.setState((state) => ({text: text,
-                                       style: {backgroundColor: 'pink'}})); // also change me
-        } else {
-            this.setState((state) => ({text: text,
-                                       style: {backgroundColor: 'white'}})); // and me
-            this.props.nameChange(text);
-        }
+            this.setState((state) => {
+                const newParam = {text: text,
+                                  className: 'error_input'};
 
+                const params = state.params.map((param, i) => modIndex == i ? newParam : param);
+                return {params: params};
+            }); 
+            // name doesn't change
+        } else {
+            this.setState((state) => {
+                const newParam = {text: text,
+                                  className: 'default_input'};
+
+                const params = state.params.map((param, i) => modIndex == i ? newParam : param);
+                return {params: params};
+            }); 
+
+            // name changes
+            this.props.paramChange(text, modIndex);
+        }
     }
 
     render() {
         return (
-            <input
-              style={this.state.style}
-              size={this.state.text.length + 1}
-              type={'text'}
-              value={this.state.text}
-              onChange={this.textChange} />
+            <React.Fragment>
+              {this.state.params.map((param, i) => (
+                  <td key={i}>
+                    <DynamicInput
+                      text={param.text}
+                      className={param.className}
+                      onChange={(e) => this.textChange(e, i)}
+                    />
+                    <RemButton
+                      onClick={() => this.remParam(i)}
+                    />
+                  </td>
+              ))}
+              <td>
+                <AddButton
+                  onClick={this.addParam}
+                />
+              </td>
+            </React.Fragment>
         );
     }
 }
 
 /*
-  Notes:
+  notes:
   #inProgs == #params
   #outExprs == #examples (well not for child fexprs)
   -----------------------
   |#inProgs != #outExprs|
   -----------------------
 */
-class App extends React.Component{
+
+const initProg = {value: '"hi there"', type: RSTRING_T};
+const initWantProg = {value: 1234, type: RNUM_T};
+
+class App extends React.Component {
     constructor(props){
         super(props);
         const initParam = 'n';
@@ -1355,7 +1371,7 @@ class App extends React.Component{
 
             //const params = this.state.tables[0].params.slice();
             const params = newTab.params.slice();
-            params.push(randomChar());
+            params.push('n');
 
             // need to maintain #inProgs == #params
             let examples = newTab.examples.slice();
@@ -1496,51 +1512,17 @@ class App extends React.Component{
     render(){
         return (
             <div>
-              <AddButton
-                onClick={this.addTable}
-                style={{float: 'right'}}
-                title={'Add a table'} />
-              {this.state.tables.map((table, i) =>
-                                     <Concise
-                                       key={i}
-                                       
-                                       examples={table.examples}
-                                       fexprs={table.fexprs}
-                                       params={table.params}
-                                       name={table.name}
+              <Succinct
+                tables={this.state.tables}
 
-                                       inProgChange={(prog, modExample, modIndex) => {this.inProgChange(prog, modExample, modIndex, table);
-                                                                                   this.testAll();}}
-                                       wantProgChange={(prog, example) =>            {this.wantProgChange(prog, example, table);
-                                                                                      this.testAll();}}
-                                       addExample={() =>                          {this.addExample(table);
-                                                                                   this.testAll();}}
-                                       remExample={(example) =>                   {this.remExample(example, table);
-                                                                                   this.testAll();}}
-                                       
-                                       fexprChange={(prog, modFexpr) =>              {this.fexprChange(prog, modFexpr, table);
-                                                                                      this.testAll();}}
-                                       addFexpr={() =>                            {this.addFexpr(table);
-                                                                                   this.testAll();}}
-                                       addThenChild={(parent) =>                  {this.addThenChild(parent, table);
-                                                                                   this.testAll();}}
-                                       remFexpr={(fexpr) =>                       {this.remFexpr(fexpr, table);
-                                                                                   this.testAll();}}
+                remTable={this.remTable}
+                addTable={this.addTable}
+                nameChange={this.nameChange}
 
-                                       paramChange={(text, index) =>                 {this.paramChange(text, index, table);
-                                                                                   this.testAll();}}
-                                       addParam={() =>                            {this.addParam(table);
-                                                                                   this.testAll();}}
-                                       remParam={(index) =>                       {this.remParam(index, table);
-                                                                                   this.testAll();}}
-
-                                       nameChange={(text) =>                         {this.nameChange(text, table);
-                                                                                   this.testAll();}}
-
-                                       testAll={this.testAll}
-                                       remTable={() => {this.remTable(table);
-                                                        this.testAll();}}
-                                     />)}
+                addParam={this.addParam}
+                remParam={this.remParam}
+                paramChange={this.paramChange}
+              />
             </div>
         );
     }
