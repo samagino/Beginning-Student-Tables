@@ -28,6 +28,7 @@ New Data Definitions:
         An outExpr is one of
                 - Program
                 - Error
+                - Gray
 
         A Program is one of
                 -  Variable
