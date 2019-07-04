@@ -1,49 +1,29 @@
-Data Definitions:
-	A Table is 
-		{examples:	[Example],
-		 input_names:	[String],	(formal parameters)
-		 exprs:		[Column]}
-	A Column is one of
-		- String			(non-boolean)
-		- {question:	String,		(boolean)
-		   exprs:	[Column]}
-	An Example is
-		{inputs:	[String],
-		 exprs:		[Column]}
-
-My Data Definitions:
-        A Table is
-                {examples:      [Example],
-                 fexprs:        [Fexpr],
-                 params:        [String],
-                 name:          String}
-
-        An Example is
-                {inTexts:           [String],
-                 wantText:          String}
-
-        A Fexpr is one of
-                - Null
-                - {text:              String,
-                   outExprs:          [Anything],
-                   thenChildren:      [Fexpr],
-                   elseChild:         Fexpr}
-            
 New Data Definitions:
         A Table is
                 {examples:      [Example],
-                 fexprs:        [Fexpr],
-                 params:        [String],
-                 name:          String}
+                 formulas:      [Formula],
+                 params:        [Parameter],
+                 name:          String,
+                 key:           Number}
 
         An Example is
-                {inTexts:           [String],
-                 wantText:          String}
+                {inputs:        [Input],
+                 want:          Program,
+                 key:           Number}
 
-        A Fexpr is
-                {text:              String,
-                 outExprs:          [outExpr], (not strictly necessary)
-                 thenChildren:      [Fexpr]}
+        An Input is
+                {prog:          Program,
+                 key:           Number}
+
+        A Formula is
+                {prog:          Program,
+                 outputs:       [outExpr],
+                 thenChildren:  [Fexpr],
+                 key:           Number}
+
+        A Parameter is
+                {name:          String,
+                 key:           Number}
 
         An outExpr is one of
                 - Program
