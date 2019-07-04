@@ -1,9 +1,28 @@
 .default_input{
     background-color: white;
+    font-family: monospace;
     float: left
 }
 
 .error_input{
     background-color: pink;
+    font-family: monospace;
     float: left;
+}
+
+.output{
+    font-family: monospace;
+    font-size: large;
+    text-align: center;
+}
+
+.gray{
+    background-color: gray;
+    color: gray;
+}
+
+.table{
+    text-align: center;
+    float: left;
+    clear: left;
 }

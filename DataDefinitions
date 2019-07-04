@@ -1,18 +1,29 @@
 New Data Definitions:
         A Table is
                 {examples:      [Example],
-                 fexprs:        [Fexpr],
-                 params:        [String],
-                 name:          String}
+                 formulas:      [Formula],
+                 params:        [Parameter],
+                 name:          String,
+                 key:           Number}
 
         An Example is
-                {inProgs:           [Program],
-                 wantProg:          Program}
+                {inputs:        [Input],
+                 want:          Program,
+                 key:           Number}
 
-        A Fexpr is
-                {prog:              Program,
-                 outExprs:          [outExpr], (not strictly necessary)
-                 thenChildren:      [Fexpr]}
+        An Input is
+                {prog:          Program,
+                 key:           Number}
+
+        A Formula is
+                {prog:          Program,
+                 outputs:       [outExpr],
+                 thenChildren:  [Fexpr],
+                 key:           Number}
+
+        A Parameter is
+                {name:          String,
+                 key:           Number}
 
         An outExpr is one of
                 - Program

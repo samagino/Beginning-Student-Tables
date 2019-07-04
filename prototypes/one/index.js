@@ -1,74 +1,14 @@
 //import React from 'react';
 //import ReactDOM from 'react-dom';
-//import './index.css';
-
-/*****************************
-  Universal Constants I Want
-*****************************/
-// value to put in child columns that don't have an outExpr for that row, not sure what this should be
-const grayVal = undefined;
-// image path
-const imgPath = './images/';
-
-/*********************
-   Functions I Want
-*********************/
-// String
-// returns a string containing one random lowercase latin character
-function randomChar(){
-    const a = 0x61;
-    let char = Math.round(Math.random() * 26);
-    char += a;
-    return String.fromCharCode(char);
-}
-
-// [Program] -> Boolean
-// returns true if progs has at least one member and all of its members are boooleans
-//    otherwise returns false
-function allBools(progs){
-    if (progs.length == 0) {
-        return false;
-    }
-
-    return progs.every((prog) => prog.type == RBOOL_T);
-}
-
-// Program -> Program -> Boolean
-// checks if two programs are equivalent, recurs on lists and applications
-// may not quite work on functions because I use js functions, not data represented closures or something
-//    thus 2 functions are only equal if they're a reference to the same object
-function deepEquals(proga, progb) {
-    if (proga.type != progb.type) {
-        return false;
-    }
-
-    if (proga.type == RLIST_T) {
-        if (proga.value == null || progb.value == null) {
-            return proga.value == progb.value;
-        }
-        return deepEquals(proga.value.a, progb.value.a) && deepEquals(proga.value.d, progb.value.d);
-    }
-
-    // this case will prolly never even happen...
-    if (proga.type == APP_T) {
-        if (proga.value.args.length != progb.value.args.length) {
-            return false;
-        }
-        let functCheck = deepEquals(proga.value.funct, progb.value.funct);
-        let argCheck = proga.value.args.map((arga, i) => deepEquals(arga, progb.value.args[i])).every((elem) => elem);
-        return functCheck && argCheck;
-    }
-
-    return proga.value === progb.value;
-}
+//import './colors.css';
 
 /****************
    Interpreter
 ****************/
 
-const VAR_T =     0;
-const APP_T =     1;
-const FUNCT_T =   2;
+const RVAR_T =    0;
+const RAPP_T =    1;
+const RFUNCT_T =   2;
 const RNUM_T =    3;
 const RBOOL_T =   4;
 const RSTRING_T = 5;
@@ -77,43 +17,43 @@ const RSYM_T =    7;
 
 const initEnv = [
     // functions
-    {name: '+', binding: {type: FUNCT_T,
+    {name: '+', binding: {type: RFUNCT_T,
                           value: plus}},
-    {name: '-', binding: {type: FUNCT_T,
+    {name: '-', binding: {type: RFUNCT_T,
                           value: minus}},
-    {name: '*', binding: {type: FUNCT_T,
+    {name: '*', binding: {type: RFUNCT_T,
                           value: times}},
-    {name: '/', binding: {type: FUNCT_T,
+    {name: '/', binding: {type: RFUNCT_T,
                           value: divide}},
-    {name: 'car', binding: {type: FUNCT_T,
+    {name: 'car', binding: {type: RFUNCT_T,
                             value: car}},
-    {name: 'cdr', binding: {type: FUNCT_T,
+    {name: 'cdr', binding: {type: RFUNCT_T,
                             value: cdr}},
-    {name: 'cons', binding: {type: FUNCT_T,
+    {name: 'cons', binding: {type: RFUNCT_T,
                              value: cons}},
-    {name: 'list', binding: {type: FUNCT_T,
+    {name: 'list', binding: {type: RFUNCT_T,
                              value: list}},
-    {name: 'not', binding: {type: FUNCT_T,
+    {name: 'not', binding: {type: RFUNCT_T,
                              value: not}},
-    {name: 'and', binding: {type: FUNCT_T,
+    {name: 'and', binding: {type: RFUNCT_T,
                              value: and}},
-    {name: 'or', binding: {type: FUNCT_T,
+    {name: 'or', binding: {type: RFUNCT_T,
                              value: or}},
-    {name: 'eqv?', binding: {type: FUNCT_T,
+    {name: 'eqv?', binding: {type: RFUNCT_T,
                              value: iseqv}},
-    {name: 'null?', binding: {type: FUNCT_T,
+    {name: 'null?', binding: {type: RFUNCT_T,
                               value: isnull}},
-    {name: 'empty?', binding: {type: FUNCT_T,
+    {name: 'empty?', binding: {type: RFUNCT_T,
                                value: isnull}},
-    {name: '=', binding: {type: FUNCT_T,
+    {name: '=', binding: {type: RFUNCT_T,
                           value: equalsign}},
-    {name: '>', binding: {type: FUNCT_T,
+    {name: '>', binding: {type: RFUNCT_T,
                           value: gtsign}},
-    {name: '>=', binding: {type: FUNCT_T,
+    {name: '>=', binding: {type: RFUNCT_T,
                            value: gesign}},
-    {name: '<', binding: {type: FUNCT_T,
+    {name: '<', binding: {type: RFUNCT_T,
                           value: ltsign}},
-    {name: '<=', binding: {type: FUNCT_T,
+    {name: '<=', binding: {type: RFUNCT_T,
                            value: lesign}},
     // constants
     {name: 'null', binding: {type: RLIST_T,
@@ -142,7 +82,7 @@ function parse(text) {
         let matches = text.match(varRE);
         let name = matches[0];
         let rest = text.slice(name.length).trim();
-        let variable = {value: name, type: VAR_T};
+        let variable = {value: name, type: RVAR_T};
 
         return {prog: variable, rest: rest};
 
@@ -175,7 +115,7 @@ function parse(text) {
             text = parseArg.rest;
         }
 
-        let app = {value: {funct: funct, args: args}, type: APP_T};
+        let app = {value: {funct: funct, args: args}, type: RAPP_T};
         let rest = text.slice(1).trim(); // remove close paren
 
         return {prog: app, rest: rest};
@@ -245,7 +185,7 @@ function parseQ(text) {
         return {prog: sym, rest: rest};
     }
 
-    throw 'Invalid Syntax: \"' + text + '\"';
+    throw new SyntaxError('Invalid Syntax: \"' + text + '\"');
 }
 
 /***
@@ -283,15 +223,15 @@ function interp(prog, env) {
         return prog;
     case RSYM_T:
         return prog;
-    case VAR_T:
-        return lookup(prog.value);
-    case FUNCT_T:
+    case RVAR_T:
+        return interp(lookup(prog.value), env);
+    case RFUNCT_T:
         return prog;
-    case APP_T:
+    case RAPP_T:
         let args = prog.value.args;
         let funct = interp(prog.value.funct, env);
 
-        typeCheck(funct, FUNCT_T);
+        typeCheck(funct, RFUNCT_T);
 
         return funct.value(args, env);
 
@@ -317,11 +257,11 @@ function unParse(prog) {
         }
     case RSYM_T:
         return prog.value;
-    case VAR_T:
+    case RVAR_T:
         return 'variable';
-    case FUNCT_T:
+    case RFUNCT_T:
         return 'function';
-    case APP_T:
+    case RAPP_T:
         return 'application';
     default:
         return 'error or something';
@@ -347,13 +287,13 @@ function parseCheck(text) {
 function typeCheck(prog, type){
     let typeString = '';
     switch (type) {
-    case VAR_T:
+    case RVAR_T:
         typeString = 'variable';
         break;
-    case APP_T:
+    case RAPP_T:
         typeString = 'application';
         break;
-    case FUNCT_T:
+    case RFUNCT_T:
         typeString = 'function';
         break;
     case RNUM_T:
@@ -632,23 +572,87 @@ function lesign(args, env) {
     }
 }
 
+/*****************************
+  Universal Constants I Want
+*****************************/
+// value to put in child columns that don't have an outExpr for that row
+const gray = {gray: 'gray'};
+// image path
+const imgPath = './images/';
+
+const initParam = 'n';
+const initOutExpr = {value: '"hi there"', type: RSTRING_T};
+
+const initInProg = {...initOutExpr};
+const initFProg = {...initOutExpr};
+const initWantProg = {value: 1234, type: RNUM_T};
+
+let keyCount = 0;
+
+
+/*********************
+   Functions I Want
+*********************/
+// String
+// returns a string containing one random lowercase latin character
+function randomChar(){
+    const a = 0x61;
+    let char = Math.round(Math.random() * 26);
+    char += a;
+    return String.fromCharCode(char);
+}
+
+// [Program] -> Boolean
+// returns true if progs has at least one member and all of its members are boooleans
+//    otherwise returns false
+function allBools(progs){
+    if (progs.length == 0) {
+        return false;
+    }
+
+    return progs.every((prog) => prog.type == RBOOL_T || prog == gray);
+}
+
+// Number
+// returns a unique key
+function getKey() {
+    return keyCount++;
+}
+
+// Program -> Program -> Boolean
+// checks if two programs are equivalent, recurs on lists and applications
+// may not quite work on functions because I use js functions, not data represented closures or something
+//    thus 2 functions are only equal if they're a reference to the same object
+function deepEquals(proga, progb) {
+    if (proga.type != progb.type) {
+        return false;
+    }
+
+    if (proga.type == RLIST_T) {
+        if (proga.value == null || progb.value == null) {
+            return proga.value == progb.value;
+        }
+        return deepEquals(proga.value.a, progb.value.a) && deepEquals(proga.value.d, progb.value.d);
+    }
+
+    // this case will prolly never even happen...
+    if (proga.type == RAPP_T) {
+        if (proga.value.args.length != progb.value.args.length) {
+            return false;
+        }
+        let functCheck = deepEquals(proga.value.funct, progb.value.funct);
+        let argCheck = proga.value.args.map((arga, i) => deepEquals(arga, progb.value.args[i])).every((elem) => elem);
+        return functCheck && argCheck;
+    }
+
+    return proga.value === progb.value;
+}
+
 /*********************
    React Components
 *********************/
 
 /*** Buttons ***/
-//button that probably tests a table
-function TestButton(props){
-    return (
-        <input
-          type={'image'}
-          style={props.style}
-          src={imgPath + 'check.png'}
-          title={props.title}
-          onClick={props.onClick}/>
-    );
-}
-
 // Button that probably adds something
 function AddButton(props){
     return (
@@ -686,225 +690,75 @@ function RemButton(props){
 }
 
 /*** Inputs ***/
-function DynamicInput(props) {
-    return (
-        <input
-          className={props.className}
-          size={props.text.length + 1}
-          type={'text'}
-          value={props.text}
-          onChange={props.onChange} />
-    );
-}
+class ValidatedInput extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = {text: '',
+                      className: 'error_input'};
 
-/*** Cells ***/
-//cell that contains the output of a relevent fexpr applied to relevent inputs
-function TestCell(props){
-    function makeText(){
-        if (props.outExpr === grayVal) {
-            return '';
-        } else if (props.outExpr instanceof Error) {
-            return props.outExpr.message;
-        } else {
-            return unParse(props.outExpr);
-        }
+        this.textChange = this.textChange.bind(this);
     }
 
-    function makeImg(){
-        // value to set a wantExpr to in the case of error
-        const wantError = Infinity;
-        let wantExpr;
-        try {
-            wantExpr = interp(props.wantProg, initEnv);
-        } catch (e) {
-            wantExpr = wantError;
-        }
+    textChange(e) {
+        let text = e.target.value;
 
-        if (props.outExpr === grayVal) {
-            return '';
-        } else if (props.outExpr instanceof Error) {
-            return <img
-                     src={imgPath + 'frowneyface.png'}
-                     style={{float: 'right'}}
-                     title={"Oh no! You got an error!"}/>;
-        } else if (wantExpr === wantError) {
-            return '';
-        } else if (deepEquals(props.outExpr, wantExpr)) {
-            return <img
-                     src={imgPath + 'smileyface.png'}
-                     style={{float: 'right'}}
-                     title={"Yay! It's right!"}/>;
+        if (this.props.isValid(text)) {
+            this.setState((state) => ({text: text,
+                                       className: 'default_input'}));
+            this.props.onValid(text);
         } else {
-            return '';
+            this.setState((state) => ({text: text,
+                                       className: 'error_input'}));
         }
+            
     }
 
-    let style = {... props.style, height: cellHeight};
+    getSize() {
+        const minSize = 5;
+        return Math.max(this.props.placeholder.length, this.state.text.length, minSize);
+    }
 
-    return (
-        <td
-          border={'1'}
-          style={style}>
-          {makeText()}
-          {makeImg()}
-        </td>
-    );
+    render() {
+        return (
+            <input
+              className={this.state.className}
+              size={this.getSize()}
+              placeholder={this.props.placeholder}
+              type={'text'}
+              value={this.state.text}
+              onChange={this.textChange} />
+        );
+    }
 }
 
 /*** Table Sections ***/
-function Functs(props){
-    /*
-      Props: numRows, fexprs, wantProgs
-             fexprChange(e, fexpr), addFexpr(), addThenChild(fexpr), remFexpr(fexpr)
-     */
-
-    // [Fexpr] -> [Boolean] -> String -> [outExpr] -> [{renderExpr, String}]
-    // uses side effects to build a shallow 2d array from a tree type thing
-    // a renderExpr is like an outExpr except it can also be a grayVal (grayed out)
-    function rotateFexprs(fexprs, boolArr, acc, rotatedExprs){
-        function rotateFexpr(fexpr, boolArr, acc, rotatedExprs) {
-            let passedInvalidRows = 0;
-            let thenBoolArr = [];
-
-            boolArr.forEach((bool, j) => {
-                if (bool) {
-                    const outExpr = fexpr.outExprs[j - passedInvalidRows];
-                    let style = {backgroundColor: colors[acc]};
-
-                    if (outExpr.value === true) {
-                        style.color = colors[(acc + 1) % colors.length];
-                    }
-
-                    rotatedExprs[j].push({outExpr: outExpr, style: style});
-                    thenBoolArr.push(outExpr.value);
-                } else {
-                    passedInvalidRows ++;
-                    rotatedExprs[j].push({outExpr: grayVal, style: {backgroundColor: 'gray'}});
-                    thenBoolArr.push(false);
-                }
-            });
-
-            if (fexpr.thenChildren.length) { // fexpr has children
-                rotateFexprs(fexpr.thenChildren, thenBoolArr, (acc + 1) % colors.length, rotatedExprs);
-            }
-        }
-
-        fexprs.forEach((fexpr) => rotateFexpr(fexpr, boolArr, acc, rotatedExprs));
-    }
-
-    // [Fexpr] -> Number -> [{Fexpr, Style}]
-    // takes a list of fexprs and an accumulator, returns flattened list of objects containing a fexpr and its associated css style
-    function flattenFexprs(fexprs, acc){
-        function flattenFexpr(fexpr, acc){
-            if (fexpr === null) {
-                return null;
-            } else {
-                return [{fexpr: fexpr, style: {backgroundColor: colors[acc]},
-                         thenColor: colors[(acc + 1) % colors.length]},
-                        flattenFexprs(fexpr.thenChildren, (acc + 1) % colors.length)].filter((elem) => elem !== null).flat();
-            }
-        }
-
-        return fexprs.map((fexpr) => flattenFexpr(fexpr, acc)).flat();
-    }
-
-
-    let cellInfoss = new Array(props.numRows).fill(0).map((elem) => []);
-    const trueArr = new Array(props.numRows).fill(true);
-    rotateFexprs(props.fexprs, trueArr, 0, cellInfoss);
-
-    return (
-        <div
-          style={{float: 'left'}}>
-          <img
-            style={{float: 'left'}}
-            src={imgPath + 'functions.png'}/>
-          <AddButton
-            style={{clear: 'left', float: 'right'}}
-            title={'Add Function (out column)'}
-            onClick={props.addFexpr}/>
-          <table border={tableBorders} style={{minWidth: '200px', clear: 'both'}}>
-            <tbody>
-              <tr>
-                {flattenFexprs(props.fexprs, 0).map((headInfo, i) =>
-                                                    <td
-                                                      key={i}
-                                                      style={{...headInfo.style, height: cellHeight}}
-                                                      border={'1'}>
-                                                      <div style={{float: 'right'}}>
-                                                        <RemButton
-                                                          title={'Remove Function (out column)'}
-                                                          onClick={() => props.remFexpr(headInfo.fexpr)}/>
-                                                        {allBools(headInfo.fexpr.outExprs) ?
-                                                         <div style={{float: 'right'}}>
-                                                           <PlusButton
-                                                             color={headInfo.thenColor}
-                                                             title={'Add Then Child'}
-                                                             onClick={() => props.addThenChild(headInfo.fexpr)}
-                                                           />
-                                                         </div>
-                                                         : '' }
-                                                      </div>
-                                                      <ProgField
-                                                        progChange={(prog) => props.fexprChange(prog, headInfo.fexpr)} />
-                                                    </td>
-                                                   )}
-              </tr>
-              {cellInfoss.map((cellInfos, i) =>
-                              <tr key={i}>
-                                {cellInfos.map((cellInfo, j) =>
-                                               <TestCell
-                                                 key={j}
-                                                 style={cellInfo.style}
-                                                 outExpr={cellInfo.outExpr}
-                                                 wantProg={props.wantProgs[i]}
-                                               />
-                                              )}
-                              </tr>
-                             )}
-            </tbody>
-          </table>
-        </div>
-    );
-}
-
 // let's put everything in one table woo
 // state contains table name
-class Succinct extends React.Component {
-    constructor(props) {
-        super(props);
-        this.state = {tables: props.tables.map((table) => ({text: table.name,
-                                                            className: 'default_input'}))}; // change me to actually use CSS
-
-        this.textChange = this.textChange.bind(this);
-        this.addTable = this.addTable.bind(this);
-        this.remTable = this.remTable.bind(this);
+function Succinct(props) {
+    function tableChange(oldTab, newTab) {
+        const alteredTabs = props.tables.map((table) => table == oldTab ? newTab : table);
+        props.programChange(alteredTabs);
     }
 
-    addTable() {
-        this.setState((state) => {
-            let text = 'table' + (state.tables.length + 1);
-            const tables =  [...state.tables, {text: text,
-                                               className: 'default_input'}];
-            return {tables: tables};
-        });
+    function addTable() {
+        const tableNum = props.tables.length;
 
-        this.props.addTable();
+        const newTab = {examples: [{inputs: [{prog: initInProg, key: getKey()}], want: initWantProg, key: getKey()}],
+                        formulas: [{prog: initFProg, outputs: [initOutExpr], thenChildren: [], key: getKey()}],
+                        params: [{name: initParam, key: getKey()}],
+                        name: 'table' + tableNum,
+                        key: getKey()};
+
+        props.programChange([...props.tables, newTab]);
     }
 
-    // modTab is used to refer to the table in props,
-    // modIndex is used to refer to the table in state
-    remTable(deadTab, deadIndex) {
-        this.setState((state) => {
-            const tables = state.tables.filter((table, i) => i != deadIndex);
-            return {tables: tables};
-        });
-
-        this.props.remTable(deadTab);
+    function remTable(deadTab) {
+        const aliveTabs = props.tables.filter((table) => table != deadTab);
+        props.programChange(aliveTabs);
     }
 
-    // same here
-    textChange(e, modTab, modIndex) {
+    // String -> Boolean
+    function validName(text, modTab) {
         function lookup(name, env) {
             return env.reduce((acc, variable) => {
                 if (acc) {
@@ -916,123 +770,317 @@ class Succinct extends React.Component {
             }, false);
         }
 
-        let text = e.target.value;
-
-        // note: null is not a Program, so these are not valid variables, but they work in this lookup funciton
-        //       because we don't actually care about the bindings here, we just want to see if the name is in
-        //       the environment
-        let tableVars = this.props.tables.filter((table) => table != modTab).map((propTab) => ({name: propTab.name, binding: null}));
+        let tableVars = props.tables.filter((table) => table != modTab).map((propTab) => ({name: propTab.name, binding: null}));
         let paramVars = modTab.params.map((param) => ({name: param, binding: null}));
         let env = [...initEnv, ...tableVars, ...paramVars];
 
         const varRE = /^[a-zA-Z\+\-\*\/\?=><]+$/; // change me
-        let badName = !varRE.test(text) || lookup(text, env);
-        
-        if (badName) {
-            this.setState((state) => {
-                const newTab = {text: text,
-                                className: 'error_input'};
 
-                const tables = state.tables.map((table, i) => modIndex === i ? newTab : table);
-                return {tables: tables};
-            }); 
-            // name doesn't change
-        } else {
-            this.setState((state) => {
-                const newTab = {text: text,
-                                className: 'default_input'};
-
-                const tables = state.tables.map((table, i) => modIndex === i ? newTab : table);
-                return {tables: tables};
-            }); 
-
-            // name changes
-            this.props.nameChange(text, modTab);
-        }
+        return varRE.test(text) && !lookup(text, env);
     }
 
-    render() {
-        return (
-            <div>
-              <AddButton
-                onClick={this.addTable}
-                style={{float: 'right'}}
-                title={'Add a table'} />
-              {this.props.tables.map((table, i) => (
-                  <SuccinctTab
-                    key={i}
-
-                    table={table}
-                    nameClass={this.state.tables[i].className}
-                    text={this.state.tables[i].text}
-
-                    textChange={(e) => this.textChange(e, table, i)}
-                    remTable={() => this.remTable(table, i)}
-
-                    addParam={() => this.props.addParam(table)}
-                    remParam={(index) => this.props.remParam(index, table)}
-                    paramChange={(text, index) => this.props.paramChange(text, index, table)}
-                    tableNames={this.props.tables.map((table) => table.name)}
-
-
-                  />
-              ))}
-            </div>
-        );
+    function nameChange(text, oldTab) {
+        const alteredTab = {...oldTab, name: text};
+        const alteredTabs = props.tables.map((table) => table == oldTab ? alteredTab : table);
+        props.programChange(alteredTabs);
     }
-}
 
-function SuccinctTab(props) {
     return (
-        <div style={{float: 'left', clear: 'left'}}>
-          <DynamicInput
-            className={props.nameClass}
-            text={props.table.name}
-            onChange={props.textChange}
-          />
-          <RemButton
-            style={{float: 'left'}}
-            title={'Delete Table'}
-            onClick={props.remTable}/>
-          <table border={'0px'} style={{clear: 'left', float: 'left'}}>
-            <tbody>
-              {/* Header row (params, fexpr progs) */}
-              <React.Fragment>
-                <tr>
-                  <React.Fragment>
-                    <ParamNames
-                      params={props.table.params}
-                      tableNames={props.tableNames}
+        <div>
+          <AddButton
+            onClick={addTable}
+            style={{float: 'right'}}
+            title={'Add a table'} />
+          {props.tables.map((table, i) => (
+              <div key={table.key} className='table'>
+                <span>
+                  <ValidatedInput
+                    placeholder={'table'}
+                    isValid={(text) => validName(text, table)}
+                    onValid={(text) => nameChange(text, table)}
+                  />
+                  <RemButton
+                    onClick={() => remTable(table)}
+                    title={'Remove this table'}
+                  />
+                </span>
+                <SuccinctTab
+                  table={table}
+                  tableNames={props.tables.map((table) => table.name)}
 
-                      addParam={props.addParam}
-                      remParam={props.remParam}
-                      paramChange={props.paramChange}
-                    />
-                    {/* <FunctDefs */}
-                    {/* /> */}
-                  </React.Fragment>
-                </tr>
-                {/* Body rows (inProgs, outExprs, wantProgs) */}
-                {/* <SuccinctBod */}
-                {/* /> */}
-              </React.Fragment>
-            </tbody>
-          </table>
+                  tableChange={(newTab) => tableChange(table, newTab)}
+                />
+              </div>
+          ))}
         </div>
     );
 }
 
-class ParamNames extends React.Component {
-    constructor(props) {
-        super(props);
-        this.state = {params: [{text: 'n',
-                                className: 'default_input'}]};
-        this.textChange = this.textChange.bind(this);
-        this.addParam = this.addParam.bind(this);
-        this.remParam = this.remParam.bind(this);
+function SuccinctTab(props) {
+    function paramsChange(params) {
+        props.tableChange({...props.table, params: params});
     }
 
-    addParam() {
+    function paramsExamplesChange(params, examples) {
+        props.tableChange({...props.table, params: params, examples: examples});
+    }
+
+    function formulasChange(formulas) {
+        props.tableChange({...props.table, formulas: formulas});
+    }
+
+    function examplesChange(examples) {
+        props.tableChange({...props.table, examples: examples});
+    }
+
+    return (
+        <table border={'0px'} style={{clear: 'left', float: 'left'}}>
+          {/* Header row (params, fexpr progs) */}
+          <thead>
+            <tr>
+              <td>{/* dummy table to align with example RemButtons */}</td>
+              <React.Fragment>
+                <Parameters
+                  params={props.table.params}
+                  examples={props.table.examples}
+                  tableNames={props.tableNames}
+
+                  paramsChange={paramsChange}
+                  paramsExamplesChange={paramsExamplesChange}
+                />
+                <Formulas
+                  formulas={props.table.formulas}
+
+                  formulasChange={formulasChange}
+                />
+              </React.Fragment>
+            </tr>
+          </thead>
+          <tbody>
+            <SuccinctBody
+              examples={props.table.examples}
+              formulas={props.table.formulas}
+              paramNames={props.table.params.map((param) => param.name)}
+
+              examplesChange={examplesChange}
+              formulasChange={formulasChange}
+            />
+          </tbody>
+        </table>
+    );
+}
+
+function SuccinctBody(props) {
+    function addExample() {
+        const inputs = props.paramNames.map((param) => ({prog: initInProg, key: getKey()}));
+        const newExample = {inputs: inputs,
+                            want: initWantProg,
+                            key: getKey()};
+        props.examplesChange([...props.examples, newExample]);
+    }
+
+    function remExample(deadExample) {
+        const aliveExamples = props.examples.filter((example) => example != deadExample);
+        props.examplesChange(aliveExamples);
+    }
+
+    function inputsChange(inputs, modExample) {
+        const alteredExample = {...modExample, inputs: inputs};
+        const alteredExamples = props.examples.map((example) => example == modExample ? alteredExample : example);
+        props.examplesChange(alteredExamples);
+    }
+
+    function wantChange(want, modExample) {
+        const alteredExample = {...modExample, want: want};
+        const alteredExamples = props.examples.map((example) => example == modExample ? alteredExample : example);
+        props.examplesChange(alteredExamples);
+    }
+
+    return (
+        <React.Fragment>
+          {props.examples.map((example, i) => (
+              <tr key={example.key}>
+                <td>
+                  <RemButton
+                    onClick={() => remExample(example)}
+                    title={'Remove this example'}
+                  />
+                </td>
+                <Inputs
+                  inputs={example.inputs}
+                  inputsChange={(inputs) => inputsChange(inputs, example)}
+                />
+                <td>{/* dummy cell to align with param AddButton */}</td>
+                <Outputs
+                  formulas={props.formulas}
+                  want={example.want}
+                  row={i}
+                />
+                <td>{/* dummy cell to align with add formula button */}</td>
+                <Want
+                  wantChange={(want) => wantChange(want, example)}
+                />
+              </tr>
+          ))}
+          <tr>
+            <td>
+              <AddButton
+                onClick={addExample}
+                title={'Add an example'}
+              />
+            </td>
+          </tr>
+        </React.Fragment>
+    );
+}
+
+function Inputs(props) {
+    function validProg(text) {
+        let goodText = true;
+
+        try {
+            parseCheck(text);
+        } catch(e) {
+            if (e instanceof SyntaxError) {
+                goodText = false;
+            } else {
+                throw e;
+            }
+        }
+
+        return goodText;
+    }
+
+    function progChange(text, modInput) {
+        const alteredInput = {...modInput, prog: parseCheck(text)};
+        const alteredInputs = props.inputs.map((input) => input == modInput ? alteredInput : input);
+
+        props.inputsChange(alteredInputs);
+    }
+
+    return (
+        <React.Fragment>
+          {props.inputs.map((input) => (
+              <td key={input.key}>
+                <ValidatedInput
+                  placeholder={'"hi there"'}
+                  isValid={validProg}
+                  onValid={(text) => progChange(text, input)}
+                />
+              </td>
+          ))}
+        </React.Fragment>
+    );
+}
+
+function Outputs(props) {
+
+    return (
+        <React.Fragment>
+          {props.formulas.map((formula) => (
+              <React.Fragment key={formula.key}>
+                <TestCell
+                  output={formula.outputs[props.row]}
+                  want={props.want}
+                />
+                {allBools(formula.outputs) ?
+                 <React.Fragment>
+                   <Outputs
+                     formulas={formula.thenChildren}
+                     want={props.want}
+                     row={props.row}
+                   />
+                   <td>{/* dummy cell to align with add formula button */}</td>
+                 </React.Fragment>
+                 : <script/> }
+              </React.Fragment>
+          ))}
+        </React.Fragment>
+    );
+}
+
+function TestCell(props) {
+
+    if (props.output == gray) {
+        return (
+           <td className={'gray'}>
+           </td>
+        );
+    }
+
+
+    let outProg = props.output;
+
+    try {
+        var wantProg = interp(props.want, initEnv);
+    } catch (e) {
+        outProg = e;
+    }
+
+    if (outProg instanceof Error) {
+        var text = outProg.message;
+        var error = true;
+    } else {
+        text = unParse(outProg);
+        error = false;
+    }
+
+    if (error) {
+        var img = <img
+                    src={imgPath + 'frowneyface.png'}
+                    style={{float: 'right'}}
+                    title={"Oh no! You got an error!"}/>;
+    } else if (deepEquals(outProg, wantProg)) {
+        img =  <img
+                 src={imgPath + 'smileyface.png'}
+                 style={{float: 'right'}}
+                 title={"Yay! It's right!"}/>;
+    } else {
+        img = '';
+    }
+
+    return (
+        <td className={'output'}>
+          {text}
+          {img}
+        </td>
+    );
+}
+
+function Want(props) {
+    function validProg(text) {
+        let goodText = true;
+
+        try {
+            parseCheck(text);
+        } catch(e) {
+            if (e instanceof SyntaxError) {
+                goodText = false;
+            } else {
+                throw e;
+            }
+        }
+
+        return goodText;
+    }
+
+    function wantChange(text) {
+        props.wantChange(parseCheck(text));
+    }
+
+    return (
+        <td>
+          <ValidatedInput
+            placeholder={'1234'}
+            isValid={validProg}
+            onValid={wantChange}
+          />
+        </td>
+    );
+}
+
+function Parameters(props) {
+    function validParam(text, modParam) {
         function lookup(name, env) {
             return env.reduce((acc, variable) => {
                 if (acc) {
@@ -1044,101 +1092,146 @@ class ParamNames extends React.Component {
             }, false);
         }
 
-        let name = randomChar();
-
-        // See note above
-        let paramVars = this.props.params.map((param) => ({name: param, binding: null}));
-        let env = [...initEnv,  paramVars];
-
-        let badName = lookup(name, env);
-
-        this.setState((state) => {
-            const params = [...state.params,
-                            {text: '',
-                             className: 'error_input'}];
-            return {params: params};
-        });
-
-        this.props.addParam();
-    }
-
-    remParam(deadIndex) {
-        this.setState((state) => {
-            const params = state.params.filter((param, i) => i != deadIndex);
-            return {params: params};
-        });
-
-        this.props.remParam(deadIndex);
-    }
-
-    textChange(e, modIndex) {
-        function lookup(name, env) {
-            return env.reduce((acc, variable) => {
-                if (acc) {
-                    return true;
-                }
-
-                return variable.name == name;
-
-            }, false);
-        }
-
-        let text = e.target.value;
-
-        // See note above
-        let paramVars = this.props.params.filter((param, i) => i != modIndex).map((param) => ({name: param, binding: null}));
-        let tableVars = this.props.tableNames.map((name) => ({name: name, binding: null}));
+        // These are not technically Variables, see note above
+        let paramVars = props.params.filter((param) => param != modParam).map((param) => ({name: param.name, binding: null}));
+        let tableVars = props.tableNames.map((name) => ({name: name, binding: null}));
         let env = [...initEnv, ...tableVars, ...paramVars];
 
         const varRE = /^[a-zA-Z\+\-\*\/\?=><]+$/; // change me
-        let badName = !varRE.test(text) || lookup(text, env);
 
-        if (badName) {
-            this.setState((state) => {
-                const newParam = {text: text,
-                                  className: 'error_input'};
+        return varRE.test(text) && !lookup(text, env);
+    }
 
-                const params = state.params.map((param, i) => modIndex == i ? newParam : param);
-                return {params: params};
-            }); 
-            // name doesn't change
-        } else {
-            this.setState((state) => {
-                const newParam = {text: text,
-                                  className: 'default_input'};
+    function nameChange(text, modParam) {
+        const alteredParam = {...modParam, name: text};
+        const alteredParams = props.params.map((param) => param == modParam ? alteredParam : param);
 
-                const params = state.params.map((param, i) => modIndex == i ? newParam : param);
-                return {params: params};
-            }); 
+        props.paramsChange(alteredParams);
+    }
 
-            // name changes
-            this.props.paramChange(text, modIndex);
+    function addParam() {
+        const newParam = {name: initParam, key: getKey()};
+
+        // need to maintain #inputs = #params
+        const modExamples = props.examples.map((example) => ({...example,
+                                                              inputs: [...example.inputs, {prog: initInProg, key: getKey()}]}));
+
+        props.paramsExamplesChange([...props.params, newParam], modExamples);
+
+    }
+
+    function remParam(deadParam) {
+        const deadIndex = props.params.indexOf(deadParam);
+        const aliveParams = props.params.filter((param) => param != deadParam);
+
+        // need to maintain #inputs = #params
+        const modExamples = props.examples.map((example => ({...example,
+                                                             inputs: example.inputs.filter((_, i) => i != deadIndex)})));
+
+        props.paramsExamplesChange(aliveParams, modExamples);
+    }
+
+    return (
+        <React.Fragment>
+        {props.params.map((param) => (
+            <td key={param.key}>
+              <ValidatedInput
+                placeholder={'n'}
+                isValid={(text) => validParam(text, param)}
+                onValid={(text) => nameChange(text, param)}
+              />
+              <RemButton
+                onClick={() => remParam(param)}
+                title={'Remove this parameter'}
+              />
+            </td>
+        ))}
+          <td>
+            <AddButton
+              onClick={addParam}
+              title={'Add a parameter'}
+            />
+          </td>
+        </React.Fragment>
+    );
+}
+
+function Formulas(props) {
+    function validProg(text) {
+        let goodText = true;
+
+        try {
+            parseCheck(text);
+        } catch(e) {
+            if (e instanceof SyntaxError) {
+                goodText = false;
+            } else {
+                throw e;
+            }
         }
+
+        return goodText;
     }
 
-    render() {
-        return (
-            <React.Fragment>
-              {this.state.params.map((param, i) => (
-                  <td key={i}>
-                    <DynamicInput
-                      text={param.text}
-                      className={param.className}
-                      onChange={(e) => this.textChange(e, i)}
-                    />
-                    <RemButton
-                      onClick={() => this.remParam(i)}
-                    />
-                  </td>
-              ))}
-              <td>
-                <AddButton
-                  onClick={this.addParam}
-                />
-              </td>
-            </React.Fragment>
-        );
+    function progChange(text, modForm) {
+        const alteredForm = {...modForm, prog: parseCheck(text)};
+        const alteredForms = props.formulas.map((formula) => formula == modForm ? alteredForm : formula);
+
+        props.formulasChange(alteredForms);
     }
+
+    // when recuring: addFexpr={() => this.props.addThenChild(fexpr)}
+    function addFormula() {
+        const newForm = {prog: initFProg,
+                         outputs: [initOutExpr],
+                         thenChildren: [],
+                         key: getKey()};
+        props.formulasChange([...props.formulas, newForm]);
+    }
+
+    function remFormula(deadForm) {
+        const aliveForms = props.formulas.filter((formula) => formula != deadForm);
+        props.formulasChange(aliveForms);
+    }
+
+    function childrenChange(formulas, modForm) {
+        const alteredForm = {...modForm, thenChildren: formulas};
+        const alteredForms = props.formulas.map((formula) => formula == modForm ? alteredForm : formula);
+
+        props.formulasChange(alteredForms);
+    }
+
+    return (
+        <React.Fragment>
+          {props.formulas.map((formula) => (
+              <React.Fragment key={formula.key}>
+                <td>
+                  <ValidatedInput
+                    placeholder={'(+ 2 3)'}
+                    isValid={validProg}
+                    onValid={(text) => progChange(text, formula)}
+                  />
+                  <RemButton
+                    onClick={() => remFormula(formula)}
+                    title={'Remove this formula'}
+                  />
+                </td>
+                {allBools(formula.outputs) ?
+                 <Formulas
+                   formulas={formula.thenChildren}
+                   formulasChange={(formulas) => childrenChange(formulas, formula)}
+                 />
+                 : <script/> }
+              </React.Fragment>
+          ))}
+          <td>
+            <AddButton
+              onClick={addFormula}
+              title={'Add a formula'}
+            />
+          </td>
+        </React.Fragment>
+    );
 }
 
 /*
@@ -1150,63 +1243,47 @@ class ParamNames extends React.Component {
   -----------------------
 */
 
-const initProg = {value: '"hi there"', type: RSTRING_T};
-const initWantProg = {value: 1234, type: RNUM_T};
-
 class App extends React.Component {
     constructor(props){
         super(props);
-        const initParam = 'n';
-        this.state = {tables: [{examples: [{inProgs: [initProg], wantProg: initWantProg}],           // rows
-                                fexprs: [{prog: initProg, outExprs: [initProg], thenChildren: []}], // function columns
-                                params: [initParam],                                                           // variable (parameter) columns
-                                name: 'table'}]};                                                              // table name (used for recursion)
+        this.state = {program: [{examples: [{inputs: [{prog: initInProg, key: getKey()}], want: initWantProg, key: getKey()}], // rows
+                                 formulas: [{prog: initFProg, outputs: [initOutExpr], thenChildren: [], key: getKey()}],       // formula columns
+                                 params: [{name: initParam, key: getKey()}],                                                   // parameter columns
+                                 name: 'table',                                                                                // table name (used for recursion)
+                                 key: getKey()}]};
         
-        this.testAll = this.testAll.bind(this);
-        this.addTable = this.addTable.bind(this);
-        this.remTable = this.remTable.bind(this);
-        this.addExample = this.addExample.bind(this);
-        this.addFexpr = this.addFexpr.bind(this);
-        this.addThenChild = this.addThenChild.bind(this);
-        this.addParam = this.addParam.bind(this);
-        this.remExample = this.remExample.bind(this);
-        this.remFexpr = this.remFexpr.bind(this);
-        this.remParam = this.remParam.bind(this);
-        this.inProgChange = this.inProgChange.bind(this);
-        this.wantProgChange = this.wantProgChange.bind(this);
-        this.fexprChange = this.fexprChange.bind(this);
-        this.paramChange = this.paramChange.bind(this);
-        this.nameChange = this.nameChange.bind(this);
+        this.programChange = this.programChange.bind(this);
     }
 
-    // this one has side effects
-    testAll(){
+    calculate(program) {
         function makeLookup(table) {
             function lookup(args, env) {
                 if (args.length != table.params.length) {
-                    throw new Error('Arity Mismatch, expected ' + table.params.length + ' argument' + (table.params.length == 1 ? 's' : ''));
+                    throw new Error('Arity Mismatch, expected ' + table.params.length + ' argument' + (table.params.length == 1 ? '' : 's'));
                 }
                 
-                const errorVal = undefined;
                 let interpArgs = args.map((arg) => interp(arg, env));
 
                 let expr = table.examples.reduce((acc, example) => {
-                    if (acc !== errorVal) {
+                    if (acc !== undefined) {
                         return acc;
                     }
 
-                    if (example.inProgs.reduce((acc, inProg, i) => {
-                        let inExpr = interp(inProg, env);
-                        return acc && deepEquals(inExpr, interpArgs[i]);
+                    // I have no idea what should happen if this is called on a table with no params
+                    if (example.inputs.reduce((acc, input, i) => {
+                        // like my pun?
+                        let INterped = interp(input.prog, env);
+                        return acc && deepEquals(INterped, interpArgs[i]);
 
                     }, true)) {
-                        return interp(example.wantProg, env);
+                        return interp(example.want, env);
                     }
 
-                    return errorVal;
-                }, errorVal);
+                    return undefined;
+                }, undefined);
 
-                if (expr === errorVal) {
+                if (expr === undefined) {
+                    // it's like a reference error in the super meta table language
                     throw new ReferenceError(interpArgs.map(unParse).join() + ' is not an example in ' + table.name);
                 }
 
@@ -1216,312 +1293,62 @@ class App extends React.Component {
             return lookup;
         }
 
+        let lookups = program.map((table) => ({name: table.name, binding: {value: makeLookup(table), type: RFUNCT_T}}));
+        let globalEnv = [...initEnv, ...lookups];
 
-        // Table -> [Function] -> [String] -> Table
-        // this one is also pure
-        function testTable(table, env){
-            // Fexpr -> [[String]] -> [String] -> [Function] -> [String] -> Fexpr
-            // function that actually does stuff
-            // this one is pure (no side effects)
-            function testFexpr(fexpr, inProgss, params){
-                let outExprs = inProgss.map((inProgs, i) => {
-
-                    try {
-                        let localBindings = inProgs.map((inProg, j) => {
-                            let inExpr = interp(inProg, initEnv);
-                            return {name: params[j], binding: inExpr};
-                        });
-
-                        const localEnv = [...env, ...localBindings];
-
-                        var outExpr = interp(fexpr.prog, localEnv);
-                    } catch (e) {
-                        if (e instanceof SyntaxError) {
-                            outExpr = fexpr.outExprs[i];
-                        } else {
-                            outExpr = e;
-                        }
+        function calcTable(table) {
+            function calcFormula(formula, examples) {
+                let outputs = examples.map((example) => {
+                    if (example == gray) {
+                        return gray;
                     }
 
-                    return outExpr;
+                    let localEnv = table.params.map((param, i) => ({name: param.name, binding: example.inputs[i].prog}));
+                    let env = [...globalEnv, ...localEnv];
+
+                    try {
+                        var output = interp(formula.prog, env);
+                    } catch (e) {
+                        output = e;
+                    }
+
+                    return output;
                 });
 
-                let thenChildren;
-                if (allBools(outExprs)) {
-                    const filterIndices = outExprs.map((outExpr, index) => outExpr.value ? index : -1);
-                    const trueInTextss = inProgss.filter((inProgs, index) => filterIndices.includes(index));
-                    thenChildren = fexpr.thenChildren.map((thenChild) => testFexpr(thenChild, trueInTextss, params));
-
+                if (allBools(outputs)) {
+                    let trueExamples = examples.map((example, i) => outputs[i].value ? example : gray);
+                    var thenChildren = formula.thenChildren.map((formula) => calcFormula(formula, trueExamples));
                 } else {
                     thenChildren = [];
                 }
 
-                return {prog: fexpr.prog,           // doesn't change
-                        outExprs: outExprs,         // changes
-                        thenChildren: thenChildren}; // changes
-
+                return {...formula,
+                        outputs: outputs,
+                        thenChildren: thenChildren};
             }
 
-            const inProgss = table.examples.map((example) => example.inProgs);
-            const fexprs = table.fexprs.map((fexpr) => testFexpr(fexpr, inProgss, table.params));
+            let formulas = table.formulas.map((formula) => calcFormula(formula, table.examples));
+            return {...table,
+                    formulas: formulas};
 
-            return {examples: table.examples, // doesn't change
-                    fexprs: fexprs,           // changes
-                    params: table.params,     // doesn't change
-                    name: table.name};        // doesn't change
         }
 
-
-        // this changes stuff
-        this.setState((state) => {
-            const lookups = state.tables.map((table) => ({name: table.name, binding: {type: FUNCT_T,
-                                                                                      value: makeLookup(table, unParse)}}));
-            const globalEnv = [...initEnv, ...lookups];
-
-            return {tables: state.tables.map((table) => testTable(table, globalEnv))};
-        });
+        let tables = program.map(calcTable);
+        return tables;
     }
 
-    // adds a new table
-    addTable(){
-        this.setState((state) => {
-            const oldTabs = state.tables.slice();
-            const initParam = 'n';
-            const tableNum = oldTabs.length + 1;
-            const newTab = {examples: [{inProgs: [initProg], wantProg: initWantProg}],
-                            fexprs: [{prog: initProg, outExprs: [initProg], thenChildren: []}],
-                            params: [initParam],
-                            name: 'table' + tableNum};
-
-            return {tables: [...oldTabs, newTab]};
-        });
-    }
-
-    // removes a table
-    remTable(deadTable){
-        this.setState((state) => ({tables: state.tables.filter((table) => table !== deadTable)}));
-    }
-    
-    //adds a new row
-    addExample(modTable){
-        this.setState((state) => {
-            let newTab = {...modTable};
-
-            const inProgs = newTab.params.map((param) => (initProg));
-            const examples = [...newTab.examples, {inProgs: inProgs,
-                                                   wantProg: initWantProg}];
-
-            // need to maintain #outExprs == #examples
-            const fexprs = newTab.fexprs.map((fexpr) => ({...fexpr, outExprs: [...fexpr.outExprs, initProg]}));
-
-            newTab.examples = examples;
-            newTab.fexprs = fexprs;
-
-            return {tables: state.tables.map((table) => table === modTable ? newTab : table)};
-        });
-    }
-    
-    //adds a new out column
-    addFexpr(modTable){
-        this.setState((state) => {
-            let newTab = {...modTable};
-
-            const outExprs = modTable.examples.map((example) => (initProg));
-            const fexprs = [...newTab.fexprs, {prog: initProg,
-                                               outExprs: outExprs,
-                                               thenChildren: []}];
-            newTab.fexprs = fexprs;
-
-            return {tables: state.tables.map((table) => table === modTable ? newTab : table)};
-        });
-    }
-
-    //adds a then column to a fexpr
-    addThenChild(parentFexpr, modTable){
-        function replaceParent(curParent, newParent){
-            if (curParent === parentFexpr){
-                return newParent;
-            } else {
-                return {...curParent,
-                        thenChildren: curParent.thenChildren.map((child) => replaceParent(child, newParent))};
-            }
-        }
-
-        this.setState((state) => {
-            let newTab = {...modTable};
-            let newParent = {...parentFexpr};
-
-            const outExprs = newParent.outExprs.filter((outExpr) => outExpr.value === true).map((outExpr) => initProg);
-
-            // this is pretty much push, but oh well
-            newParent.thenChildren = [...newParent.thenChildren, {prog: initProg,
-                                                                  outExprs: outExprs,
-                                                                  thenChildren: []}];
-
-            newTab.fexprs = newTab.fexprs.map((fexpr) => replaceParent(fexpr, newParent));
-
-            return {tables: state.tables.map((table) => table === modTable ? newTab : table)};
-        });
-    }
-
-    // adds a new in column
-    addParam(modTable){
-        this.setState((state) => {
-            let newTab = {...modTable};
-
-            //const params = this.state.tables[0].params.slice();
-            const params = newTab.params.slice();
-            params.push('n');
-
-            // need to maintain #inProgs == #params
-            let examples = newTab.examples.slice();
-            examples.forEach((example) => example.inProgs.push(initProg));
-
-            newTab.params = params;
-            newTab.examples = examples;
-
-            return {tables: state.tables.map((table) => table === modTable ? newTab : table)};
-        });
-    }
-    
-    //removes a row
-    remExample(deadExample, modTable){
-        this.setState((state) => {
-            let newTab = {...modTable};
-            
-            // get index of example we wanna remove so we can remove all the corresponding outExprs
-            const deadIndex = newTab.examples.indexOf(deadExample);
-            //filter out the example we don't want from the examples
-            const examples = newTab.examples.filter((example) => example !== deadExample);
-
-            // gotta maintain #outExprs == #examples
-            let fexprs = newTab.fexprs.slice();
-            fexprs.forEach((fexpr) => fexpr.outExprs.splice(deadIndex, 1));
-
-            newTab.fexprs = fexprs;
-            newTab.examples = examples;
-
-            return {tables: state.tables.map((table) => table === modTable ? newTab : table)};
-        });
-    }
-    
-    //removes an output column
-    //has to search recursively through tree to find the right one
-    remFexpr(deadFexpr, modTable){
-        // Fexpr -> Fexpr
-        // filters out the deadFexpr recursively through the tree
-        // this is pretty violent
-        function killFexpr(fexpr){
-            if (fexpr === deadFexpr){
-                return null;
-            } else {
-                return {prog: fexpr.prog,
-                        outExprs: fexpr.outExprs.slice(),
-                        thenChildren: fexpr.thenChildren.map(killFexpr).filter((elem) => elem !== null)};
-            }
-        }
-        
-        this.setState((state) => {
-            let newTab = {...modTable};
-            //filter out the fexpr we don't want from the fexprs
-            const fexprs = newTab.fexprs.map(killFexpr).filter((elem) => elem !== null);
-
-            newTab.fexprs = fexprs;
-
-            return {tables: state.tables.map((table) => table === modTable ? newTab : table)};
-        });
-    }
-
-    // removes an input column
-    remParam(deadIndex, modTable){
-        this.setState((state) => {
-            let newTab = {...modTable};
-            
-            //let params = this.state.tables[0].params.slice();
-            let params = newTab.params.slice();
-            params.splice(deadIndex, 1);
-
-            //gotta maintain #inProgs == #params
-            let examples = newTab.examples.slice();
-            examples.forEach((example) => example.inProgs.splice(deadIndex, 1));
-
-            newTab.params = params;
-            newTab.examples = examples;
-
-            return {tables: state.tables.map((table) => table === modTable ? newTab : table)};
-        });
-    }
-    
-    //handles changes caused by updating a text field
-    //modExample refers to the modified row, modIndex referes to the modified inProg
-    inProgChange(prog, modExample, modIndex, modTable){
-        let newExample = {...modExample};
-        newExample.inProgs[modIndex] = prog;
-
-        this.setState((state) => {
-            const newTab = {...modTable, examples: modTable.examples.map((example) => example === modExample ? newExample : example)};
-            return {tables: state.tables.map((table) => table === modTable ? newTab : table)};
-        });
-    }
-
-    wantProgChange(prog, modExample, modTable){
-        let newExample = {...modExample};
-        newExample.wantProg = prog;
-
-        this.setState((state) => {
-            const newTab = {...modTable, examples: modTable.examples.map((example) => example === modExample ? newExample : example)};
-            return {tables: state.tables.map((table) => table === modTable ? newTab : table)};
-        });
-    }
-    
-    fexprChange(prog, modFexpr, modTable){
-        function replaceFexpr(curFexpr, newFexpr){
-            if (curFexpr === modFexpr){
-                return newFexpr;
-            } else {
-                return {...curFexpr,
-                        thenChildren: curFexpr.thenChildren.map((child) => replaceFexpr(child, newFexpr))};
-            }
-        }
-
-        let newFexpr = {...modFexpr};
-        newFexpr.prog = prog;
-
-        this.setState((state) => {
-            const newTab = {...modTable, fexprs: modTable.fexprs.map((fexpr) => replaceFexpr(fexpr, newFexpr))};
-            return {tables: state.tables.map((table) => table === modTable ? newTab : table)};
-        });
-    }
-
-    paramChange(text, modIndex, modTable){
-        const newParam = text;
-
-        this.setState((state) =>{
-            const newTab = {...modTable, params: modTable.params.map((param, index) => index === modIndex ? newParam : param)};
-            return {tables: state.tables.map((table) => table === modTable ? newTab : table)};
-        });
-    }
-
-    nameChange(text, modTable){
-        const newName = text;
-        this.setState((state) => {
-            return {tables: state.tables.map((table) => table === modTable ? {...table, name: newName} : table)};
-        });
+    programChange(newProg) {
+        let calkedProg = this.calculate(newProg);
+        //console.log(calkedProg);
+        this.setState((state) => ({program: calkedProg}));
     }
     
     render(){
         return (
             <div>
               <Succinct
-                tables={this.state.tables}
-
-                remTable={this.remTable}
-                addTable={this.addTable}
-                nameChange={this.nameChange}
-
-                addParam={this.addParam}
-                remParam={this.remParam}
-                paramChange={this.paramChange}
+                tables={this.state.program}
+                programChange={this.programChange}
               />
             </div>
         );
