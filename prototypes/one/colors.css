@@ -1,19 +1,17 @@
 .default_input{
     background-color: white;
     font-family: monospace;
-    float: left
 }
 
 .error_input{
     background-color: pink;
     font-family: monospace;
-    float: left;
 }
 
 .output{
     font-family: monospace;
     font-size: large;
-    text-align: center;
+    text-align: left;
 }
 
 .gray{
@@ -21,8 +19,42 @@
     color: gray;
 }
 
-.table{
-    text-align: center;
+.pink{
+    background-color: pink;
+    color: pink;
+}
+.html_table{
+    clear: left;
+    float: left;
+    border-collapse: collapse;
+    border: 2px solid black;
+}
+.table_method{
     float: left;
     clear: left;
+}
+
+thead, tbody{
+    border-collapse: collapse;
+    border: 2px solid black;
+}
+
+th, td{
+    border-collapse: collapse;
+    border: 1px solid black;
+}
+
+.full_cell{
+    width: 100%;
+}
+
+.input_part{
+    float: left;
+    width: auto;
+    overflow: hidden;
+}
+
+.buttonPart{
+    float: right;
+    width: 20px;
 }

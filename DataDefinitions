@@ -15,10 +15,19 @@ New Data Definitions:
                 {prog:          Program,
                  key:           Number}
 
-        A Formula is
+        A Formula is one of
+                - Boolean Formula
+                - Non-Boolean Formula
+
+        A Boolean Formula is
                 {prog:          Program,
                  outputs:       [outExpr],
-                 thenChildren:  [Fexpr],
+                 thenChildren:  [Formula],
+                 key:           Number}
+
+        A Non-Boolean Formula is
+                {prog:          Program,
+                 outputs:       [outExpr],
                  key:           Number}
 
         A Parameter is
@@ -29,6 +38,7 @@ New Data Definitions:
                 - Program
                 - Error
                 - Gray
+                - Pink
 
         A Program is one of
                 -  Variable

@@ -246,7 +246,7 @@ function unParse(prog) {
     case RNUM_T:
         return prog.value;
     case RBOOL_T:
-        return '#' + (prog.value ? 't' : 'f');
+        return '#' + (prog.value ? 'true' : 'false');
     case RSTRING_T:
         return prog.value;
     case RLIST_T:
@@ -575,16 +575,19 @@ function lesign(args, env) {
 /*****************************
   Universal Constants I Want
 *****************************/
-// value to put in child columns that don't have an outExpr for that row
+// value to put in child formulas that don't have an output for that row
 const gray = {gray: 'gray'};
+// value to put in child formulas that have an error output for that row (non-boolean)
+const pink = {pink: 'pink'};
 // image path
 const imgPath = './images/';
 
 const initParam = 'n';
 const initOutExpr = {value: '"hi there"', type: RSTRING_T};
+const initTableName = 'table';
 
-const initInProg = {...initOutExpr};
-const initFProg = {...initOutExpr};
+const initInProg = {value: 0, type: RNUM_T};
+const initFProg = {...initInProg};
 const initWantProg = {value: 1234, type: RNUM_T};
 
 let keyCount = 0;
@@ -611,6 +614,10 @@ function allBools(progs){
     }
 
     return progs.every((prog) => prog.type == RBOOL_T || prog == gray);
+}
+
+function isBooleanFormula(formula) {
+    return allBools(formula.outputs) || formula.thenChildren != undefined;
 }
 
 // Number
@@ -697,25 +704,38 @@ class ValidatedInput extends React.Component {
                       className: 'error_input'};
 
         this.textChange = this.textChange.bind(this);
+        this.getSize = this.getSize.bind(this);
+        this.checkEmpty = this.checkEmpty.bind(this);
     }
 
     textChange(e) {
         let text = e.target.value;
 
         if (this.props.isValid(text)) {
-            this.setState((state) => ({text: text,
+            this.setState((state) => ({...state,
+                                       text: text,
                                        className: 'default_input'}));
             this.props.onValid(text);
         } else {
-            this.setState((state) => ({text: text,
+            this.setState((state) => ({...state,
+                                       text: text,
                                        className: 'error_input'}));
         }
             
     }
 
+    checkEmpty() {
+        if (this.state.text == '') {
+            this.props.onEmpty();
+        }
+    }
+
     getSize() {
-        const minSize = 5;
-        return Math.max(this.props.placeholder.length, this.state.text.length, minSize);
+        if (this.state.text.length == 0) {
+            return this.props.placeholder.length;
+        } 
+        const minSize = 4;
+        return Math.max(this.state.text.length, minSize);
     }
 
     render() {
@@ -726,9 +746,32 @@ class ValidatedInput extends React.Component {
               placeholder={this.props.placeholder}
               type={'text'}
               value={this.state.text}
-              onChange={this.textChange} />
+              onChange={this.textChange}
+              onBlur={this.checkEmpty}
+            />
         );
     }
+}
+
+function InputUndX(props) {
+    return (
+        <span className='full_cell'>
+          <span className='input_part'>
+            <ValidatedInput
+              placeholder={props.placeholder}
+              isValid={props.isValid}
+              onValid={props.onValid}
+              onEmpty={props.onEmpty}
+            />
+          </span>
+          <span className='button_part'>
+            <RemButton
+              title={props.title}
+              onClick={props.onClick}
+            />
+          </span>
+        </span>
+    );
 }
 
 /*** Table Sections ***/
@@ -744,7 +787,7 @@ function Succinct(props) {
         const tableNum = props.tables.length;
 
         const newTab = {examples: [{inputs: [{prog: initInProg, key: getKey()}], want: initWantProg, key: getKey()}],
-                        formulas: [{prog: initFProg, outputs: [initOutExpr], thenChildren: [], key: getKey()}],
+                        formulas: [{prog: initFProg, outputs: [initOutExpr], key: getKey()}],
                         params: [{name: initParam, key: getKey()}],
                         name: 'table' + tableNum,
                         key: getKey()};
@@ -785,6 +828,13 @@ function Succinct(props) {
         props.programChange(alteredTabs);
     }
 
+    function emptyName(oldTab) {
+        const alteredTab = {...oldTab, name: initTableName};
+        const alteredTabs = props.tables.map((table) => table == oldTab ? alteredTab : table);
+        props.programChange(alteredTabs);
+        
+    }
+
     return (
         <div>
           <AddButton
@@ -792,22 +842,18 @@ function Succinct(props) {
             style={{float: 'right'}}
             title={'Add a table'} />
           {props.tables.map((table, i) => (
-              <div key={table.key} className='table'>
-                <span>
-                  <ValidatedInput
-                    placeholder={'table'}
+              <div key={table.key} className='table_method' >
+                  <InputUndX
+                    placeholder={'Table Name'}
                     isValid={(text) => validName(text, table)}
                     onValid={(text) => nameChange(text, table)}
-                  />
-                  <RemButton
+                    onEmpty={() => emptyName(table)}
                     onClick={() => remTable(table)}
                     title={'Remove this table'}
                   />
-                </span>
                 <SuccinctTab
                   table={table}
                   tableNames={props.tables.map((table) => table.name)}
-
                   tableChange={(newTab) => tableChange(table, newTab)}
                 />
               </div>
@@ -834,39 +880,329 @@ function SuccinctTab(props) {
     }
 
     return (
-        <table border={'0px'} style={{clear: 'left', float: 'left'}}>
-          {/* Header row (params, fexpr progs) */}
-          <thead>
-            <tr>
-              <td>{/* dummy table to align with example RemButtons */}</td>
-              <React.Fragment>
-                <Parameters
-                  params={props.table.params}
-                  examples={props.table.examples}
-                  tableNames={props.tableNames}
+        <table className={'html_table'}>
+          <SuccinctHead
+            params={props.table.params}
+            examples={props.table.examples}
+            tableNames={props.tableNames}
+            paramsChange={paramsChange}
+            paramsExamplesChange={paramsExamplesChange}
 
-                  paramsChange={paramsChange}
-                  paramsExamplesChange={paramsExamplesChange}
-                />
-                <Formulas
-                  formulas={props.table.formulas}
-
-                  formulasChange={formulasChange}
-                />
-              </React.Fragment>
-            </tr>
-          </thead>
-          <tbody>
-            <SuccinctBody
-              examples={props.table.examples}
-              formulas={props.table.formulas}
-              paramNames={props.table.params.map((param) => param.name)}
-
-              examplesChange={examplesChange}
-              formulasChange={formulasChange}
-            />
-          </tbody>
+            formulas={props.table.formulas}
+            formulasChange={formulasChange}
+          />
+          <SuccinctBody
+            examples={props.table.examples}
+            formulas={props.table.formulas}
+            paramNames={props.table.params.map((param) => param.name)}
+            examplesChange={examplesChange}
+            formulasChange={formulasChange}
+          />
         </table>
+    );
+}
+
+function SuccinctHead(props) {
+    function addFormula() {
+        const newForm = {prog: initFProg,
+                         outputs: [initOutExpr],
+                         key: getKey()};
+        props.formulasChange([...props.formulas, newForm]);
+    }
+
+    function remFormula(deadForm) {
+        const aliveForms = props.formulas.filter((formula) => formula != deadForm);
+        props.formulasChange(aliveForms);
+    }
+
+    function formulaChange(newForm, oldForm) {
+        const alteredForms = props.formulas.map((form) => form == oldForm ? newForm : form);
+        props.formulasChange(alteredForms);
+    }
+
+    function maxDepth(formula, curMax) {
+        if (!isBooleanFormula(formula)) {
+            return curMax;
+        } else {
+            return formula.thenChildren.reduce((acc, child) => Math.max(acc, maxDepth(child, curMax + 1)), curMax + 1);
+        }
+    }
+
+
+    // Number -> [Number]
+    // takes a number, returns an array that counts from 1 to that number, input of 0 gives empty array
+    // e.g. countUp(5) -> [1, 2, 3, 4, 5]
+    function countUp(num) {
+        // special case: want an empty array for 0
+        if (num == 0) {
+            return [];
+        } else if (num == 1)
+            return [1];
+        else
+            return [...countUp(num - 1), num];
+    }
+
+    const abyss = props.formulas.reduce((acc, formula) => Math.max(acc, maxDepth(formula, 0)), 0);
+    const numParams = props.params.length;
+
+    return (
+        <thead>
+          <tr>
+            <Parameters
+              params={props.params}
+              examples={props.examples}
+              tableNames={props.tableNames}
+              paramsChange={props.paramsChange}
+              paramsExamplesChange={props.paramsExamplesChange}
+            />
+            {/* top level formulas */}
+        {props.formulas.map((formula) => (
+            <DepictFormula
+              key={formula.key}
+              formula={formula}
+              depth={0}
+              kill={() => remFormula(formula)}
+              formulaChange={(newForm) => formulaChange(newForm, formula)}
+            />
+        ))}
+            <th>
+              <AddButton
+                title={'Add a formula'}
+                onClick={addFormula}
+              />
+            </th>
+          </tr>
+          {/* rest of formulas */}
+          {countUp(abyss).map((depth) => (
+              <tr key={depth}>
+                <th>{/* empty cell to align with example RemButtons */}</th>
+                <th colSpan={numParams + 1}>{/* empty cell to align with parameters */}</th>
+                {props.formulas.map((formula) => (
+                    <DepictFormula
+                      key={formula.key}
+                      formula={formula}
+                      depth={depth}
+                      kill={() => remFormula(formula)}
+                      formulaChange={(newForm) => formulaChange(newForm, formula)}
+                    />
+                ))}
+              </tr>
+          ))}
+        </thead>
+    );
+}
+
+function Parameters(props) {
+    function validParam(text, modParam) {
+        function lookup(name, env) {
+            return env.reduce((acc, variable) => {
+                if (acc) {
+                    return true;
+                }
+
+                return variable.name == name;
+
+            }, false);
+        }
+
+        // These are not technically Variables, see note above
+        let paramVars = props.params.filter((param) => param != modParam).map((param) => ({name: param.name, binding: null}));
+        let tableVars = props.tableNames.map((name) => ({name: name, binding: null}));
+        let env = [...initEnv, ...tableVars, ...paramVars];
+
+        const varRE = /^[a-zA-Z\+\-\*\/\?=><]+$/; // change me
+
+        return varRE.test(text) && !lookup(text, env);
+    }
+
+    function addParam() {
+        const newParam = {name: initParam, key: getKey()};
+
+        // need to maintain #inputs = #params
+        const modExamples = props.examples.map((example) => ({...example,
+                                                              inputs: [...example.inputs, {prog: initInProg, key: getKey()}]}));
+
+        props.paramsExamplesChange([...props.params, newParam], modExamples);
+
+    }
+
+    function remParam(deadParam) {
+        const deadIndex = props.params.indexOf(deadParam);
+        const aliveParams = props.params.filter((param) => param != deadParam);
+
+        // need to maintain #inputs = #params
+        const modExamples = props.examples.map((example => ({...example,
+                                                             inputs: example.inputs.filter((_, i) => i != deadIndex)})));
+
+        props.paramsExamplesChange(aliveParams, modExamples);
+    }
+
+    function nameChange(text, modParam) {
+        const alteredParam = {...modParam, name: text};
+        const alteredParams = props.params.map((param) => param == modParam ? alteredParam : param);
+        props.paramsChange(alteredParams);
+    }
+
+    function emptyName(modParam) {
+        const alteredParam = {...modParam, name: initParam};
+        const alteredParams = props.params.map((param) => param == modParam ? alteredParam : param);
+        props.paramsChange(alteredParams);
+    }
+
+    return (
+        <React.Fragment>
+          <th>{/* empty cell to align with example RemButtons */}</th>
+          <React.Fragment>
+            {props.params.map((param) => (
+                <th key={param.key} >
+                  <InputUndX
+                    placeholder={'Parameter'}
+                    isValid={(text) => validParam(text, param)}
+                    onValid={(text) => nameChange(text, param)}
+                    onEmpty={() => emptyName(param)}
+
+                    onClick={() => remParam(param)}
+                    title={'Remove this parameter'}
+                  />
+                </th>
+            ))}
+            <th>
+              <AddButton
+                onClick={addParam}
+                title={'Add a parameter'}
+              />
+            </th>
+          </React.Fragment>
+        </React.Fragment>
+    );
+}
+
+/*
+  props: formula, depth, kill, formulaChange
+*/
+function DepictFormula(props) {
+    function validProg(text) {
+        let goodText = true;
+
+        try {
+            parseCheck(text);
+        } catch(e) {
+            if (e instanceof SyntaxError) {
+                goodText = false;
+            } else {
+                throw e;
+            }
+        }
+
+        return goodText;
+    }
+
+    function progChange(text) {
+        const alteredForm = {...props.formula, prog: parseCheck(text)};
+        props.formulaChange(alteredForm);
+    }
+
+    function emptyForm() {
+        const alteredForm = {...props.formula, prog: initFProg};
+        props.formulaChange(alteredForm);
+    }
+
+    // this is pretty macabre...
+    function remChild(deadChild) {
+        const aliveChildren = props.formula.thenChildren.filter((child) => child != deadChild);
+        props.formulaChange({...props.formula, thenChildren: aliveChildren});
+    }
+
+    function addChild() {
+        // this is happier
+        const newChild = {prog: initFProg,
+                          outputs: [initOutExpr],
+                          thenChildren: [],
+                          key: getKey()};
+        const children = [...props.formula.thenChildren, newChild];
+        props.formulaChange({...props.formula, thenChildren: children});
+    }
+
+    function childChange(newChild, modChild) {
+        const children = props.formula.thenChildren.map((child) => child == modChild ? newChild : child);
+        props.formulaChange({...props.formula, thenChildren: children});
+    }
+
+    function countWidth(formula) {
+        if (!isBooleanFormula(formula)) {
+            return 1;
+        } else {
+            return formula.thenChildren.reduce((acc, child) => acc + countWidth(child), 2);
+        }
+    }
+
+    if (props.depth > 1) {
+        return (
+            <React.Fragment>
+              <th>{/* empty cell to align with parent input */}</th>
+              {isBooleanFormula(props.formula) ?
+               <React.Fragment>
+                 {props.formula.thenChildren.map((child) => (
+                     <DepictFormula
+                       key={child.key}
+                       formula={child}
+                       depth={props.depth - 1}
+                       kill={() => remChild(child)}
+                       formulaChange={(formula) => childChange(formula, child)}
+                     />))}
+                 <th>{/* empty cell to align with child input */}</th>
+               </React.Fragment>
+               : <script/> }
+            </React.Fragment>
+        );
+    } else if (props.depth == 1) {
+        return (
+            <React.Fragment>
+              <th>{/* empty cell to align with parent input */}</th>
+              {isBooleanFormula(props.formula) ?
+               <React.Fragment>
+                 {props.formula.thenChildren.map((child) => (
+                     <DepictFormula
+                       key={child.key}
+                       formula={child}
+                       depth={props.depth - 1}
+                       kill={() => remChild(child)}
+                       formulaChange={(formula) => childChange(formula, child)}
+                     />))}
+                 <DepictDummy
+                   addThing={addChild}
+                 />
+               </React.Fragment>
+               : <script/> }
+            </React.Fragment>
+        );
+    } else {
+        return (
+            <React.Fragment>
+              <th colSpan={countWidth(props.formula)} >
+                <InputUndX
+                  placeholder={'Formula'}
+                  isValid={validProg}
+                  onValid={progChange}
+                  onEmpty={emptyForm}
+
+                  title={'Remove formula'}
+                  onClick={props.kill}
+                />
+              </th>
+            </React.Fragment>
+        );
+    }
+}
+
+function DepictDummy(props) {
+    return (
+        <td>
+          <AddButton
+            title={'Add a thing'}
+            onClick={props.addThing}
+          />
+        </td>
     );
 }
 
@@ -898,38 +1234,40 @@ function SuccinctBody(props) {
 
     return (
         <React.Fragment>
-          {props.examples.map((example, i) => (
-              <tr key={example.key}>
-                <td>
-                  <RemButton
-                    onClick={() => remExample(example)}
-                    title={'Remove this example'}
+          <tbody>
+            {props.examples.map((example, i) => (
+                <tr key={example.key}>
+                  <td>
+                    <RemButton
+                      onClick={() => remExample(example)}
+                      title={'Remove this example'}
+                    />
+                  </td>
+                  <Inputs
+                    inputs={example.inputs}
+                    inputsChange={(inputs) => inputsChange(inputs, example)}
                   />
-                </td>
-                <Inputs
-                  inputs={example.inputs}
-                  inputsChange={(inputs) => inputsChange(inputs, example)}
+                  <td>{/* empty cell to align with param AddButton */}</td>
+                  <Outputs
+                    formulas={props.formulas}
+                    want={example.want}
+                    row={i}
+                  />
+                  <td>{/* empty cell to align with top level formula AddButton */}</td>
+                  <Want
+                    wantChange={(want) => wantChange(want, example)}
+                  />
+                </tr>
+            ))}
+            <tr>
+              <td>
+                <AddButton
+                  onClick={addExample}
+                  title={'Add an example'}
                 />
-                <td>{/* dummy cell to align with param AddButton */}</td>
-                <Outputs
-                  formulas={props.formulas}
-                  want={example.want}
-                  row={i}
-                />
-                <td>{/* dummy cell to align with add formula button */}</td>
-                <Want
-                  wantChange={(want) => wantChange(want, example)}
-                />
-              </tr>
-          ))}
-          <tr>
-            <td>
-              <AddButton
-                onClick={addExample}
-                title={'Add an example'}
-              />
-            </td>
-          </tr>
+              </td>
+            </tr>
+          </tbody>
         </React.Fragment>
     );
 }
@@ -954,18 +1292,24 @@ function Inputs(props) {
     function progChange(text, modInput) {
         const alteredInput = {...modInput, prog: parseCheck(text)};
         const alteredInputs = props.inputs.map((input) => input == modInput ? alteredInput : input);
+        props.inputsChange(alteredInputs);
+    }
 
+    function emptyInput(modInput) {
+        const alteredInput = {...modInput, prog: initInProg};
+        const alteredInputs = props.inputs.map((input) => input == modInput ? alteredInput : input);
         props.inputsChange(alteredInputs);
     }
 
     return (
         <React.Fragment>
           {props.inputs.map((input) => (
-              <td key={input.key}>
+              <td key={input.key} >
                 <ValidatedInput
-                  placeholder={'"hi there"'}
+                  placeholder={'Input'}
                   isValid={validProg}
                   onValid={(text) => progChange(text, input)}
+                  onEmpty={() => emptyInput(input)}
                 />
               </td>
           ))}
@@ -983,14 +1327,14 @@ function Outputs(props) {
                   output={formula.outputs[props.row]}
                   want={props.want}
                 />
-                {allBools(formula.outputs) ?
+                {isBooleanFormula(formula) ?
                  <React.Fragment>
                    <Outputs
                      formulas={formula.thenChildren}
                      want={props.want}
                      row={props.row}
                    />
-                   <td>{/* dummy cell to align with add formula button */}</td>
+                  <td>{/* empty cell to align with add child button */}</td>
                  </React.Fragment>
                  : <script/> }
               </React.Fragment>
@@ -1005,6 +1349,13 @@ function TestCell(props) {
         return (
            <td className={'gray'}>
            </td>
+        );
+    }
+
+    if (props.output == pink) {
+        return (
+            <td className={'pink'}>
+            </td>
         );
     }
 
@@ -1068,169 +1419,19 @@ function Want(props) {
         props.wantChange(parseCheck(text));
     }
 
+    function emptyWant() {
+        props.wantChange(initWantProg);
+    }
+
     return (
         <td>
           <ValidatedInput
-            placeholder={'1234'}
+            placeholder={'Want'}
             isValid={validProg}
             onValid={wantChange}
+            onEmpty={emptyWant}
           />
         </td>
-    );
-}
-
-function Parameters(props) {
-    function validParam(text, modParam) {
-        function lookup(name, env) {
-            return env.reduce((acc, variable) => {
-                if (acc) {
-                    return true;
-                }
-
-                return variable.name == name;
-
-            }, false);
-        }
-
-        // These are not technically Variables, see note above
-        let paramVars = props.params.filter((param) => param != modParam).map((param) => ({name: param.name, binding: null}));
-        let tableVars = props.tableNames.map((name) => ({name: name, binding: null}));
-        let env = [...initEnv, ...tableVars, ...paramVars];
-
-        const varRE = /^[a-zA-Z\+\-\*\/\?=><]+$/; // change me
-
-        return varRE.test(text) && !lookup(text, env);
-    }
-
-    function nameChange(text, modParam) {
-        const alteredParam = {...modParam, name: text};
-        const alteredParams = props.params.map((param) => param == modParam ? alteredParam : param);
-
-        props.paramsChange(alteredParams);
-    }
-
-    function addParam() {
-        const newParam = {name: initParam, key: getKey()};
-
-        // need to maintain #inputs = #params
-        const modExamples = props.examples.map((example) => ({...example,
-                                                              inputs: [...example.inputs, {prog: initInProg, key: getKey()}]}));
-
-        props.paramsExamplesChange([...props.params, newParam], modExamples);
-
-    }
-
-    function remParam(deadParam) {
-        const deadIndex = props.params.indexOf(deadParam);
-        const aliveParams = props.params.filter((param) => param != deadParam);
-
-        // need to maintain #inputs = #params
-        const modExamples = props.examples.map((example => ({...example,
-                                                             inputs: example.inputs.filter((_, i) => i != deadIndex)})));
-
-        props.paramsExamplesChange(aliveParams, modExamples);
-    }
-
-    return (
-        <React.Fragment>
-        {props.params.map((param) => (
-            <td key={param.key}>
-              <ValidatedInput
-                placeholder={'n'}
-                isValid={(text) => validParam(text, param)}
-                onValid={(text) => nameChange(text, param)}
-              />
-              <RemButton
-                onClick={() => remParam(param)}
-                title={'Remove this parameter'}
-              />
-            </td>
-        ))}
-          <td>
-            <AddButton
-              onClick={addParam}
-              title={'Add a parameter'}
-            />
-          </td>
-        </React.Fragment>
-    );
-}
-
-function Formulas(props) {
-    function validProg(text) {
-        let goodText = true;
-
-        try {
-            parseCheck(text);
-        } catch(e) {
-            if (e instanceof SyntaxError) {
-                goodText = false;
-            } else {
-                throw e;
-            }
-        }
-
-        return goodText;
-    }
-
-    function progChange(text, modForm) {
-        const alteredForm = {...modForm, prog: parseCheck(text)};
-        const alteredForms = props.formulas.map((formula) => formula == modForm ? alteredForm : formula);
-
-        props.formulasChange(alteredForms);
-    }
-
-    // when recuring: addFexpr={() => this.props.addThenChild(fexpr)}
-    function addFormula() {
-        const newForm = {prog: initFProg,
-                         outputs: [initOutExpr],
-                         thenChildren: [],
-                         key: getKey()};
-        props.formulasChange([...props.formulas, newForm]);
-    }
-
-    function remFormula(deadForm) {
-        const aliveForms = props.formulas.filter((formula) => formula != deadForm);
-        props.formulasChange(aliveForms);
-    }
-
-    function childrenChange(formulas, modForm) {
-        const alteredForm = {...modForm, thenChildren: formulas};
-        const alteredForms = props.formulas.map((formula) => formula == modForm ? alteredForm : formula);
-
-        props.formulasChange(alteredForms);
-    }
-
-    return (
-        <React.Fragment>
-          {props.formulas.map((formula) => (
-              <React.Fragment key={formula.key}>
-                <td>
-                  <ValidatedInput
-                    placeholder={'(+ 2 3)'}
-                    isValid={validProg}
-                    onValid={(text) => progChange(text, formula)}
-                  />
-                  <RemButton
-                    onClick={() => remFormula(formula)}
-                    title={'Remove this formula'}
-                  />
-                </td>
-                {allBools(formula.outputs) ?
-                 <Formulas
-                   formulas={formula.thenChildren}
-                   formulasChange={(formulas) => childrenChange(formulas, formula)}
-                 />
-                 : <script/> }
-              </React.Fragment>
-          ))}
-          <td>
-            <AddButton
-              onClick={addFormula}
-              title={'Add a formula'}
-            />
-          </td>
-        </React.Fragment>
     );
 }
 
@@ -1247,7 +1448,7 @@ class App extends React.Component {
     constructor(props){
         super(props);
         this.state = {program: [{examples: [{inputs: [{prog: initInProg, key: getKey()}], want: initWantProg, key: getKey()}], // rows
-                                 formulas: [{prog: initFProg, outputs: [initOutExpr], thenChildren: [], key: getKey()}],       // formula columns
+                                 formulas: [{prog: initFProg, outputs: [initOutExpr], key: getKey()}],       // formula columns
                                  params: [{name: initParam, key: getKey()}],                                                   // parameter columns
                                  name: 'table',                                                                                // table name (used for recursion)
                                  key: getKey()}]};
@@ -1301,6 +1502,8 @@ class App extends React.Component {
                 let outputs = examples.map((example) => {
                     if (example == gray) {
                         return gray;
+                    } else if (example == pink) {
+                        return pink;
                     }
 
                     let localEnv = table.params.map((param, i) => ({name: param.name, binding: example.inputs[i].prog}));
@@ -1315,16 +1518,33 @@ class App extends React.Component {
                     return output;
                 });
 
-                if (allBools(outputs)) {
-                    let trueExamples = examples.map((example, i) => outputs[i].value ? example : gray);
-                    var thenChildren = formula.thenChildren.map((formula) => calcFormula(formula, trueExamples));
+                if (allBools(outputs) || (formula.thenChildren != undefined && formula.thenChildren.length != 0)) {
+                    function grayOrPink(example, output) {
+                        if (example == gray || output.value === false)
+                            return gray;
+                        else if (typeof output.value != 'boolean')
+                            return pink;
+                        else
+                            return example;
+                    }
+
+                    if (formula.thenChildren == undefined) {
+                        var thenChildren = [];
+                    } else {
+                        let subExamples = examples.map((example, i) => grayOrPink(example, outputs[i]));
+                        thenChildren = formula.thenChildren.map((formula) => calcFormula(formula, subExamples));
+                    }
+
+                    return {...formula,
+                            outputs: outputs,
+                            thenChildren: thenChildren};
                 } else {
-                    thenChildren = [];
+                    let newFormula = {...formula,
+                                      outputs: outputs};
+                    delete newFormula.thenChildren;
+                    return newFormula;
                 }
 
-                return {...formula,
-                        outputs: outputs,
-                        thenChildren: thenChildren};
             }
 
             let formulas = table.formulas.map((formula) => calcFormula(formula, table.examples));
