@@ -417,10 +417,6 @@ function cons(args, env) {
             type: RLIST_T};
 }
 function list(args, env) {
-    if (args.length === 0) {
-        throw new Error('arity mismatch');
-    }
-
     let interpArgs = args.map((arg) => interp(arg, env));
 
     return interpArgs.reverse().reduce((acc, arg) => ({value: {a: arg, d: acc},
