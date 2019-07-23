@@ -1023,7 +1023,7 @@ function SuccinctHead(props) {
           <div className='full_cell'>
             <ValidatedInput
               dummy={true}
-              placeholder='Add'
+              placeholder='Formula'
               isValid={validProg}
               onValid={(text) => formulaChange({prog: parseCheck(text),
                                                 outputs: props.examples.map((_) => yellow),
@@ -1149,7 +1149,7 @@ function Parameters(props) {
           <div className='full_cell'>
             <ValidatedInput
               dummy={true}
-              placeholder='Add'
+              placeholder='Parameter'
               isValid={(text) => validParam(text, {})}
               onValid={(text) => paramChange({name: text,
                                               key: takeKey()},
@@ -1261,7 +1261,7 @@ function DepictFormula(props) {
                   <div className='full_cell'>
                     <ValidatedInput
                       dummy={true}
-                      placeholder='Add'
+                      placeholder='Formula'
                       isValid={validProg}
                       onValid={(text) => childChange({prog: parseCheck(text),
                                                       outputs: Array(props.numExamples).fill(yellow),
