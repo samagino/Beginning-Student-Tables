@@ -714,19 +714,6 @@ function deepEquals(proga, progb) {
 *********************/
 
 /*** Buttons ***/
-// Button that probably adds something
-function AddButton(props){
-    return (
-        <input
-          type={'image'}
-          style={props.style}
-          src={imgPath + 'plus.png'}
-          alt='Add'
-          title={props.title}
-          onClick={props.onClick}/>
-    );
-}
-
 // Button that probably removes something
 function RemButton(props){
     return (
@@ -800,24 +787,16 @@ class ValidatedInput extends React.Component {
 function Succinct(props) {
 
     function tableChange(newTab, oldTab) {
-        let alteredTabs = props.tables.map((table) => table === oldTab ? newTab : table);
-        props.programChange(alteredTabs);
-    }
+        const exists = props.tables.indexOf(oldTab) !== -1;
 
-    function addTable(name) {
-        const tableKey = takeKey();
-        if (name === undefined) {
-            name = yellow;
+        let alteredTabs;
+        if (exists) {
+            alteredTabs = props.tables.map((table) => table === oldTab ? newTab : table);
+        } else {
+            alteredTabs = [...props.tables, newTab];
         }
-        name = yellow;
 
-        let newTab = {examples: [{inputs: [{prog: yellow, key: takeKey()}], want: yellow, key: takeKey()}],
-                      formulas: [{prog: yellow, outputs: [yellow], key: takeKey()}],
-                      params: [{name: yellow, key: takeKey()}],
-                      name: name,
-                      key: tableKey};
-
-        props.programChange([...props.tables, newTab]);
+        props.programChange(alteredTabs);
     }
 
     function remTable(deadTab) {
@@ -838,9 +817,7 @@ function Succinct(props) {
             }, false);
         }
 
-        let tableVars = props.tables.filter((table) => table !== modTab).map((propTab) => ({name: propTab.name, binding: null}));
-        // TODO: change this call to reflect how params work now
-        //       also make this not awful
+        let tableVars = props.tables.filter((table) => table !== modTab).map((otherTab) => ({name: otherTab.name, binding: null}));
         let paramVars = modTab.params.map((param) => ({name: param, binding: null}));
         let env = [...initEnv, ...tableVars, ...paramVars];
 
@@ -849,53 +826,78 @@ function Succinct(props) {
         return varRE.test(text) && !lookup(text, env);
     }
 
+    const reals = props.tables.map((table) => (
+        <div key={table.key} className='table_method' >
+          <div className='full_cell'>
+            <ValidatedInput
+              dummy={false}
+              placeholder='Table Name'
+              isValid={(text) => validName(text, table)}
+              onValid={(text) => tableChange({...table,
+                                              name: text},
+                                             table)}
+              onEmpty={() => tableChange({...table,
+                                          name: yellow},
+                                         table)}
+            />
+            <RemButton
+              onClick={() => remTable(table)}
+              title='Remove this table'
+            />
+          </div>
+          <SuccinctTab
+            table={table}
+            tableNames={props.tables.map((table) => table.name)}
+            tableChange={(newTab) => tableChange(newTab, table)}
+          />
+        </div>
+    ));
+
+    const dummy = (
+        <div key={peekKey()} className='table_method'>
+          <div className='full_cell'>
+            <ValidatedInput
+              dummy={true}
+              placeholder='Table Name'
+              isValid={(text) => validName(text, {params: []})}
+              onValid={(text) => tableChange({name: text,
+                                              examples: [],
+                                              formulas: [],
+                                              params: [],
+                                              key: takeKey()},
+                                             {})}
+            />
+          </div>
+          <SuccinctTab
+            table={{name: '',
+                    examples: [],
+                    formulas: [],
+                    params: [],
+                    key: peekKey()}}
+            tableNames={props.tables.map((table) => table.name)}
+            tableChange={(newTab) => tableChange(newTab, {})}
+          />
+        </div>
+    );
+
     return (
         <div>
-          {[...props.tables.map((table) => (
-              <div key={table.key} className='table_method' >
-                <div className='full_cell'>
-                  <ValidatedInput
-                    placeholder={'Table Name'}
-                    isValid={(text) => validName(text, table)}
-                    onValid={(text) => tableChange({...table,
-                                                    name: text},
-                                                   table)}
-                    onEmpty={() => tableChange({...table,
-                                                name: yellow},
-                                               table)}
-                  />
-                  <RemButton
-                    onClick={() => remTable(table)}
-                    title='Remove this table'
-                  />
-                </div>
-                <SuccinctTab
-                  table={table}
-                  tableNames={props.tables.map((table) => table.name)}
-                  tableChange={(newTab) => tableChange(newTab, table)}
-                />
-              </div>
-          )),
-            <div key={peekKey()} className='table_method'>
-              <AddButton
-                onClick={addTable}
-              />
-            </div>]}
+          {[...reals, dummy]}
         </div>
     );
 }
 
 function SuccinctTab(props) {
     function paramsExamplesChange(params, examples) {
-        props.tableChange({...props.table, params: params, examples: examples});
+        props.tableChange({...props.table, params, examples});
     }
 
     function formulasChange(formulas) {
-        props.tableChange({...props.table, formulas: formulas});
+        props.tableChange({...props.table, formulas});
     }
 
-    function examplesChange(examples) {
-        props.tableChange({...props.table, examples: examples});
+    function examplesFormulasChange(examples, formulas) {
+        props.tableChange({...props.table, examples, formulas});
     }
 
     return (
@@ -913,7 +915,7 @@ function SuccinctTab(props) {
             examples={props.table.examples}
             formulas={props.table.formulas}
             paramNames={props.table.params.map((param) => param.name)}
-            examplesChange={examplesChange}
+            examplesFormulasChange={examplesFormulasChange}
             formulasChange={formulasChange}
           />
         </table>
@@ -1231,61 +1233,87 @@ function DepictFormula(props) {
             </React.Fragment>
         );
     } else {
-        const reals = props.formula.thenChildren.map((child) => (
-            <th key={child.key} colSpan={countWidth(child)} >
-              <div className='full_cell'>
-                <ValidatedInput
-                  dummy={false}
-                  placeholder={'Formula'}
-                  isValid={validProg}
-                  onValid={(text) => childChange({...child,
-                                                  prog: parseCheck(text)},
+        if (isBooleanFormula(props.formula)) {
+            const reals = props.formula.thenChildren.map((child) => (
+                <th key={child.key} colSpan={countWidth(child)} >
+                  <div className='full_cell'>
+                    <ValidatedInput
+                      dummy={false}
+                      placeholder={'Formula'}
+                      isValid={validProg}
+                      onValid={(text) => childChange({...child,
+                                                      prog: parseCheck(text)},
+                                                     child)}
+                      onEmpty={() => childChange({...child,
+                                                  prog: yellow},
                                                  child)}
-                  onEmpty={() => childChange({...child,
-                                              prog: yellow},
-                                             child)}
-                />
-                <RemButton
-                  title={'Remove formula'}
-                  onClick={() => remChild(child)}
-                />
-              </div>
-            </th>
-        ));
+                    />
+                    <RemButton
+                      title={'Remove formula'}
+                      onClick={() => remChild(child)}
+                    />
+                  </div>
+                </th>
+            ));
 
-        const dummy = (
-            <th key={peekKey()} colSpan={1}>
-              <div className='full_cell'>
-                <ValidatedInput
-                  dummy={true}
-                  placeholder='Add'
-                  isValid={validProg}
-                  onValid={(text) => childChange({prog: parseCheck(text),
-                                                  outputs: Array(props.numExamples).fill(yellow),
-                                                  key: takeKey()},
-                                                 {})}
-                />
-              </div>
-            </th>
-        );
+            const dummy = (
+                <th key={peekKey()} colSpan={1}>
+                  <div className='full_cell'>
+                    <ValidatedInput
+                      dummy={true}
+                      placeholder='Add'
+                      isValid={validProg}
+                      onValid={(text) => childChange({prog: parseCheck(text),
+                                                      outputs: Array(props.numExamples).fill(yellow),
+                                                      key: takeKey()},
+                                                     {})}
+                    />
+                  </div>
+                </th>
+            );
 
-        return (
-            <React.Fragment>
-              <th>{/* empty cell to align with parent input */}</th>
-              {isBooleanFormula(props.formula) ?
-               <React.Fragment>
-                 {[...reals, dummy]}
-               </React.Fragment>
-               : <script/> }
-            </React.Fragment>
-        );
+            return (
+                <React.Fragment>
+                  <th>{/* empty cell to align with parent input */}</th>
+                   <React.Fragment>
+                     {[...reals, dummy]}
+                   </React.Fragment>
+                </React.Fragment>
+            );
+        } else {
+
+            return (
+                <React.Fragment>
+                  <th>{/* empty cell to align with parent input */}</th>
+                </React.Fragment>
+            );
+        }
     }
 }
 
 function SuccinctBody(props) {
     function remExample(deadExample) {
+        const deadIndex = props.examples.indexOf(deadExample);
+        // Formula -> Formula
+        // removes the output at deadIndex from the given formula and all of its children (if it has any) so stuff works
+        function removeOutputFromFormula(formula) {
+            let outputs = formula.outputs.filter((_, i) => i !== deadIndex);
+
+            if (isBooleanFormula(formula)) {
+                const thenChildren = formula.thenChildren.map(removeOutputFromFormula);
+                return {...formula,
+                        outputs,
+                        thenChildren};
+            } else {
+                return {...formula,
+                        outputs};
+            }
+        }
+
+
         const aliveExamples = props.examples.filter((example) => example !== deadExample);
-        props.examplesChange(aliveExamples);
+        const alteredForms = props.formulas.map(removeOutputFromFormula);
+        props.examplesFormulasChange(aliveExamples, alteredForms);
     }
 
     function exampleChange(newExample, oldExample) {
@@ -1295,13 +1323,32 @@ function SuccinctBody(props) {
             return exists;
         }
 
-        let alteredExamples;
+        // Formula -> Formula
+        // adds an init output to the given formula and all of its children (if it has any) so stuff works
+        function addAnotherOutputToFormula(formula) {
+            let outputs = [...formula.outputs, yellow];
+
+            if (isBooleanFormula(formula)) {
+                const thenChildren = formula.thenChildren.map(addAnotherOutputToFormula);
+                return {...formula,
+                        outputs,
+                        thenChildren};
+            } else {
+                return {...formula,
+                        outputs};
+            }
+        }
+
+        let alteredExamples, alteredForms;
         if (exists) {
             alteredExamples = props.examples.map((example) => example === oldExample ? newExample : example);
+            alteredForms = props.formulas;
         } else {
             alteredExamples = [...props.examples, newExample];
+            alteredForms = props.formulas.map(addAnotherOutputToFormula);
         }
-        props.examplesChange(alteredExamples);
+
+        props.examplesFormulasChange(alteredExamples, alteredForms);
         return true; // this doesn't actually do anything
     }
 
@@ -1319,14 +1366,14 @@ function SuccinctBody(props) {
               inputsChange={(inputs) => exampleChange({...example, inputs},
                                                       example)}
             />
-            <td>{/* empty cell to align with param AddButton */}</td>
+            <td>{/* empty cell to align with param dummy input */}</td>
             <Outputs
               dummy={false}
               formulas={props.formulas}
               want={example.want}
               row={i}
             />
-            <td>{/* empty cell to align with top level formula AddButton */}</td>
+            <td>{/* empty cell to align with top level formula dummy input */}</td>
             <Want
               dummy={false}
               wantChange={(want) => exampleChange({...example, want},
@@ -1346,12 +1393,12 @@ function SuccinctBody(props) {
                                                        key: takeKey()},
                                                       {})}
             />
-            <td>{/* empty cell to align with param AddButton */}</td>
+            <td>{/* empty cell to align with param dummy input */}</td>
             <Outputs
               dummy={true}
               formulas={props.formulas}
             />
-            <td>{/* empty cell to align with top level formula AddButton */}</td>
+            <td>{/* empty cell to align with top level formula dummy input */}</td>
             <Want
               dummy={true}
               wantChange={(want) => exampleChange({want,
@@ -1608,7 +1655,11 @@ class App extends React.Component {
                         return acc && deepEquals(INterped, interpArgs[i]);
 
                     }, true)) {
-                        return interp(example.want, env);
+                        if (example.want === yellow) {
+                            throw new ReferenceError(`(${table.name} ${interpArgs.map(unParse).join(' ')}) doesn't have a want`);
+                        } else {
+                            return interp(example.want, env);
+                        }
                     }
 
                     return undefined;
