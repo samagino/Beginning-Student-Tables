@@ -1,6 +1,6 @@
-//import React from 'react';
-//import ReactDOM from 'react-dom';
-//import './colors.css';
+import React from 'react';
+import './App.css';
+
 
 /****************
    Interpreter
@@ -1724,10 +1724,4 @@ class App extends React.Component {
     }
 }
 
-//thing that decides what to render and where
-const domContainer = document.querySelector('#table_method_container');
-ReactDOM.render(<App />,
-                domContainer);
-
-//ReactDOM.render(<App />,
-//		document.getElementById('root'));
+export default App;

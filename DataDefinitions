@@ -1,18 +1,21 @@
 New Data Definitions:
+        A Table_Method_Program is
+                {tables:        [Table]}
+
         A Table is
                 {examples:      [Example],
                  formulas:      [Formula],
-                 params:        [Parameter],
-                 name:          String,
+                 params:        [Parameters],
+                 name:          Name_Input,
                  key:           Number}
 
         An Example is
-                {inputs:        [Input],
-                 want:          Program,
+                {inputs:        [Inputs],
+                 want:          Program_Input,
                  key:           Number}
 
         An Input is
-                {prog:          Program,
+                {prog:          Program_Input,
                  key:           Number}
 
         A Formula is one of
@@ -20,18 +23,22 @@ New Data Definitions:
                 - Non-Boolean Formula
 
         A Boolean Formula is
-                {prog:          Program,
+                {prog:          Program_Input,
                  outputs:       [outExpr],
                  thenChildren:  [Formula],
                  key:           Number}
 
         A Non-Boolean Formula is
-                {prog:          Program,
+                {prog:          Program_Input,
                  outputs:       [outExpr],
                  key:           Number}
 
+        A Parameters_And_Key is
+                {params:        [Parameter],
+                 nextKey:       Number}
+
         A Parameter is
-                {name:          String,
+                {name:          Name_Input,
                  key:           Number}
 
         An outExpr is one of
@@ -39,6 +46,15 @@ New Data Definitions:
                 - Error
                 - Gray
                 - Pink
+                - Yellow
+
+        A Program_Input is one of
+                - Program
+                - Yellow (initial value)
+
+        A Name_Input is one of
+                - String
+                - Yellow (initial value)
 
         A Program is one of
                 -  Variable

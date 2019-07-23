@@ -1,13 +1,12 @@
 --___TODO___--
 
-now:
-Make symbol/list parser
-Put functions in environmnet
+todo:
+figure out how and where to host this
+dummy tables
+split stuff into sepereate files
 
-Make Racket BSL Interpreter
-
-later: 
-use better colors for cond blocks
+bugs:
+crashes when boolean column with no children and delete all yellow examples
 
 stuff that may be nice:
 undo/redo button

@@ -1,0 +1,17 @@
+.dummy_input{
+    background-color: lightgreen;
+    font-family: monospace;
+    flex: auto;
+}
+
+.valid_input{
+    background-color: white;
+    font-family: monospace;
+    flex: auto;
+}
+
+.invalid_input{
+    background-color: pink;
+    font-family: monospace;
+    flex: auto;
+}
