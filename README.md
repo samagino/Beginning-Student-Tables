@@ -8,25 +8,26 @@ click me: https://samagino.github.io/tableMethodThing/
 1. clone the repo
 
 2. install npm
-```
-sudo apt install npm
-```
-```
-sudo dnf install npm
-```
-(or however you install packages in your OS/distribution)
-
+   on Debian it's probably
+   ```
+   sudo apt install npm
+   ```
+   on Fedora it's probably
+   ```
+   sudo dnf install npm
+   ```
+   so however you install packages on your OS/distribution, just do that
 
 3. go to the project directory (two)
-```
-cd prototypes/two
-```
+   ```
+   cd path/to/repo/prototypes/two
+   ```
 
 4. using npm, install react-scripts
-```
-npm install react-scripts
-```
+   ```
+   npm install react-scripts
+   ```
 
-5. run ```npm start``` to start development server
+5. run ```npm start``` to start a development server
 
 6. have fun
