@@ -7,7 +7,8 @@ click me: https://samagino.github.io/tableMethodThing/
 ### slightly less easy way that lets you play around with the code more
 1. clone the repo
 
-2. install npm
+2. install npm (the NodePackageManager)
+
    on Debian it's probably
    ```
    sudo apt install npm
