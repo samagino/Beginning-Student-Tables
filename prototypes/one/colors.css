@@ -1,11 +1,25 @@
-.default_input{
-    background-color: white;
+.dummy_input{
+    background-color: lightgreen;
     font-family: monospace;
+    flex: auto;
 }
 
-.error_input{
+.empty_input{
+    background-color: palegoldenrod;
+    font-family: monospace;
+    flex: auto;
+}
+
+.valid_input{
+    background-color: white;
+    font-family: monospace;
+    flex: auto;
+}
+
+.invalid_input{
     background-color: pink;
     font-family: monospace;
+    flex: auto;
 }
 
 .output{
@@ -23,13 +37,32 @@
     background-color: pink;
     color: pink;
 }
+
+.white{
+    background-color: white;
+    color: white;
+}
+
+.yellow{
+    background-color: palegoldenrod;
+    color: palegoldenrod;
+}
+
+
 .html_table{
     clear: left;
     float: left;
     border-collapse: collapse;
     border: 2px solid black;
 }
+
 .table_method{
+    float: left;
+    clear: left;
+}
+
+.bsl_io{
+    font-family: monospace;
     float: left;
     clear: left;
 }
@@ -45,16 +78,9 @@ th, td{
 }
 
 .full_cell{
-    width: 100%;
+    display: flex;
 }
 
-.input_part{
-    float: left;
-    width: auto;
-    overflow: hidden;
-}
-
-.buttonPart{
-    float: right;
-    width: 20px;
+.cross_button{
+    flex: initial;
 }
