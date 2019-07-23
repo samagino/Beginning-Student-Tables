@@ -235,16 +235,18 @@ function interp(prog, env) {
     case RSYM_T:
         return prog;
     case RVAR_T:
-        return interp(lookup(prog.value), env);
+        return lookup(prog.value);
     case RFUNCT_T:
         return prog;
     case RAPP_T:
-        let args = prog.value.args;
+        // interpret function (valof rator env)
         let funct = interp(prog.value.funct, env);
+        // interpret arguments (valof rand env)
+        let args = prog.value.args.map((arg) => interp(arg, env));
 
         typeCheck(funct, RFUNCT_T);
 
-        return funct.value(args, env);
+        return funct.value(args);
 
     default:
         throw new TypeError("Unknown Type " + prog.value);
@@ -331,164 +333,154 @@ function typeCheck(prog, type){
     }
 }
 
-function plus(args, env) {
-    let argVals = args.map((elem) => interp(elem, env));
-    argVals.forEach((cur) => typeCheck(cur, RNUM_T));
+function plus(args) {
+    args.forEach((cur) => typeCheck(cur, RNUM_T));
 
-    return argVals.reduce((acc, cur) => {
+    return args.reduce((acc, cur) => {
         return {value: acc.value + cur.value,
                 type: RNUM_T};
     });
 }
-function minus(args, env) {
-    let argVals = args.map((elem) => interp(elem, env));
-    argVals.forEach((cur) => typeCheck(cur, RNUM_T));
+function minus(args) {
+    args.forEach((cur) => typeCheck(cur, RNUM_T));
 
-    return argVals.reduce((acc, cur) => {
+    return args.reduce((acc, cur) => {
         return {value: acc.value - cur.value,
                 type: RNUM_T};
     });
 }
-function times(args, env) {
-    let argVals = args.map((elem) => interp(elem, env));
-    argVals.forEach((cur) => typeCheck(cur, RNUM_T));
+function times(args) {
+    args.forEach((cur) => typeCheck(cur, RNUM_T));
 
-    return argVals.reduce((acc, cur) => {
+    return args.reduce((acc, cur) => {
         return {value: acc.value * cur.value,
                 type: RNUM_T};
     });
 }
-function divide(args, env) {
+function divide(args) {
     if (args.length === 1) {
-        let firstVal = interp(args[0], env);
+        let firstArg = args[0];
 
-        typeCheck(firstVal, RNUM_T);
+        typeCheck(firstArg, RNUM_T);
 
-        return {value: 1 / firstVal.value,
+        return {value: 1 / firstArg.value,
                 type: RNUM_T};
     } else if (args.length === 2) {
-        let firstVal = interp(args[0], env);
-        let secondVal = interp(args[1], env);
+        let firstArg = args[0];
+        let secondArg = args[1];
 
-        typeCheck(firstVal, RNUM_T);
-        typeCheck(secondVal, RNUM_T);
+        typeCheck(firstArg, RNUM_T);
+        typeCheck(secondArg, RNUM_T);
 
-        return {value: firstVal.value / secondVal.value,
+        return {value: firstArg.value / secondArg.value,
                 type: RNUM_T};
     }
 
     args.forEach((cur) => typeCheck(cur, RNUM_T));
     return {value: false, type: RBOOL_T};
 }
-function car(args, env) {
+function car(args) {
     if (args.length !== 1) {
         throw new Error('arity mismatch');
     }
 
-    let firstVal = interp(args[0], env);
+    let firstArg = args[0];
 
-    typeCheck(firstVal, RLIST_T);
+    typeCheck(firstArg, RLIST_T);
 
-    return firstVal.value.a;
+    return firstArg.value.a;
 }
-function cdr(args, env) {
+function cdr(args) {
     if (args.length !== 1) {
         throw new Error('arity mismatch');
     }
 
-    let firstVal = interp(args[0], env);
+    let firstArg = args[0];
 
-    typeCheck(firstVal, RLIST_T);
+    typeCheck(firstArg, RLIST_T);
 
-    return firstVal.value.d;
+    return firstArg.value.d;
 }
-function cons(args, env) {
+function cons(args) {
     if (args.length !== 2) {
         throw new Error('arity mismatch');
     }
 
-    let firstVal = interp(args[0], env);
-    let secondVal = interp(args[1], env);
+    let firstArg = args[0];
+    let secondArg = args[1];
 
     // because BSL
-    typeCheck(secondVal, RLIST_T);
+    typeCheck(secondArg, RLIST_T);
 
-    return {value: {a: firstVal, d: secondVal},
+    return {value: {a: firstArg, d: secondArg},
             type: RLIST_T};
 }
-function list(args, env) {
-    let interpArgs = args.map((arg) => interp(arg, env));
-
-    return interpArgs.reverse().reduce((acc, arg) => ({value: {a: arg, d: acc},
+function list(args) {
+    return args.reverse().reduce((acc, arg) => ({value: {a: arg, d: acc},
                                                        type: RLIST_T}),
                                        {value: null,
                                         type: RLIST_T});
 }
-function not(args, env) {
+function not(args) {
     if (args.length !== 1) {
         throw new Error('arity mismatch');
     }
 
-    let firstVal = interp(args[0], env);
+    let firstArg = args[0];
 
-    return {value: firstVal.value === false,
+    return {value: firstArg.value === false,
             type: RBOOL_T};
 }
-function iseqv(args, env) {
+function iseqv(args) {
     if (args.length !== 2) {
         throw new Error('arity mismatch');
     }
 
-    let firstVal = interp(args[0], env);
-    let secondVal = interp(args[1], env);
+    let firstArg = args[0];
+    let secondArg = args[1];
 
-    return {value: firstVal.value === secondVal.value,
+    return {value: firstArg.value === secondArg.value,
             type: RBOOL_T};
 }
-function and(args, env) {
-    let interpArgs = args.map((prog) => interp(prog, env));
-
-    return interpArgs.reduce((acc, cur) => {
+function and(args) {
+    return args.reduce((acc, cur) => {
         return acc.value !== false ? cur : {value: false, type: RBOOL_T};
     }, {value: true, type: RBOOL_T});
 
 }
-function or(args, env) {
-    let interpArgs = args.map((prog) => interp(prog, env));
-
-    return interpArgs.reduce((acc, cur) => {
+function or(args) {
+    return args.reduce((acc, cur) => {
         return acc.value !== false ? acc : cur;
     }, {value: true, type: RBOOL_T});
 
 }
-function rif(args, env) {
+function rif(args) {
     if (args.length !== 3) {
         throw new Error('arity mismatch');
     }
 
-    let firstVal = interp(args[0], env);
-    let secondVal = interp(args[1], env);
-    let thirdVal = interp(args[2], env);
+    let firstArg = args[0];
+    let secondArg = args[1];
+    let thirdArg = args[2];
 
-    typeCheck(firstVal, RBOOL_T);
+    typeCheck(firstArg, RBOOL_T);
 
-    return firstVal.value ? secondVal : thirdVal;
+    return firstArg.value ? secondArg : thirdArg;
 }
-function isnull(args, env) {
+function isnull(args) {
     if (args.length !== 1) {
         throw new Error('arity mismatch');
     }
 
-    let firstVal = interp(args[0], env);
+    let firstArg = args[0];
 
-    return {value: firstVal.value === null && firstVal.type === RLIST_T,
+    return {value: firstArg.value === null && firstArg.type === RLIST_T,
             type: RBOOL_T};
 }
-function equalsign(args, env) {
-    let interpArgs = args.map((elem) => interp(elem, env));
-    interpArgs.forEach((cur) => typeCheck(cur, RNUM_T));
+function equalsign(args) {
+    args.forEach((cur) => typeCheck(cur, RNUM_T));
 
-    let val = interpArgs.reduce((acc, cur) => {
+    let val = args.reduce((acc, cur) => {
 
         if (acc.value === false) {
             return {value: false, type: RBOOL_T};
@@ -503,11 +495,10 @@ function equalsign(args, env) {
         return {value: true, type: RBOOL_T};
     }
 }
-function gtsign(args, env) {
-    let interpArgs = args.map((elem) => interp(elem, env));
-    interpArgs.forEach((cur) => typeCheck(cur, RNUM_T));
+function gtsign(args) {
+    args.forEach((cur) => typeCheck(cur, RNUM_T));
 
-    let val = interpArgs.reduce((acc, cur) => {
+    let val = args.reduce((acc, cur) => {
 
         if (acc.value === false) {
             return {value: false, type: RBOOL_T};
@@ -522,11 +513,10 @@ function gtsign(args, env) {
         return {value: true, type: RBOOL_T};
     }
 }
-function gesign(args, env) {
-    let interpArgs = args.map((elem) => interp(elem, env));
-    interpArgs.forEach((cur) => typeCheck(cur, RNUM_T));
+function gesign(args) {
+    args.forEach((cur) => typeCheck(cur, RNUM_T));
 
-    let val = interpArgs.reduce((acc, cur) => {
+    let val = args.reduce((acc, cur) => {
 
         if (acc.value === false) {
             return {value: false, type: RBOOL_T};
@@ -541,11 +531,10 @@ function gesign(args, env) {
         return {value: true, type: RBOOL_T};
     }
 }
-function ltsign(args, env) {
-    let interpArgs = args.map((elem) => interp(elem, env));
-    interpArgs.forEach((cur) => typeCheck(cur, RNUM_T));
+function ltsign(args) {
+    args.forEach((cur) => typeCheck(cur, RNUM_T));
 
-    let val = interpArgs.reduce((acc, cur) => {
+    let val = args.reduce((acc, cur) => {
 
         if (acc.value === false) {
             return {value: false, type: RBOOL_T};
@@ -560,11 +549,10 @@ function ltsign(args, env) {
         return {value: true, type: RBOOL_T};
     }
 }
-function lesign(args, env) {
-    let interpArgs = args.map((elem) => interp(elem, env));
-    interpArgs.forEach((cur) => typeCheck(cur, RNUM_T));
+function lesign(args) {
+    args.forEach((cur) => typeCheck(cur, RNUM_T));
 
-    let val = interpArgs.reduce((acc, cur) => {
+    let val = args.reduce((acc, cur) => {
 
         if (acc.value === false) {
             return {value: false, type: RBOOL_T};
@@ -1448,11 +1436,11 @@ function Inputs(props) {
                   placeholder={'Input'}
                   isValid={validProg}
                   onValid={props.dummy ?
-                           (text) => inputChange({prog: parseCheck(text)},
+                           (text) => inputChange({prog: interp(parseCheck(text), initEnv)},
                                                   input)
                            :
                            (text) => inputChange({...input,
-                                                  prog: parseCheck(text)},
+                                                  prog: interp(parseCheck(text), initEnv)},
                                                  input)}
                   
                   onEmpty={() => inputChange({...input,
@@ -1601,7 +1589,7 @@ function Want(props) {
             dummy={props.dummy}
             placeholder={'Want'}
             isValid={validProg}
-            onValid={(text) => props.wantChange(parseCheck(text))}
+            onValid={(text) => props.wantChange(interp(parseCheck(text), initEnv))}
             onEmpty={() => props.wantChange(yellow)}
           />
         </td>
@@ -1632,12 +1620,10 @@ class App extends React.Component {
 
     calculate(program) {
         function makeLookup(table) {
-            function lookup(args, env) {
+            function lookup(args) {
                 if (args.length !== table.params.length) {
                     throw new Error('Arity Mismatch, expected ' + table.params.length + ' argument' + (table.params.length === 1 ? '' : 's'));
                 }
-
-                let interpArgs = args.map((arg) => interp(arg, env));
 
                 let expr = table.examples.reduce((acc, example) => {
                     if (acc !== undefined) {
@@ -1646,15 +1632,12 @@ class App extends React.Component {
 
                     // I have no idea what should happen if this is called on a table with no params
                     if (example.inputs.reduce((acc, input, i) => {
-                        // like my pun?
-                        let INterped = interp(input.prog, env);
-                        return acc && deepEquals(INterped, interpArgs[i]);
-
+                        return acc && deepEquals(input.prog, args[i]);
                     }, true)) {
                         if (example.want === yellow) {
-                            throw new ReferenceError(`(${table.name} ${interpArgs.map(unParse).join(' ')}) doesn't have a want`);
+                            throw new ReferenceError(`(${table.name} ${args.map(unParse).join(' ')}) doesn't have a want`);
                         } else {
-                            return interp(example.want, env);
+                            return example.want;
                         }
                     }
 
@@ -1663,7 +1646,7 @@ class App extends React.Component {
 
                 if (expr === undefined) {
                     // it's like a reference error in the super meta table language
-                    throw new ReferenceError(interpArgs.map(unParse).join() + ' is not an example in ' + table.name);
+                    throw new ReferenceError(args.map(unParse).join() + ' is not an example in ' + table.name);
                 }
 
                 return expr;
