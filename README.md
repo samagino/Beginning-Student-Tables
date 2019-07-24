@@ -31,4 +31,6 @@ click me: https://samagino.github.io/tableMethodThing/
 
 5. run ```npm start``` to start a development server
 
-6. have fun
+6. have fun!
+
+If this doesn't make sense, the README in ```prototypes/two``` contains more info.
