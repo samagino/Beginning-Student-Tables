@@ -228,7 +228,7 @@ function Succinct(props) {
             />
           </div>
           <SuccinctTab
-            table={{name: '',
+            table={{name: yellow,
                     examples: [],
                     formulas: [],
                     params: [],
@@ -1040,7 +1040,8 @@ class App extends React.Component {
                         return gray;
                     } else if (example === pink) {
                         return pink;
-                    } else if (!example.inputs.every((input) => input.prog !== yellow) || formula.prog === yellow) { // if any inputs or the formula aren't initialized
+                    } else if (!example.inputs.every((input) => input.prog !== yellow) || formula.prog === yellow) {
+                        // if any of the inputs or the formula isn't initialized, return yellow
                         return yellow;
                     }
 
@@ -1084,11 +1085,9 @@ class App extends React.Component {
                 }
             }
 
-            if (table.name === yellow || !table.params.every((param) => param.name !== yellow)) { // if the table or any of the table's parameters don't have a name yet, don't calculate
-                // I should probably change this at some point, as it is it pretty much overwrites all outputs if a new parameter is added, although I guess it would do that anyway because of how init inputs are treated
+            if (table.name === yellow || !table.params.every((param) => param.name !== yellow)) { // if the table or any of the table's parameters don't have a name yet, freeze outputs
                 let formulas = table.formulas.map((formula) => ({...formula, outputs: Array(table.examples.length).fill(yellow)}));
-                return {...table,
-                        formulas};
+                return {...table}; 
             } else {
                 let formulas = table.formulas.map((formula) => calcFormula(formula, table.examples));
                 return {...table,
