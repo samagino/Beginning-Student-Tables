@@ -48,6 +48,8 @@ const initEnv = [
                               value: isnull}},
     {name: 'empty?', binding: {type: RFUNCT_T,
                                value: isnull}},
+    {name: 'cons?', binding: {type: RFUNCT_T,
+                               value: iscons}},
     {name: '=', binding: {type: RFUNCT_T,
                           value: equalsign}},
     {name: '>', binding: {type: RFUNCT_T,
@@ -471,6 +473,16 @@ function isnull(args) {
     let firstArg = args[0];
 
     return {value: firstArg.value === null && firstArg.type === RLIST_T,
+            type: RBOOL_T};
+}
+function iscons(args) {
+    if (args.length !== 1) {
+        throw new Error('arity mismatch');
+    }
+
+    let firstArg = args[0];
+
+    return {value: firstArg.value !== null && firstArg.type === RLIST_T,
             type: RBOOL_T};
 }
 function equalsign(args) {
