@@ -72,11 +72,11 @@ const initEnv = [
 // String -> {prog: Program, rest: String}
 // parses all expressions except quoted expressions
 function parse(text) {
-    const varRE = /^[a-zA-Z+\-*/?=><]+/; // change me
+    const varRE = /^[^\s",'`()[\]{}|;#]+/; // except numbers
     const appRE = /^\(/;
-    const numRE = /^-?\d+/; // this one doesn't permit fractions
-    const boolRE = /^#[tf]/;
-    const strRE = /^"[^"]*"/;
+    const numRE = /^-?(?:\d+(?:\.\d*)?|\.\d+)(?=$|[\s",'`()[\]{}|;#])/; // this one doesn't permit fractions
+    const boolRE = /^#(?:[tfTF]|true|false)(?=$|[\s",'`()[\]{}|;#])/;
+    const strRE = /^"[^\\"]*"/; // TODO: handle backslash escape
     const quoteRE = /^'/;
 
     if (numRE.test(text)) {
@@ -98,8 +98,8 @@ function parse(text) {
     } else if (boolRE.test(text)) {
         let matches = text.match(boolRE);
         let boolStr = matches[0];
-        let rest = text.slice(2).trim();
-        let bool = {value: boolStr === '#t', type: RBOOL_T};
+        let rest = text.slice(boolStr.length).trim();
+        let bool = {value: boolStr[1].toLowerCase() === 't', type: RBOOL_T};
 
         return {prog: bool, rest: rest};
 
@@ -129,7 +129,7 @@ function parse(text) {
         return {prog: app, rest: rest};
 
     } else if (quoteRE.test(text)) {
-        return parseQ(text);
+        return parseQ(text.slice(1).trim());
     }
 
     throw new SyntaxError('Invalid Syntax: "' + text + '"');
@@ -138,15 +138,15 @@ function parse(text) {
 // String -> {prog: Program, rest: String}
 // parses quoted expressions
 function parseQ(text) {
-    const symRE = /^'?[a-zA-Z+\-*/?=><#"]+/; // change me
-    const listRE = /^'?\s*\(/;
-    const numRE = /^'?-?\d+/; // this one doesn't permit fractions
-    const boolRE = /^#[tf]/;
-    const strRE = /^"[^"]*"/;
+    const symRE = /^[^\s",'`()[\]{}|;#]+/; // except numbers
+    const listRE = /^\(/;
+    const numRE = /^-?(?:\d+(?:\.\d*)?|\.\d+)(?=$|[\s",'`()[\]{}|;#])/; // this one doesn't permit fractions
+    const boolRE = /^#(?:[tfTF]|true|false)(?=$|[\s",'`()[\]{}|;#])/;
+    const strRE = /^"[^\\"]*"/;
 
 
     if (listRE.test(text)) {
-        text = text.slice(text.match(listRE)[0].length).trim(); // remove quote, open paren
+        text = text.slice(1).trim(); // remove quote, open paren
         let listArr = [];
 
         while (text[0] !== ')') {
@@ -171,8 +171,8 @@ function parseQ(text) {
     } else if (boolRE.test(text)) {
         let matches = text.match(boolRE);
         let boolStr = matches[0];
-        let rest = text.slice(2).trim();
-        let bool = {value: boolStr === '#t', type: RBOOL_T};
+        let rest = text.slice(boolStr.length).trim();
+        let bool = {value: boolStr.charAt(1).toLowerCase() === 't', type: RBOOL_T};
 
         return {prog: bool, rest: rest};
 
@@ -186,8 +186,7 @@ function parseQ(text) {
     } else if (symRE.test(text)) {
         let matches = text.match(symRE);
         let value = matches[0];
-        value = value[0] === '\'' ? value : '\'' + value;
-        let sym = {value: value, type: RSYM_T};
+        let sym = {value: '\'' + value, type: RSYM_T}; // TODO value should not be stored with apostrophe
         let rest = text.slice(matches[0].length).trim();
 
         return {prog: sym, rest: rest};
