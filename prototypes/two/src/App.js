@@ -112,13 +112,13 @@ class ValidatedInput extends React.Component {
 
     render() {
         let className;
-        if (this.props.dummy) {
+        if (this.props.dummy && this.state.text === '') { // empty dummy
             className = 'dummy_input';
-        } else if (this.props.isValid(this.state.text)) {
+        } else if (this.props.isValid(this.state.text)) { // valid
             className = 'valid_input';
-        } else if (this.state.text === '') {
+        } else if (this.state.text === '') { // empty non-dummy
             className = 'empty_input';
-        } else {
+        } else { // invalid
             className = 'invalid_input';
         }
         
@@ -1086,7 +1086,6 @@ class App extends React.Component {
             }
 
             if (table.name === yellow || !table.params.every((param) => param.name !== yellow)) { // if the table or any of the table's parameters don't have a name yet, freeze outputs
-                let formulas = table.formulas.map((formula) => ({...formula, outputs: Array(table.examples.length).fill(yellow)}));
                 return {...table}; 
             } else {
                 let formulas = table.formulas.map((formula) => calcFormula(formula, table.examples));
