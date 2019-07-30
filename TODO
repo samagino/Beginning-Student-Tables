@@ -2,6 +2,8 @@
 
 todo:
 pretty printing
+add unparse function that turns list into (list a b c ...)
+images (svg/canvas?)
 
 bugs:
 
