@@ -1,5 +1,5 @@
 import React from 'react';
-import {interp, parseCheck, unParse, initEnv, RAPP_T, RFUNCT_T, RBOOL_T, RLIST_T} from './interpreter.js';
+import {interp, parseCheck, unparse_cons, unparse_list, initEnv, RAPP_T, RFUNCT_T, RBOOL_T, RLIST_T} from './interpreter.js';
 import {gray, pink, yellow, allBools, isBooleanFormula} from './header.js';
 import toBSL from './prettyprint.js';
 import './App.css';
@@ -39,6 +39,14 @@ function peekKey(lookahead) {
     }
 }
 
+/**************
+    Unparser
+**************/
+let unparse = unparse_cons;
+
+/*****************
+    Deep Equals
+*****************/
 // Program -> Program -> Boolean
 // checks if two programs are equivalent, recurs on lists and applications
 // may not quite work on functions because I use js functions, not data represented closures or something
@@ -910,7 +918,7 @@ function TestCell(props) {
         text = output.message;
         error = true;
     } else {
-        text = unParse(output);
+        text = unparse(output);
         error = false;
     }
 
@@ -1010,7 +1018,7 @@ class App extends React.Component {
                         return acc && deepEquals(input.prog, args[i]);
                     }, true)) {
                         if (example.want === yellow) {
-                            throw new ReferenceError(`(${table.name} ${args.map(unParse).join(' ')}) doesn't have a want`);
+                            throw new ReferenceError(`(${table.name} ${args.map(unparse).join(' ')}) doesn't have a want`);
                         } else {
                             return example.want;
                         }
@@ -1021,7 +1029,7 @@ class App extends React.Component {
 
                 if (expr === undefined) {
                     // it's like a reference error in the super meta table language
-                    throw new ReferenceError(args.map(unParse).join() + ' is not an example in ' + table.name);
+                    throw new ReferenceError(args.map(unparse).join() + ' is not an example in ' + table.name);
                 }
 
                 return expr;
@@ -1100,7 +1108,7 @@ class App extends React.Component {
 
     programChange(newProg) {
         let calkedProg = this.calculate(newProg);
-        console.log(calkedProg);
+        //console.log(calkedProg);
         //console.log('next key: ', peekKey());
         //console.log(toBSL(calkedProg));
         this.setState((state) => {
@@ -1111,6 +1119,23 @@ class App extends React.Component {
     render(){
         return (
             <div>
+              <input
+                type='radio'
+                name='unparse_mode_button'
+                id='cons_mode_button'
+                onInput={() => {unparse = unparse_cons; this.setState((state) => state);}}
+                defaultChecked={true}
+              />
+              <label htmlFor='cons_mode_button'>cons mode</label>
+
+              <input
+                type='radio'
+                name='unparse_mode_button'
+                id='list_mode_button'
+                onInput={() => {unparse = unparse_list; this.setState((state) => state);}}
+              />
+              <label htmlFor='list_mode_button'>list mode</label>
+
               <Succinct
                 tables={this.state.tables}
                 programChange={this.programChange}

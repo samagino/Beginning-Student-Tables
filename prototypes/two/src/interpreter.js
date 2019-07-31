@@ -252,7 +252,7 @@ function interp(prog, env) {
 }
 
 // Program -> String
-function unParse(prog) {
+function unparse_cons(prog) {
     switch (prog.type) {
     case RNUM_T:
         return prog.value;
@@ -264,7 +264,7 @@ function unParse(prog) {
         if (prog.value === null) {
             return '\'()';
         } else {
-            return `(cons ${unParse(prog.value.a)} ${unParse(prog.value.d)})`;
+            return `(cons ${unparse_cons(prog.value.a)} ${unparse_cons(prog.value.d)})`;
         }
     case RSYM_T:
         return prog.value;
@@ -273,7 +273,36 @@ function unParse(prog) {
     case RFUNCT_T:
         return 'function';
     case RAPP_T:
-        return `(${unParse(prog.value.funct)} ${prog.value.args.map(unParse).join(' ')})`;
+        return `(${unparse_cons(prog.value.funct)} ${prog.value.args.map(unparse_cons).join(' ')})`;
+    default:
+        return 'error or something';
+    }
+}
+
+// Program -> String
+function unparse_list (prog) {
+    switch (prog.type) {
+    case RNUM_T:
+        return prog.value;
+    case RBOOL_T:
+        return '#' + (prog.value ? 'true' : 'false');
+    case RSTRING_T:
+        return prog.value;
+    case RLIST_T:
+        let elems = '';
+        while (prog.value !== null) {
+            elems += ' ' + unparse_list(prog.value.a);
+            prog = prog.value.d;
+        }
+        return `(list${elems})`;
+    case RSYM_T:
+        return prog.value;
+    case RVAR_T:
+        return prog.value;
+    case RFUNCT_T:
+        return 'function';
+    case RAPP_T:
+        return `(${unparse_list(prog.value.funct)} ${prog.value.args.map(unparse_list).join(' ')})`;
     default:
         return 'error or something';
     }
@@ -327,7 +356,8 @@ function typeCheck(prog, type){
     }
 
     if (prog.type !== type){
-        throw new TypeError(unParse(prog) + ' ain\'t a ' + typeString);
+        // TODO maybe change me to use whatever unpareser is currently being used somehow
+        throw new TypeError(unparse_cons(prog) + ' ain\'t a ' + typeString);
     }
 }
 
@@ -576,4 +606,4 @@ function lesign(args) {
     }
 }
 
-export {interp, parseCheck, unParse, initEnv, RVAR_T, RAPP_T, RFUNCT_T, RNUM_T, RBOOL_T, RSTRING_T, RLIST_T, RSYM_T};
+export {interp, parseCheck, unparse_cons, unparse_list, initEnv, RVAR_T, RAPP_T, RFUNCT_T, RNUM_T, RBOOL_T, RSTRING_T, RLIST_T, RSYM_T};
