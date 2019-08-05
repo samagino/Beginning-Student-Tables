@@ -12,6 +12,15 @@ const RSTRING_T = 5;
 const RLIST_T =   6;
 const RSYM_T =    7;
 
+const varRE = /^[^\s",'`()[\]{}|;#]+/; // except numbers
+const appRE = /^\(/;
+const numRE = /^-?(?:\d+(?:\.\d*)?|\.\d+)(?=$|[\s",'`()[\]{}|;#])/; // this one doesn't permit fractions
+const boolRE = /^#(?:[tfTF]|true|false)(?=$|[\s",'`()[\]{}|;#])/;
+const strRE = /^"[^\\"]*"/; // TODO: handle backslash escape
+const quoteRE = /^'/;
+const symRE = /^[^\s",'`()[\]{}|;#]+/; // except numbers
+const listRE = /^\(/;
+
 const initEnv = [
     // functions
     {name: '+', binding: {type: RFUNCT_T,
@@ -74,13 +83,6 @@ const initEnv = [
 // String -> {prog: Program, rest: String}
 // parses all expressions except quoted expressions
 function parse(text) {
-    const varRE = /^[^\s",'`()[\]{}|;#]+/; // except numbers
-    const appRE = /^\(/;
-    const numRE = /^-?(?:\d+(?:\.\d*)?|\.\d+)(?=$|[\s",'`()[\]{}|;#])/; // this one doesn't permit fractions
-    const boolRE = /^#(?:[tfTF]|true|false)(?=$|[\s",'`()[\]{}|;#])/;
-    const strRE = /^"[^\\"]*"/; // TODO: handle backslash escape
-    const quoteRE = /^'/;
-
     if (numRE.test(text)) {
         let matches = text.match(numRE);
         let numStr = matches[0];
@@ -140,13 +142,6 @@ function parse(text) {
 // String -> {prog: Program, rest: String}
 // parses quoted expressions
 function parseQ(text) {
-    const symRE = /^[^\s",'`()[\]{}|;#]+/; // except numbers
-    const listRE = /^\(/;
-    const numRE = /^-?(?:\d+(?:\.\d*)?|\.\d+)(?=$|[\s",'`()[\]{}|;#])/; // this one doesn't permit fractions
-    const boolRE = /^#(?:[tfTF]|true|false)(?=$|[\s",'`()[\]{}|;#])/;
-    const strRE = /^"[^\\"]*"/;
-
-
     if (listRE.test(text)) {
         text = text.slice(1).trim(); // remove quote, open paren
         let listArr = [];
@@ -606,4 +601,6 @@ function lesign(args) {
     }
 }
 
-export {interp, parseCheck, unparse_cons, unparse_list, initEnv, RVAR_T, RAPP_T, RFUNCT_T, RNUM_T, RBOOL_T, RSTRING_T, RLIST_T, RSYM_T};
+export {interp, parseCheck, unparse_cons, unparse_list, initEnv,
+        RVAR_T, RAPP_T, RFUNCT_T, RNUM_T, RBOOL_T, RSTRING_T, RLIST_T, RSYM_T,
+        varRE};

@@ -1,5 +1,5 @@
 import React from 'react';
-import {interp, parseCheck, unparse_cons, unparse_list, initEnv, RAPP_T, RFUNCT_T, RBOOL_T, RLIST_T} from './interpreter.js';
+import {interp, parseCheck, unparse_cons, unparse_list, initEnv, RAPP_T, RFUNCT_T, RBOOL_T, RLIST_T, varRE} from './interpreter.js';
 import {gray, pink, yellow, allBools, isBooleanFormula} from './header.js';
 import toBSL from './prettyprint.js';
 import './App.css';
@@ -187,8 +187,6 @@ function Succinct(props) {
         let tableVars = props.tables.filter((table) => table !== modTab).map((otherTab) => ({name: otherTab.name, binding: null}));
         let paramVars = modTab.params.map((param) => ({name: param, binding: null}));
         let env = [...initEnv, ...tableVars, ...paramVars];
-
-        const varRE = /^[a-zA-Z+\-*/?=><]+$/; // change me
 
         return varRE.test(text) && !lookup(text, env);
     }
@@ -452,8 +450,6 @@ function Parameters(props) {
         let paramVars = props.params.filter((param) => param !== modParam).map((param) => ({name: param.name, binding: null}));
         let tableVars = props.tableNames.map((name) => ({name: name, binding: null}));
         let env = [...initEnv, ...tableVars, ...paramVars];
-
-        const varRE = /^[a-zA-Z+\-*/?=><]+$/; // change me
 
         return varRE.test(text) && !lookup(text, env);
     }
