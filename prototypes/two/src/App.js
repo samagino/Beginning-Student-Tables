@@ -785,19 +785,12 @@ function SuccinctBody(props) {
 
 function Inputs(props) {
     function validProg(text) {
-        let goodText = true;
-
         try {
-            parseCheck(text);
+            interp(parseCheck(text), initEnv);
         } catch(e) {
-            if (e instanceof SyntaxError) {
-                goodText = false;
-            } else {
-                throw e;
-            }
+            return false;
         }
-
-        return goodText;
+        return true;
     }
 
     function inputChange(newInput, oldInput) {
@@ -951,19 +944,12 @@ function TestCell(props) {
 
 function Want(props) {
     function validProg(text) {
-        let goodText = true;
-
         try {
-            parseCheck(text);
+            interp(parseCheck(text), initEnv);
         } catch(e) {
-            if (e instanceof SyntaxError) {
-                goodText = false;
-            } else {
-                throw e;
-            }
+            return false;
         }
-
-        return goodText;
+        return true;
     }
 
     return (
