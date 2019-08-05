@@ -1141,11 +1141,11 @@ class App extends React.Component {
                 programChange={this.programChange}
               />
               <textarea
-                rows={10}
-                cols={50}
+                rows={20}
+                cols={100}
                 className='bsl_io'
                 readOnly={true}
-                value={toBSL(this.state.tables)}
+                value={toBSL(this.state.tables, unparse, 100, 50)}
               />
             </div>
         );
