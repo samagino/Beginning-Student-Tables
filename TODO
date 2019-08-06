@@ -4,7 +4,6 @@ todo:
 - make toBSL collapse cond expressions (so there's only one at every level)
 - checkbox for showing bsl output (maybe later change it so it indicates whether it
       should expect input from the field or print output to the field or something)
-- change cons mode/list mode buttons to drop-down menu
 - images (svg/canvas?)
 - bsl import (BSL to Table)
 

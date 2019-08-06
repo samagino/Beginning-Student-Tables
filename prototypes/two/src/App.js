@@ -1089,7 +1089,6 @@ class App extends React.Component {
         let calkedProg = this.calculate(newProg);
         //console.log(calkedProg);
         //console.log('next key: ', peekKey());
-        //console.log(toBSL(calkedProg));
         this.setState((state) => {
             return {tables: calkedProg};
         });
@@ -1098,23 +1097,6 @@ class App extends React.Component {
     render(){
         return (
             <div>
-              <input
-                type='radio'
-                name='unparse_mode_button'
-                id='cons_mode_button'
-                onInput={() => {unparse = unparse_cons; this.setState((state) => state);}}
-                defaultChecked={true}
-              />
-              <label htmlFor='cons_mode_button'>cons mode</label>
-
-              <input
-                type='radio'
-                name='unparse_mode_button'
-                id='list_mode_button'
-                onInput={() => {unparse = unparse_list; this.setState((state) => state);}}
-              />
-              <label htmlFor='list_mode_button'>list mode</label>
-
               <Succinct
                 tables={this.state.tables}
                 programChange={this.programChange}
@@ -1126,9 +1108,42 @@ class App extends React.Component {
                 readOnly={true}
                 value={toBSL(this.state.tables, unparse, 100, 50)}
               />
+              <div className='language_select'>
+                <select
+                  onChange={(e) => {
+                      if (e.target.value === 'cons'){
+                          unparse = unparse_cons;
+                      } else {
+                          unparse = unparse_list;
+                      }
+                      this.setState((state) => state);
+                  }}
+                >
+                  <option value='cons' selected={true}>Beginning Student</option>
+                  <option value='list'>Beginning Student with List Abbreviations</option>
+                </select>
+              </div>
             </div>
         );
     }
 }
+
+// <input
+//   type='radio'
+//   name='unparse_mode_button'
+//   id='cons_mode_button'
+//   onInput={() => {unparse = unparse_cons; this.setState((state) => state);}}
+//   defaultChecked={true}
+// />
+// <label htmlFor='cons_mode_button'>cons mode</label>
+
+// <input
+//   type='radio'
+//   name='unparse_mode_button'
+//   id='list_mode_button'
+//   onInput={() => {unparse = unparse_list; this.setState((state) => state);}}
+// />
+// <label htmlFor='list_mode_button'>list mode</label>
+
 
 export default App;
