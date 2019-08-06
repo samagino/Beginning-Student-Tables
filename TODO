@@ -1,7 +1,6 @@
 --___TODO___--
 
 todo:
-- make toBSL show the literal typed-in expressions in check-expects
 - make toBSL collapse cond expressions (so there's only one at every level)
 - checkbox for showing bsl output (maybe later change it so it indicates whether it
       should expect input from the field or print output to the field or something)

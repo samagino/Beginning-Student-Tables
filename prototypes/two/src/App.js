@@ -808,11 +808,11 @@ function Inputs(props) {
                   placeholder={'Input'}
                   isValid={validProg}
                   onValid={props.dummy ?
-                           (text) => inputChange({prog: interp(parseCheck(text), initEnv)},
+                           (text) => inputChange({prog: parseCheck(text)},
                                                   input)
                            :
                            (text) => inputChange({...input,
-                                                  prog: interp(parseCheck(text), initEnv)},
+                                                  prog: parseCheck(text)},
                                                  input)}
                   
                   onEmpty={() => inputChange({...input,
@@ -895,11 +895,7 @@ function TestCell(props) {
     let want = yellow;
 
     if (props.want !== yellow) {
-        try {
-            want = interp(props.want, initEnv);
-        } catch (e) {
-            output = e;
-        }
+        want = interp(props.want, initEnv);
     }
 
     let text, error;
@@ -954,7 +950,7 @@ function Want(props) {
             dummy={props.dummy}
             placeholder={'Want'}
             isValid={validProg}
-            onValid={(text) => props.wantChange(interp(parseCheck(text), initEnv))}
+            onValid={(text) => props.wantChange(parseCheck(text))}
             onEmpty={() => props.wantChange(yellow)}
           />
         </td>
@@ -1035,7 +1031,7 @@ class App extends React.Component {
                         return yellow;
                     }
 
-                    let localEnv = table.params.map((param, i) => ({name: param.name, binding: example.inputs[i].prog}));
+                    let localEnv = table.params.map((param, i) => ({name: param.name, binding: interp(example.inputs[i].prog, initEnv)}));
                     let env = [...globalEnv, ...localEnv];
 
                     try {
@@ -1075,7 +1071,8 @@ class App extends React.Component {
                 }
             }
 
-            if (table.name === yellow || !table.params.every((param) => param.name !== yellow)) { // if the table or any of the table's parameters don't have a name yet, freeze outputs
+            if (table.name === yellow || !table.params.every((param) => param.name !== yellow)) {
+                // if the table or any of the table's parameters don't have a name yet, freeze outputs
                 return {...table}; 
             } else {
                 let formulas = table.formulas.map((formula) => calcFormula(formula, table.examples));
