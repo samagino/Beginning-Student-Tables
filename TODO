@@ -2,7 +2,7 @@
 
 todo:
 - make toBSL collapse cond expressions (so there's only one at every level)
-- make pretty printer print more prettily
+- have toBSL use the pretty printer better so it prints more prettily
     - maybe make a parser that takes an s-expr and returns a doc?
 - images (svg/canvas?)
 - bsl import (BSL to Table)
