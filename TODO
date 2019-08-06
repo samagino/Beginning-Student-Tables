@@ -2,8 +2,8 @@
 
 todo:
 - make toBSL collapse cond expressions (so there's only one at every level)
-- checkbox for showing bsl output (maybe later change it so it indicates whether it
-      should expect input from the field or print output to the field or something)
+- make pretty printer print more prettily
+    - maybe make a parser that takes an s-expr and returns a doc?
 - images (svg/canvas?)
 - bsl import (BSL to Table)
 
