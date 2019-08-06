@@ -40,9 +40,10 @@ function peekKey(lookahead) {
 }
 
 /**************
-    Unparser
+    Globals
 **************/
 let unparse = unparse_cons;
+let showBSL = false;
 
 /*****************
     Deep Equals
@@ -1095,18 +1096,46 @@ class App extends React.Component {
     }
 
     render(){
+        let bslField;
+        if (showBSL) {
+            bslField = (
+                <textarea
+                  className='bsl_field'
+                  rows={20}
+                  cols={70}
+                  readOnly={true}
+                  value={toBSL(this.state.tables, unparse, 70, 50)}
+                />
+            );
+        } else {
+            bslField = (
+                <textarea
+                  className='bsl_field'
+                  rows={20}
+                  cols={70}
+                  readOnly={true}
+                  value={''}
+                />
+            );
+        }
+
         return (
             <div>
+              <div className='bsl_io'>
+                <div className='bsl_checkbox'>
+                  <input
+                    type='checkbox'
+                    id='bsl_output'
+                    name='bsl_output'
+                    onChange={(e) => {showBSL = !showBSL; this.setState((state) => state);}}
+                  />
+                  <label htmlFor='bsl_output'>Show BSL Output</label>
+                </div>
+                {bslField}
+              </div>
               <Succinct
                 tables={this.state.tables}
                 programChange={this.programChange}
-              />
-              <textarea
-                rows={20}
-                cols={100}
-                className='bsl_io'
-                readOnly={true}
-                value={toBSL(this.state.tables, unparse, 100, 50)}
               />
               <div className='language_select'>
                 <select
@@ -1116,6 +1145,7 @@ class App extends React.Component {
                       } else {
                           unparse = unparse_list;
                       }
+                      // this just rerenders everything, the state remains unchanged
                       this.setState((state) => state);
                   }}
                 >
@@ -1127,23 +1157,5 @@ class App extends React.Component {
         );
     }
 }
-
-// <input
-//   type='radio'
-//   name='unparse_mode_button'
-//   id='cons_mode_button'
-//   onInput={() => {unparse = unparse_cons; this.setState((state) => state);}}
-//   defaultChecked={true}
-// />
-// <label htmlFor='cons_mode_button'>cons mode</label>
-
-// <input
-//   type='radio'
-//   name='unparse_mode_button'
-//   id='list_mode_button'
-//   onInput={() => {unparse = unparse_list; this.setState((state) => state);}}
-// />
-// <label htmlFor='list_mode_button'>list mode</label>
-
 
 export default App;

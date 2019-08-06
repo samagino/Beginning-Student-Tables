@@ -62,8 +62,18 @@
 }
 
 .bsl_io{
-    font-family: monospace;
     float: right;
+}
+
+.bsl_checkbox{
+    float: left;
+    clear: left;
+}
+
+.bsl_field{
+    font-family: monospace;
+    float: left;
+    clear: left;
 }
 
 .language_select{
