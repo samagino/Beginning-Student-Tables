@@ -1139,6 +1139,7 @@ class App extends React.Component {
               />
               <div className='language_select'>
                 <select
+                  defaultValue='cons'
                   onChange={(e) => {
                       if (e.target.value === 'cons'){
                           unparse = unparse_cons;
@@ -1149,7 +1150,7 @@ class App extends React.Component {
                       this.setState((state) => state);
                   }}
                 >
-                  <option value='cons' selected={true}>Beginning Student</option>
+                  <option value='cons'>Beginning Student</option>
                   <option value='list'>Beginning Student with List Abbreviations</option>
                 </select>
               </div>
