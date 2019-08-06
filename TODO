@@ -1,13 +1,18 @@
 --___TODO___--
 
 todo:
-images (svg/canvas?)
-bsl import (BSL to Table)
+- make toBSL show the literal typed-in expressions in check-expects
+- make toBSL collapse cond expressions (so there's only one at every level)
+- checkbox for showing bsl output (maybe later change it so it indicates whether it
+      should expect input from the field or print output to the field or something)
+- change cons mode/list mode buttons to drop-down menu
+- images (svg/canvas?)
+- bsl import (BSL to Table)
 
 bugs:
 
 stuff that may be nice:
-undo/redo button
+- undo/redo button
 
 stuff that will probably happen eventually:
-actually figrure out where/how to host this
+- actually figrure out where/how to host this
