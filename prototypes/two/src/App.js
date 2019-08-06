@@ -1121,18 +1121,6 @@ class App extends React.Component {
 
         return (
             <div>
-              <div className='bsl_io'>
-                <div className='bsl_checkbox'>
-                  <input
-                    type='checkbox'
-                    id='bsl_output'
-                    name='bsl_output'
-                    onChange={(e) => {showBSL = !showBSL; this.setState((state) => state);}}
-                  />
-                  <label htmlFor='bsl_output'>Show BSL Output</label>
-                </div>
-                {bslField}
-              </div>
               <Succinct
                 tables={this.state.tables}
                 programChange={this.programChange}
@@ -1153,6 +1141,18 @@ class App extends React.Component {
                   <option value='cons'>Beginning Student</option>
                   <option value='list'>Beginning Student with List Abbreviations</option>
                 </select>
+              </div>
+              <div className='bsl_io'>
+                <div className='bsl_checkbox'>
+                  <input
+                    type='checkbox'
+                    id='bsl_output'
+                    name='bsl_output'
+                    onChange={(e) => {showBSL = !showBSL; this.setState((state) => state);}}
+                  />
+                  <label htmlFor='bsl_output'>Show BSL Output</label>
+                </div>
+                {bslField}
               </div>
             </div>
         );
