@@ -319,7 +319,7 @@ function progToDoc (program) {
     case RVAR_T:
         return text(program.value);
     case RAPP_T:
-        return group(nest(1, level([text('('), stack([progToDoc(program.value.funct), ...program.value.args.map(progToDoc)]), text(')')])));
+        return group(nest(1, bracket('(', stack([progToDoc(program.value.funct), ...program.value.args.map(progToDoc)]), ')')));
     case RFUNCT_T:
         return text('function');
     case RNUM_T:
@@ -330,10 +330,9 @@ function progToDoc (program) {
         return text(program.value);
     case RLIST_T: // this just does cons, not list
         if (program.value === null) {
-            return text('\'()');
+            return text("'()");
         } else {
-            return group(nest(6, stack([spread([text('(cons'), progToDoc(program.value.a)]),
-                                        level([progToDoc(program.value.d), text(')')])])));
+            return bracket('(', spread([text('cons'), progToDoc(program.value.a), progToDoc(program.value.d)]), ')');
         }
     case RSYM_T:
         return text("'" + program.value);
@@ -357,10 +356,10 @@ function toBSL(tables, unparse, width, ribbon) {
             let inputs = stack(example.inputs.map((input) => fieldToDoc(input.prog)));
             let want = fieldToDoc(example.want);
 
-            return group(nest('(check-expect ('.length, stack([spread([text('(check-expect'),
-                                                                      level([text('('), name])]),
-                                                              level([inputs, text(')')]),
-                                                              level([want, text(')')])])));
+            return group(nest(14, stack([nest(1, stack([spread([text('(check-expect'),
+                                                                level([text('('), name])]),
+                                                        level([inputs, text(')')])])),
+                                         level([want, text(')')])])));
         }));
 
         let body = formulasToDoc(table.formulas);
@@ -386,9 +385,9 @@ function toBSL(tables, unparse, width, ribbon) {
         if (splitForms.bools.length !== 0) {
             // so is this one
             bools = nest(2, bracket('(', stack([text('cond'),
-                                                ...splitForms.bools.map((form) => bracket('[', stack([fieldToDoc(form.prog),
+                                                ...splitForms.bools.map((form) => nest(1, bracket('[', stack([fieldToDoc(form.prog),
                                                                                                       formulasToDoc(form.thenChildren)]),
-                                                                                          ']'))]),')'));
+                                                                                                  ']')))]),')'));
         }
 
         if (splitForms.bools.length !== 0 && splitForms.nonbools.length !== 0) {
