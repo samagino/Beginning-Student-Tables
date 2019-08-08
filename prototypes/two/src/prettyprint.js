@@ -336,7 +336,7 @@ function progToDoc (program) {
                                         level([progToDoc(program.value.d), text(')')])])));
         }
     case RSYM_T:
-        return text(program.value);
+        return text("'" + program.value);
     default:
         throw new Error('unknown program type');
     }

@@ -183,7 +183,7 @@ function parseQ(text) {
     } else if (symRE.test(text)) {
         let matches = text.match(symRE);
         let value = matches[0];
-        let sym = {value: '\'' + value, type: RSYM_T}; // TODO value should not be stored with apostrophe
+        let sym = {value: value, type: RSYM_T};
         let rest = text.slice(matches[0].length).trim();
 
         return {prog: sym, rest: rest};
@@ -262,7 +262,7 @@ function unparse_cons(prog) {
             return `(cons ${unparse_cons(prog.value.a)} ${unparse_cons(prog.value.d)})`;
         }
     case RSYM_T:
-        return prog.value;
+        return "'" + prog.value;
     case RVAR_T:
         return prog.value;
     case RFUNCT_T:
@@ -291,7 +291,7 @@ function unparse_list (prog) {
         }
         return `(list${elems})`;
     case RSYM_T:
-        return prog.value;
+        return "'" + prog.value;
     case RVAR_T:
         return prog.value;
     case RFUNCT_T:
