@@ -309,6 +309,7 @@ function bracket (left, doc, right) {
     return level([text(left), doc, text(right)]);
 }
 
+
 /**************************************
     Thing that Turns Tables Into BSL
 **************************************/
@@ -334,6 +335,40 @@ function progToDoc (program) {
         } else {
             return bracket('(', spread([text('cons'), progToDoc(program.value.a), progToDoc(program.value.d)]), ')');
         }
+    case RSYM_T:
+        return text("'" + program.value);
+    default:
+        throw new Error('unknown program type');
+    }
+}
+
+// Program -> Doc
+function progToDoc_list (program) {
+    switch (program.type) {
+    case RVAR_T:
+        return text(program.value);
+    case RAPP_T:
+        return group(nest(1, bracket('(', stack([progToDoc(program.value.funct), ...program.value.args.map(progToDoc)]), ')')));
+    case RFUNCT_T:
+        return text('function');
+    case RNUM_T:
+        return text(program.value);
+    case RBOOL_T:
+        return text('#' + program.value);
+    case RSTRING_T:
+        return text(program.value);
+    case RLIST_T:
+        if (program.value === null) {
+            return text("'()");
+        }
+
+        let list = program.value.d,
+            elems = progToDoc_list(program.value.a);
+        while (list.value !== null) {
+            elems = spread([elems, progToDoc_list(list.value.a)]);
+        }
+
+        return bracket('(', spread([text('list'), elems]), ')');
     case RSYM_T:
         return text("'" + program.value);
     default:
@@ -413,5 +448,13 @@ function toBSL(tables, unparse, width, ribbon) {
     }
 }
 
+
+/****************
+    Unparsers
+****************/
+const widePretty = makePretty(Infinity, Infinity);
+
+export let unparse_cons = (prog) => widePretty(progToDoc(prog));
+export let unparse_list = (prog) => widePretty(progToDoc_list(prog));
 
 export default toBSL;
