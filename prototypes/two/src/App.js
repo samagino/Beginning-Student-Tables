@@ -994,12 +994,12 @@ class App extends React.Component {
 
                     // I have no idea what should happen if this is called on a table with no params
                     if (example.inputs.reduce((acc, input, i) => {
-                        return acc && deepEquals(input.prog, args[i]);
+                        return acc && deepEquals(interp(input.prog, initEnv), args[i]);
                     }, true)) {
                         if (example.want === yellow) {
                             throw new ReferenceError(`(${table.name} ${args.map(unparse).join(' ')}) doesn't have a want`);
                         } else {
-                            return example.want;
+                            return interp(example.want, initEnv);
                         }
                     }
 
@@ -1104,7 +1104,7 @@ class App extends React.Component {
                   rows={20}
                   cols={70}
                   readOnly={true}
-                  value={toBSL(this.state.tables, unparse, 70, 50)}
+                  value={toBSL(this.state.tables, unparse, 70, 70)}
                 />
             );
         } else {
