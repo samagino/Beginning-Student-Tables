@@ -1,4 +1,5 @@
 import {yellow, isBooleanFormula} from './header.js';
+import {RVAR_T, RAPP_T, RFUNCT_T, RNUM_T, RBOOL_T, RSTRING_T, RLIST_T, RSYM_T} from './interpreter.js';
 
 /*********************
     Pretty Printer
@@ -204,8 +205,8 @@ function makePretty (width, ribbon) {
     }
 
     // Integer -> Integer -> Doc -> Boolean
-    function fits(deltaWidth, deltaRibbon, doc) {
-        if (deltaWidth < 0 || deltaRibbon < 0) {
+    function fits(diffWidth, diffRibbon, doc) {
+        if (diffWidth < 0 || diffRibbon < 0) {
             return false;
         }
 
@@ -215,7 +216,9 @@ function makePretty (width, ribbon) {
         case 'compose':
             switch (doc.left.type) {
             case 'text':
-                return fits(deltaWidth - doc.left.text.length, deltaRibbon - doc.left.text.length, doc.right);
+                return fits(diffWidth - doc.left.text.length, diffRibbon - doc.left.text.length, doc.right);
+            case 'nest': // TODO: not sure if this should be here
+                return fits(diffWidth - doc.left.indent, diffRibbon - doc.left.indent, doc.right);
             case 'line':
                 return true;
             default:
@@ -264,6 +267,12 @@ function folddoc (f, docs) {
     }
 }
 
+// [☺String, Doc☹] -> Doc
+// where [☺String, Doc☹] means an array of elements that are either a Doc or a String (disjunction or whatever)
+function docify(stuff) {
+    return stuff.map((elem) => typeof elem === 'string' ? text(elem) : elem);
+}
+
 // [Doc] -> Doc
 // puts a space between docs
 function spread (docs) {
@@ -284,7 +293,6 @@ function superstack (docs) {
 
 // [Doc] -> Doc
 // fills available horizontal space
-// doesn't work in group()s because group() destroys unions
 function fill(docs){
     return folddoc(spaceOrLine, docs);
 }
@@ -295,51 +303,113 @@ function level (docs) {
     return folddoc(compose, docs);
 }
 
+// String -> Doc -> String -> Doc
+// puts the given document between left and right
+function bracket (left, doc, right) {
+    return level([text(left), doc, text(right)]);
+}
+
 /**************************************
     Thing that Turns Tables Into BSL
 **************************************/
 
+// Program -> Doc
+function progToDoc (program) {
+    switch (program.type) {
+    case RVAR_T:
+        return text(program.value);
+    case RAPP_T:
+        return group(nest(1, level([text('('), stack([progToDoc(program.value.funct), ...program.value.args.map(progToDoc)]), text(')')])));
+    case RFUNCT_T:
+        return text('function');
+    case RNUM_T:
+        return text(program.value);
+    case RBOOL_T:
+        return text('#' + program.value);
+    case RSTRING_T:
+        return text(program.value);
+    case RLIST_T: // this just does cons, not list
+        if (program.value === null) {
+            return text('\'()');
+        } else {
+            return group(nest(6, stack([spread([text('(cons'), progToDoc(program.value.a)]),
+                                        level([progToDoc(program.value.d), text(')')])])));
+        }
+    case RSYM_T:
+        return text(program.value);
+    default:
+        throw new Error('unknown program type');
+    }
+}
+
 // [Table] -> String
-function toBSL(program, unparse, width, ribbon) {
+function toBSL(tables, unparse, width, ribbon) {
     let pretty = makePretty(width, ribbon);
-    let essaie = superstack([...program.map(tableToDoc), nil]);
+    let essaie = superstack([...tables.map(tableToDoc), nil]);
     return pretty(essaie);
 
     // Table -> Doc
     function tableToDoc(table) {
-        let name = inputToDoc(table.name);
-        let params = spread(table.params.map((param) => inputToDoc(param.name)));
+        let name = fieldToDoc(table.name);
+        let params = spread(table.params.map((param) => fieldToDoc(param.name)));
 
         let checkExpects = stack(table.examples.map((example) => {
-            let inputs = stack(example.inputs.map((input) => inputToDoc(input.prog)));
-            let want = inputToDoc(example.want);
+            let inputs = stack(example.inputs.map((input) => fieldToDoc(input.prog)));
+            let want = fieldToDoc(example.want);
 
-            return group(nest(1, stack([text('(check-expect'), nest(1, stack([level([text('('), name]), level([inputs, text(')')])])), level([want, text(')')])])));
+            return group(nest('(check-expect ('.length, stack([spread([text('(check-expect'),
+                                                                      level([text('('), name])]),
+                                                              level([inputs, text(')')]),
+                                                              level([want, text(')')])])));
         }));
 
-        let body = stack(table.formulas.map(formulaToDoc));
-        let funct = nest(2, group(stack([spread([text('(define'), level([text('('), name]), level([params, text(')')])]), level([body, text(')')])])));
+        let body = formulasToDoc(table.formulas);
+        let funct = group(nest(2, bracket('(', stack([spread([text('define'), bracket('(', spread([name, params]), ')')]), body]), ')')));
         return stack([funct, line, checkExpects]);
     }
 
-    // Formula -> Doc
-    function formulaToDoc(formula) {
-        if (isBooleanFormula(formula)) {
-            let children = spread(formula.thenChildren.map(formulaToDoc));
-            return nest(2, stack([text('(cond'), nest(1, stack([level([text('['), inputToDoc(formula.prog)]), level([children, text('])')])]))]));
+    // [Formula] -> Doc
+    function formulasToDoc(formulas) {
+        // [Formula] -> {bools: [Formula], nonbools: [Formula]}
+        function splitFormulas(formulas) {
+            let bools = formulas.filter(isBooleanFormula);
+            let nonbools = formulas.filter((formula) => !isBooleanFormula(formula));
+            return {bools, nonbools};
+        }
+
+        let splitForms = splitFormulas(formulas);
+
+        // this one's a doc
+        let nonbools = stack(splitForms.nonbools.map((form) => fieldToDoc(form.prog))),
+            bools;
+
+        if (splitForms.bools.length !== 0) {
+            // so is this one
+            bools = nest(2, bracket('(', stack([text('cond'),
+                                                ...splitForms.bools.map((form) => bracket('[', stack([fieldToDoc(form.prog),
+                                                                                                      formulasToDoc(form.thenChildren)]),
+                                                                                          ']'))]),')'));
+        }
+
+        if (splitForms.bools.length !== 0 && splitForms.nonbools.length !== 0) {
+            return stack([bools, nonbools]);
+        } else if (splitForms.bools.length !== 0) {
+            return bools;
+        } else if (splitForms.nonbools.length !== 0) {
+            return nonbools;
         } else {
-            return inputToDoc(formula.prog);
+            return nil;
         }
     }
 
-    // Input (yellow or string or program) -> Doc
-    function inputToDoc(input) {
-        if (input === yellow) { // empty
+    // Field (yellow or string or program) -> Doc
+    function fieldToDoc(input) {
+        if (input === yellow) {                 // empty
             return text('...');
-        } else if (typeof input === 'string') { // string
+        } else if (typeof input === 'string') { // name
             return text(input);
-        } else { // program
-            return text(unparse(input));
+        } else {                                // program
+            return progToDoc(input);
         }
     }
 }
