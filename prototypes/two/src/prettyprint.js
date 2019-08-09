@@ -157,7 +157,7 @@ function flatten (doc) {
     case 'nest':
         return flatten(doc.rest);
     case 'text':
-        return text(doc.text);
+        return doc;
     case 'line':
         return text(' ');
     case 'union':
@@ -169,6 +169,36 @@ function flatten (doc) {
 
 // Integer -> Integer -> (Doc -> String)
 function makePretty (width, ribbon) {
+
+    // Integer -> Integer  -> [Pair] -> Doc
+    // it's like best, but better!
+    function be (r, k, pairs) {
+        if (pairs.length === 0) {
+            return nil;
+        }
+
+        let doc = pairs[0].doc;
+        let indent = pairs[0].indent;
+        let rest = pairs.splice(1);
+
+        switch (doc.type) {
+        case 'nil':
+            return be(r, k, rest);
+        case 'compose':
+            return be(r, k, [{indent, doc: doc.left}, {indent, doc: doc.right}, ...rest]);
+        case 'nest':
+            return be(r, k, [{indent: indent + doc.indent, doc: doc.rest}, ...rest]);
+        case 'text':
+            return Text(doc.text, be(r, k + doc.text.length, rest));
+        case 'line':
+            return Line(indent, be(r + indent, indent, rest));
+        case 'union':
+            return better(r, k, be(r, k, [{indent, doc: doc.left}, ...rest]),
+                                be(r, k, [{indent, doc: doc.right}, ...rest]));
+        default:
+            throw Error(`unnexpected document type: ${doc.type}`);
+        }
+    }
 
     // Integer -> Integer -> Doc -> Doc
     function best (thisRibbon, current, doc) {
@@ -231,7 +261,8 @@ function makePretty (width, ribbon) {
 
     // Doc -> String
     function pretty (doc) {
-        return layout(best(ribbon, 0, doc));
+        return layout(be(ribbon, 0, [{indent: 0, doc: doc}]));
+        //return layout(best(ribbon, 0, doc));
     }
 
     return pretty;
@@ -381,6 +412,7 @@ function toBSL(tables, unparse, width, ribbon) {
     let pretty = makePretty(width, ribbon);
     let essaie = superstack([...tables.map(tableToDoc), nil]);
     return pretty(essaie);
+    //return 'hi';
 
     // Table -> Doc
     function tableToDoc(table) {
