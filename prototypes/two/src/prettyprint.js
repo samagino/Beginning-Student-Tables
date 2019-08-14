@@ -407,11 +407,33 @@ function progToDoc_list (program) {
     }
 }
 
+// makes a Haskell document (as defined in projects/haskellPretty/prettier.hs)
+// I'm too lazy to do this by hand
+function toHaskDoc (doc) {
+    switch (doc.type) {
+    case 'nil':
+        return 'nil';
+    case 'compose':
+        return `${toHaskDoc(doc.left)} :<> ${toHaskDoc(doc.right)}`;
+    case 'nest':
+        return `nest ${doc.indent} ${doc.rest}`;
+    case 'text':
+        return `text "${doc.text}"`;
+    case 'line':
+        return 'line';
+    case 'union':
+        return `${toHaskDoc(doc.left)} :<|> ${toHaskDoc(doc.right)}`;
+    default:
+        throw Error('invalid doc type: '+doc.type);
+    }
+}
+
 // [Table] -> String
 function toBSL(tables, unparse, width, ribbon) {
     let pretty = makePretty(width, ribbon);
     let essaie = superstack([...tables.map(tableToDoc), nil]);
-    return pretty(essaie);
+    return toHaskDoc(essaie);
+    //return pretty(essaie);
     //return 'hi';
 
     // Table -> Doc
