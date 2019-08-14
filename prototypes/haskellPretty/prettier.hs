@@ -15,11 +15,11 @@ data Doc = Nil
          | String `Text` Doc
          | Int `Line` Doc
 
-nil    = NIL
-x <> y = x :<> y
+nil      = NIL
+x <> y   = x :<> y
 nest i x = NEST i x
-text s = TEXT s
-line = LINE
+text s   = TEXT s
+line     = LINE
 
 group x = flatten x :<|> x
 
@@ -58,8 +58,15 @@ pretty w x = layout (best w 0 x)
 
 -- Utility Functions
 
-x <+> y = x <> text " " <> y
-x </> y = x <> line <> y
+-- here I use :<> where the paper uses <>
+-- pretty much the symbol <> causes a reference error
+-- because <> is also a function in the library Prelude, which I
+-- guess is loaded automatically
+-- So I could prefix <> with Main so it knows I'm referring to the
+-- one defined in this file, but I don't feel like doing that and also
+-- <> and :<> are equivalent, as defined above, so I just use :<>
+x <+> y = x :<> text " " :<> y
+x </> y = x :<> line :<> y
 
 folddoc f []     = nil
 folddoc f [x]    = x
@@ -67,3 +74,11 @@ folddoc f (x:xs) = f x (folddoc f xs)
 
 spread = folddoc (<+>)
 stack = folddoc (</>)
+
+-- these are utility functions I defined, but the paper did not
+level = folddoc (:<>)
+-- note that this definition of bracket is distinct from the one in the paper
+bracket left doc right = level [text left, doc, text right]
+
+funct = bracket "(" (group (stack [spread [text "define", name], body])) ")"
+name = bracket "(" (spread [text "append", text "la", text "lb" ]) ")"
