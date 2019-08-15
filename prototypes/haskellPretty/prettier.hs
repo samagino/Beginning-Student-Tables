@@ -80,5 +80,31 @@ level = folddoc (:<>)
 -- note that this definition of bracket is distinct from the one in the paper
 bracket left doc right = level [text left, doc, text right]
 
-funct = bracket "(" (group (stack [spread [text "define", name], body])) ")"
-name = bracket "(" (spread [text "append", text "la", text "lb" ]) ")"
+data Table = Table DOC [DOC] [Example] [Formula]
+
+
+data Example = Example [DOC] DOC
+
+data Formula = Branch DOC [Formula]
+             | Leaf DOC
+             
+--tabToDoc :: Table -> DOC
+
+splitForms :: [Formula] -> ([Formula], [Formula])
+splitForms forms = (filter isBoolForm forms, filter (not . isBoolForm) forms)
+
+isBoolForm :: Formula -> Bool
+isBoolForm (Branch _ _) = True
+isBoolForm (Leaf _)     = False
+
+formsToDoc :: ([Formula], [Formula]) -> DOC
+formsToDoc ([], [])          = nil
+formsToDoc (bools, [])       = nest 2 (bracket "(" (stack [text "cond", stack (map formToDoc bools)]) ")")
+formsToDoc ([], nonbools)    = stack (map formToDoc nonbools)
+formsToDoc (bools, nonbools) = stack [nest 2 (bracket "(" (stack [text "cond", stack (map formToDoc bools)]) ")"),
+                                      stack (map formToDoc nonbools)]
+formToDoc :: Formula -> DOC
+formToDoc (Leaf doc)            = doc
+formToDoc (Branch doc children) = bracket "[" (nest 1 (stack [doc, formsToDoc $ splitForms children])) "]"
+
+--exampleToDoc :: Example -> DOC
