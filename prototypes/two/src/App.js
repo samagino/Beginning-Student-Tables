@@ -804,22 +804,24 @@ function Inputs(props) {
         <React.Fragment>
           {props.inputs.map((input, i) => (
               <td key={input.key} >
-                <ValidatedInput
-                  dummy={props.dummy}
-                  placeholder={'Input'}
-                  isValid={validProg}
-                  onValid={props.dummy ?
-                           (text) => inputChange({prog: parseCheck(text)},
-                                                  input)
-                           :
-                           (text) => inputChange({...input,
-                                                  prog: parseCheck(text)},
-                                                 input)}
-                  
-                  onEmpty={() => inputChange({...input,
-                                              prog: yellow},
-                                             input)}
-                />
+                <div className='full_cell'>
+                  <ValidatedInput
+                    dummy={props.dummy}
+                    placeholder={'Input'}
+                    isValid={validProg}
+                    onValid={props.dummy ?
+                             (text) => inputChange({prog: parseCheck(text)},
+                                                   input)
+                             :
+                             (text) => inputChange({...input,
+                                                    prog: parseCheck(text)},
+                                                   input)}
+                    
+                    onEmpty={() => inputChange({...input,
+                                                prog: yellow},
+                                               input)}
+                  />
+                </div>
               </td>
           ))}
         </React.Fragment>
@@ -947,13 +949,15 @@ function Want(props) {
 
     return (
         <td>
-          <ValidatedInput
-            dummy={props.dummy}
-            placeholder={'Want'}
-            isValid={validProg}
-            onValid={(text) => props.wantChange(parseCheck(text))}
-            onEmpty={() => props.wantChange(yellow)}
-          />
+          <div className='full_cell'>
+            <ValidatedInput
+              dummy={props.dummy}
+              placeholder={'Want'}
+              isValid={validProg}
+              onValid={(text) => props.wantChange(parseCheck(text))}
+              onEmpty={() => props.wantChange(yellow)}
+            />
+          </div>
         </td>
     );
 }
@@ -1148,11 +1152,19 @@ class App extends React.Component {
                     type='checkbox'
                     id='bsl_output'
                     name='bsl_output'
-                    onChange={(e) => {showBSL = !showBSL; this.setState((state) => state);}}
+                    onChange={(e) => {
+                        showBSL = !showBSL;
+                        // same here, state remains unchanged but everything is rerendered
+                        this.setState((state) => state);
+                    }}
                   />
                   <label htmlFor='bsl_output'>Show BSL Output</label>
                 </div>
                 {bslField}
+              </div>
+              <div>
+                <svg
+                />
               </div>
             </div>
         );
