@@ -412,6 +412,8 @@ function SuccinctHead(props) {
                 formulaChange={(newForm) => formulaChange(newForm, formula)}
               />
           ))}
+          {Array(depth).fill(<th>{/* empty cell under some parent dummy formula */}</th>)}
+          <th>{/* empty cell above wants */}</th>
         </tr>
     ));
 
@@ -425,7 +427,7 @@ function SuccinctHead(props) {
               paramsExamplesChange={props.paramsExamplesChange}
             />
             {/* top level formulas */}
-            {[...reals, dummy]}
+            {[...reals, dummy, <th>{/* empty cell above wants */}</th>]}
           </tr>
           {/* rest of formulas */}
           {children}
@@ -434,7 +436,6 @@ function SuccinctHead(props) {
 }
 
 function Parameters(props) {
-    // 
     function validParam(text, modParam) {
         function lookup(name, env) {
             return env.reduce((acc, variable) => {
@@ -861,7 +862,7 @@ function Outputs(props) {
                          want={props.want}
                          row={props.row}
                        />
-                       <td>{/* empty cell to align with dummy child */}</td>
+                       <td>{/* empty cell to align with dummy child; this td corresponds with the yellow cells in Ken's email */}</td>
                      </React.Fragment>
                      : <script/> }
                   </React.Fragment>

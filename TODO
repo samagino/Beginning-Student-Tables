@@ -12,7 +12,6 @@ todo:
 bugs:
 - things listed in email from Ken
     - output cells under dummy children formulas should show pink/gray when relevent
-    - header rows should extend to end of table (have empty cells after last formula)
 
 stuff that may be nice:
 - undo/redo button
