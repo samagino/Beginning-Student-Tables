@@ -11,7 +11,6 @@ todo:
 
 bugs:
 - things listed in email from Ken
-    - formulas with nonboolean field and no children sometimes treated as boolean formulas
     - output cells under dummy children formulas should show pink/gray when relevent
     - header rows should extend to end of table (have empty cells after last formula)
 
