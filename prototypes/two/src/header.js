@@ -18,7 +18,7 @@ export const yellow = {yellow: 'yellow'};
 // returns true if progs has at least one member and all of its members are boooleans
 //    otherwise returns false
 export function allBools(progs){
-    if (progs.length === 0) {
+    if (progs.length === 0 || progs.every((prog) => prog === gray)) {
         return false;
     }
 
