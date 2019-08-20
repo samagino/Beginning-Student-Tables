@@ -14,7 +14,7 @@ bugs:
     - formulas with nonboolean field and no children sometimes treated as boolean formulas
     - output cells under dummy children formulas should show pink/gray when relevent
     - input fields and want fields should be same width as the cell they're in
-    - header rows should extend to end of table (have empty cells after last formula
+    - header rows should extend to end of table (have empty cells after last formula)
 
 stuff that may be nice:
 - undo/redo button
