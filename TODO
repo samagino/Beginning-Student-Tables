@@ -5,8 +5,7 @@ todo:
 - have toBSL use the pretty printer better so it prints more prettily
 - images (svg)
   - make library implementing subset of 2htdp
-     - circle, square, triangle
-     - above, beside, overlay
+     - triangle, text
 - bsl import (BSL to Table)
 
 bugs:
