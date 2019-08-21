@@ -862,7 +862,15 @@ function Outputs(props) {
                          want={props.want}
                          row={props.row}
                        />
-                       <td>{/* empty cell to align with dummy child; this td corresponds with the yellow cells in Ken's email */}</td>
+                       {/* make dummy outputs look like the cell to their left */}
+                       {/* this is pretty jank */}
+                       {formula.thenChildren.length > 0 ?
+                        <DummyCell
+                          output={formula.thenChildren[0].outputs[props.row]}
+                        />
+                        :
+                        <td></td>
+                       }
                      </React.Fragment>
                      : <script/> }
                   </React.Fragment>
@@ -936,6 +944,23 @@ function TestCell(props) {
           {img}
         </td>
     );
+}
+
+function DummyCell (props) {
+    console.log(props.output);
+    if (props.output === gray) {
+        return (
+            <td className={'gray'}>
+            </td>
+        );
+    } else if (props.output === pink) {
+        return (
+            <td className={'pink'}>
+            </td>
+        );
+    } else {
+        return <td></td>;
+    }
 }
 
 function Want(props) {
