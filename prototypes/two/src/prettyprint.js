@@ -82,7 +82,7 @@ function Union (docL, docR) {
 
 // Doc -> Doc -> Doc
 // in the paper this is written as <> and is sometimes called 'concatenate'
-//   I prefer the name 'compose' so as to confuse the term with
+//   I prefer the name 'compose' so as to not confuse the term with
 //   string concatenation
 // however it may be confused with function composition...
 function compose (docL, docR) {
@@ -202,27 +202,7 @@ function makePretty (width, ribbon) {
 
     // Integer -> Integer -> Doc -> Doc
     function best (thisRibbon, current, doc) {
-        switch (doc.type) {
-        case 'nil':
-            return nil;
-        case 'compose':
-            switch (doc.left.type) {
-            case 'text':
-                return compose(doc.left, best(thisRibbon, current + doc.left.text.length, doc.right));
-            case 'line':
-                return compose(line, best(ribbon, 0, doc.right));
-            case 'nest':
-                return compose(nest(doc.left.indent, line), best(ribbon + doc.left.indent, doc.left.indent, doc.right));
-            default:
-                throw Error(`unnexpected document type: ${doc.left.type}`);
-            }
-        case 'union':
-            return better(thisRibbon, current,
-                          best(thisRibbon, current, doc.left),
-                          best(thisRibbon, current, doc.right));
-        default:
-            throw Error(`unnexpected document type: ${doc.type}`);
-        }
+        return be(thisRibbon, current, [{indent: 0, doc: doc}])
     }
 
     // Integer -> Integer -> Integer -> Doc -> Doc -> Doc
@@ -261,7 +241,7 @@ function makePretty (width, ribbon) {
 
     // Doc -> String
     function pretty (doc) {
-        return layout(be(ribbon, 0, [{indent: 0, doc: doc}]));
+        return layout(best(ribbon, 0, doc));
         //return layout(best(ribbon, 0, doc));
     }
 
@@ -351,7 +331,7 @@ function progToDoc (program) {
     case RVAR_T:
         return text(program.value);
     case RAPP_T:
-        return group(nest(1, bracket('(', stack([progToDoc(program.value.funct), ...program.value.args.map(progToDoc)]), ')')));
+        return nest(1, bracket('(', group(stack([progToDoc(program.value.funct), ...program.value.args.map(progToDoc)])), ')'));
     case RFUNCT_T:
         return text('function');
     case RNUM_T:
@@ -364,7 +344,7 @@ function progToDoc (program) {
         if (program.value === null) {
             return text("'()");
         } else {
-            return bracket('(', spread([text('cons'), progToDoc(program.value.a), progToDoc(program.value.d)]), ')');
+            return nest(1, bracket('(', group(stack([text('cons'), progToDoc(program.value.a), progToDoc(program.value.d)])), ')'));
         }
     case RSYM_T:
         return text("'" + program.value);
@@ -379,7 +359,7 @@ function progToDoc_list (program) {
     case RVAR_T:
         return text(program.value);
     case RAPP_T:
-        return group(nest(1, bracket('(', stack([progToDoc(program.value.funct), ...program.value.args.map(progToDoc)]), ')')));
+        return nest(1, bracket('(', group(stack([progToDoc(program.value.funct), ...program.value.args.map(progToDoc)])), ')'));
     case RFUNCT_T:
         return text('function');
     case RNUM_T:
@@ -396,10 +376,10 @@ function progToDoc_list (program) {
         let list = program.value.d,
             elems = progToDoc_list(program.value.a);
         while (list.value !== null) {
-            elems = spread([elems, progToDoc_list(list.value.a)]);
+            elems = stack([elems, progToDoc_list(list.value.a)]);
         }
 
-        return bracket('(', spread([text('list'), elems]), ')');
+        return bracket('(', spread([text('list'), group(elems)]), ')');
     case RSYM_T:
         return text("'" + program.value);
     default:
@@ -416,7 +396,7 @@ function toHaskDoc (doc) {
     case 'compose':
         return `${toHaskDoc(doc.left)} :<> ${toHaskDoc(doc.right)}`;
     case 'nest':
-        return `nest ${doc.indent} ${doc.rest}`;
+        return `nest ${doc.indent} ${toHaskDoc(doc.rest)}`;
     case 'text':
         return `text "${doc.text}"`;
     case 'line':
@@ -431,9 +411,10 @@ function toHaskDoc (doc) {
 // [Table] -> String
 function toBSL(tables, unparse, width, ribbon) {
     let pretty = makePretty(width, ribbon);
-    let essaie = superstack([...tables.map(tableToDoc), nil]);
-    return toHaskDoc(essaie);
-    //return pretty(essaie);
+    let essaie = stack([...tables.map(tableToDoc), nil]);
+    //return toHaskDoc(essaie);
+    return pretty(essaie);
+    //return `${pretty(essaie)}\n\n\n${toHaskDoc(essaie)}`;
     //return 'hi';
 
     // Table -> Doc
@@ -445,14 +426,11 @@ function toBSL(tables, unparse, width, ribbon) {
             let inputs = stack(example.inputs.map((input) => fieldToDoc(input.prog)));
             let want = fieldToDoc(example.want);
 
-            return group(nest(14, stack([nest(1, stack([spread([text('(check-expect'),
-                                                                level([text('('), name])]),
-                                                        level([inputs, text(')')])])),
-                                         level([want, text(')')])])));
+            return nest(1, bracket('(', group(stack([text('check-expect'), bracket('(', nest(1, stack([name, inputs])), ')'), want])), ')'));
         }));
 
         let body = formulasToDoc(table.formulas);
-        let funct = group(nest(2, bracket('(', stack([spread([text('define'), bracket('(', spread([name, params]), ')')]), body]), ')')));
+        let funct = nest(2, bracket('(', spread([text('define'), group(stack([bracket('(', spread([name, params]), ')'), body]))]), ')'));
         return stack([funct, line, checkExpects]);
     }
 
@@ -472,11 +450,12 @@ function toBSL(tables, unparse, width, ribbon) {
             bools;
 
         if (splitForms.bools.length !== 0) {
-            // so is this one
-            bools = nest(2, bracket('(', stack([text('cond'),
-                                                ...splitForms.bools.map((form) => nest(1, bracket('[', stack([fieldToDoc(form.prog),
-                                                                                                      formulasToDoc(form.thenChildren)]),
-                                                                                                  ']')))]),')'));
+            // this is an array of documents
+            let condRows = splitForms.bools.map((form) => (
+                nest(1, bracket('[', stack([fieldToDoc(form.prog), formulasToDoc(form.thenChildren)]),']'))
+            ));
+            // this one is just a doc
+            bools = nest(2, bracket('(', stack([text('cond'), ...condRows]),')'));
         }
 
         if (splitForms.bools.length !== 0 && splitForms.nonbools.length !== 0) {
@@ -502,6 +481,106 @@ function toBSL(tables, unparse, width, ribbon) {
     }
 }
 
+// Program -> Doc
+function progToDoc_noGroup (program) {
+    switch (program.type) {
+    case RVAR_T:
+        return text(program.value);
+    case RAPP_T:
+        return nest(1, bracket('(', stack([progToDoc_noGroup(program.value.funct), ...program.value.args.map(progToDoc_noGroup)]), ')'));
+    case RFUNCT_T:
+        return text('function');
+    case RNUM_T:
+        return text(program.value);
+    case RBOOL_T:
+        return text('#' + program.value);
+    case RSTRING_T:
+        return text(program.value);
+    case RLIST_T:
+        if (program.value === null) {
+            return text("'()");
+        } else {
+            return nest(1, bracket('(', stack([text('cons'), progToDoc_noGroup(program.value.a), progToDoc_noGroup(program.value.d)]), ')'));
+        }
+    case RSYM_T:
+        return text("'" + program.value);
+    default:
+        throw new Error('unknown program type');
+    }
+}
+
+// [Table] -> String
+function toBSL_noGroup(tables, unparse, width, ribbon) {
+    let pretty = makePretty(width, ribbon);
+    let essaie = stack([...tables.map(tableToDoc), nil]);
+    //return toHaskDoc(essaie);
+    return pretty(essaie);
+    //return `${pretty(essaie)}\n\n\n${toHaskDoc(essaie)}`;
+    //return 'hi';
+
+    // Table -> Doc
+    function tableToDoc(table) {
+        let name = fieldToDoc(table.name);
+        let params = spread(table.params.map((param) => fieldToDoc(param.name)));
+
+        let checkExpects = stack(table.examples.map((example) => {
+            let inputs = stack(example.inputs.map((input) => fieldToDoc(input.prog)));
+            let want = fieldToDoc(example.want);
+
+            return nest(1, bracket('(', stack([text('check-expect'), bracket('(', nest(1, stack([name, inputs])), ')'), want]), ')'));
+        }));
+
+        let body = formulasToDoc(table.formulas);
+        let funct = nest(2, bracket('(', spread([text('define'), stack([bracket('(', spread([name, params]), ')'), body])]), ')'));
+        return stack([funct, line, checkExpects]);
+    }
+
+    // [Formula] -> Doc
+    function formulasToDoc(formulas) {
+        // [Formula] -> {bools: [Formula], nonbools: [Formula]}
+        function splitFormulas(formulas) {
+            let bools = formulas.filter(isBooleanFormula);
+            let nonbools = formulas.filter((formula) => !isBooleanFormula(formula));
+            return {bools, nonbools};
+        }
+
+        let splitForms = splitFormulas(formulas);
+
+        // this one's a doc
+        let nonbools = stack(splitForms.nonbools.map((form) => fieldToDoc(form.prog))),
+            bools;
+
+        if (splitForms.bools.length !== 0) {
+            // this is an array of documents
+            let condRows = splitForms.bools.map((form) => (
+                nest(1, bracket('[', stack([fieldToDoc(form.prog), formulasToDoc(form.thenChildren)]),']'))
+            ));
+            // this one is just a doc
+            bools = nest(2, bracket('(', stack([text('cond'), ...condRows]),')'));
+        }
+
+        if (splitForms.bools.length !== 0 && splitForms.nonbools.length !== 0) {
+            return stack([bools, nonbools]);
+        } else if (splitForms.bools.length !== 0) {
+            return bools;
+        } else if (splitForms.nonbools.length !== 0) {
+            return nonbools;
+        } else {
+            return nil;
+        }
+    }
+
+    // Field (yellow or string or program) -> Doc
+    function fieldToDoc(input) {
+        if (input === yellow) {                 // empty
+            return text('...');
+        } else if (typeof input === 'string') { // name
+            return text(input);
+        } else {                                // program
+            return progToDoc_noGroup(input);
+        }
+    }
+}
 
 /****************
     Unparsers
@@ -511,4 +590,5 @@ const widePretty = makePretty(Infinity, Infinity);
 export let unparse_cons = (prog) => widePretty(progToDoc(prog));
 export let unparse_list = (prog) => widePretty(progToDoc_list(prog));
 
-export default toBSL;
+export default toBSL_noGroup;
+// export default toBSL;
