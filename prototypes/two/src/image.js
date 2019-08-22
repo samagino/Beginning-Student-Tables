@@ -13,6 +13,7 @@
       - Beside
       - Above
       - Overlay
+      - Place
 
     A Circle is
       {r:     Integer,
@@ -27,23 +28,38 @@
        mode:   String,
        type:   'rect'}
        
-    A Triangle is
-      {??? (a, b, c maybe?),
-       color:  Color,
-       mode:   String,
-       type:   'triang'}
+    A Triangle is                   
+      {A:      Integer,             /\
+       B:      Integer,            /  \
+       C:      Integer,        B  /    \  C
+       color:  Color,            /      \
+       mode:   String,          /________\
+       type:   'triangle'}          A      
+       
+    note: only acute triangles are handled
        
     A Beside is
-      {type:  'beside',
+      {type:   'beside',
+       yplace:  String,
        images: [Image]} note: images must be non-empty
        
     An Above is
-      {type: 'above',
+      {type:   'above',
+       xplace:  String,
        images: [Image]} note: images must be non-empty
 
     An Overlay is
-      {type: 'overlay',
+      {type:   'overlay',
+       yplace: String
+       xplace: String,
        images: [Image]} note: images must be non-empty
+       
+   A Place is
+     {type: place,
+      x:     Integer,
+      y:     Integer,
+      image: Image,
+      scene: Image}
        
     A Color is
       {r: Integer,
@@ -92,7 +108,6 @@ const colorDb = {
     "LAWN-GREEN" : makeColor(124, 252, 0),
     "GREEN-YELLOW" : makeColor(173, 255, 47),
     "YELLOW-GREEN" : makeColor(154, 205, 50),
-    "MEDIUM-FOREST-GREEN" : makeColor(107, 142, 35),
     "OLIVE-DRAB" : makeColor(107, 142, 35),
     "MEDIUM-FOREST-GREEN" : makeColor(107, 142, 35),
     "DARK-OLIVE-GREEN" : makeColor(85, 107, 47),
@@ -138,7 +153,6 @@ const colorDb = {
     "DARK-VIOLET" : makeColor(148, 0, 211),
     "DARK-ORCHID" : makeColor(153, 50, 204),
     "MEDIUM-PURPLE" : makeColor(147, 112, 219),
-    "CORNFLOWER-BLUE" : makeColor(68, 64, 108),
     "MEDIUM-ORCHID" : makeColor(186, 85, 211),
     "DARK-MAGENTA" : makeColor(139, 0, 139),
     "GHOST-WHITE" : makeColor(248, 248, 255),
@@ -148,7 +162,6 @@ const colorDb = {
     "DIM-GRAY" : makeColor(105, 105, 105),
 
     "ORANGE" : makeColor(255, 165, 0),
-    "RED" : makeColor(255, 0, 0),
     "ORANGERED" : makeColor(255, 69, 0),
     "TOMATO" : makeColor(255, 99, 71),
     "DARKRED" : makeColor(139, 0, 0),
@@ -178,7 +191,6 @@ const colorDb = {
     "DARKORANGE" : makeColor(255, 140, 0),
     "CORAL" : makeColor(255, 127, 80),
     "SIENNA" : makeColor(160, 82, 45),
-    "ORANGE" : makeColor(255, 165, 0),
     "SALMON" : makeColor(250, 128, 114),
     "PERU" : makeColor(205, 133, 63),
     "DARKGOLDENROD" : makeColor(184, 134, 11),
@@ -263,13 +275,11 @@ const colorDb = {
     "STEELBLUE" : makeColor(70, 130, 180),
     "LIGHTSKYBLUE" : makeColor(135, 206, 250),
     "DARK TURQUOISE" : makeColor(0, 206, 209),
-    "DARKTURQUOISE" : makeColor(0, 206, 209),
     "CYAN" : makeColor(0, 255, 255),
     "AQUA" : makeColor(0, 255, 255),
     "DARKCYAN" : makeColor(0, 139, 139),
     "TEAL" : makeColor(0, 128, 128),
     "SKY BLUE" : makeColor(135, 206, 235),
-    "SKYBLUE" : makeColor(135, 206, 235),
     "CADET BLUE" : makeColor(96, 160, 160),
     "CADETBLUE" : makeColor(95, 158, 160),
     "DARK SLATE GRAY" : makeColor(47, 79, 79),
@@ -331,41 +341,17 @@ const colorDb = {
     "BLACK" : makeColor(0, 0, 0),
     "TRANSPARENT" : makeColor(0, 0, 0, 0),
 };
+
+// Integer
+// generates a random key so react stops complaining
+function genKey() {
+    return Math.round(Math.random() * 100000000);
+}
+
 /*
 TODO:
-  Figure out how [SVG]s should work (render_beside etc.)
   Figure out how triangles should work
 */
-
-// Integer Color -> Image
-function makeCircle (r, color, mode) {
-    return {r, color, mode, type: 'circle'};
-}
-
-// Integer Integer Color -> Image
-function makeRect (width, height, color, mode) {
-    return {width, height, color, mode, type: 'rect'};
-}
-
-// Integer Integer Color -> Image
-function makeTriang (base, width, color, mode) {
-    return {base, width, color, mode, type: 'triang'};
-}
-
-// [Image] -> Image
-function makeBeside (images) {
-    return {images, type: 'beside'};
-}
-
-// [Image] -> Image
-function makeAbove (images) {
-    return {images, type: 'above'};
-}
-
-// [Image] -> Image
-function makeOverlay (images) {
-    return {images, type: 'overlay'};
-}
 
 // Integer, Integer, Integer[, Integer] -> Color 
 function makeColor (r, g, b, a = 255) {
@@ -377,6 +363,67 @@ function changeAlpha (color, a) {
     return {...color, a};
 }
 
+// String | Color -> Color
+function checkColor(maybeColor) {
+    if (typeof maybeColor === 'string') {
+        let color = colorDb[maybeColor.replace(' ', '').toUpperCase()];
+        if (color === undefined) {
+            throw Error(`${maybeColor} is not a valid color`);
+        }
+
+        return color;
+    } 
+
+    // TODO: check if maybeColor is actually a color object
+    return maybeColor;
+}
+
+// Integer String Color -> Image
+function makeCircle (r, mode, color) {
+    return {r, mode, color: checkColor(color), type: 'circle'};
+}
+
+// Integer Integer String Color -> Image
+function makeRectangle (width, height, mode, color) {
+    return {width, mode, height, color: checkColor(color), type: 'rect'};
+}
+
+// Integer Integer String Color -> Image
+function makeTriangle (A, B, C, mode, color) {
+    return {A, B, C, mode, color: checkColor(color), type: 'triangle'};
+}
+
+function makeEquiTriangle (length, mode, color) {
+    return makeTriangle(length, length, length, mode, color);
+}
+
+// [Image] -> Image
+function makeBeside (images, yplace = 'center') {
+    return {images, yplace, type: 'beside'};
+}
+
+// [Image] -> Image
+function makeAbove (images, xplace = 'center') {
+    return {images, xplace, type: 'above'};
+}
+
+// [Image] -> Image
+function makeOverlay (images, xplace = 'center', yplace = 'center') {
+    return {images, xplace, yplace, type: 'overlay'};
+}
+
+function makePlace (image, x, y, scene) {
+    return {image, x, y, scene, type: 'place'};
+}
+
+let circle = makeCircle;
+let rectangle = makeRectangle;
+let triangle = makeEquiTriangle;
+let beside = makeBeside;
+let above = makeAbove;
+let overlay = makeOverlay;
+let placeImage = makePlace;
+
 // Image -> Integer
 function width (image) {
     switch (image.type) {
@@ -384,32 +431,19 @@ function width (image) {
         return image.r * 2;
     case 'rect':
         return image.width;
-    case 'triang':
-        throw Error (`Triangles not implemented yet`);
+    case 'triangle':
+        return image.A;
     case 'beside':
-        return width_beside(image.images);
+        return image.images.reduce((acc, image) => acc + width(image), 0);
     case 'above':
-        return width_above(image.images);
+        return image.images.reduce((acc, image) => Math.max(acc, width(image)), 0);
     case 'overlay':
-        return width_overlay(image.images);
+        return image.images.reduce((acc, image) => Math.max(acc, width(image)), 0);
+    case 'place':
+        return width(image.scene);
     default:
-        return Error ('Unknown Image');
+        return Error (`Unknown Image Type: ${image.type}`);
     }
-}
-
-// [Image] -> Integer
-function width_beside (images) {
-    return images.reduce((acc, image) => acc + width(image), 0);
-}
-
-// [Image] -> Integer
-function width_above (images) {
-    return images.reduce((acc, image) => Math.max(acc, width(image)), 0);
-}
-
-// [Image] -> Integer
-function width_overlay (images) {
-    return images.reduce((acc, image) => Math.max(acc, width(image)), 0);
 }
 
 // Image -> Integer
@@ -419,33 +453,24 @@ function height (image) {
         return image.r * 2;
     case 'rect':
         return image.height;
-    case 'triang':
-        throw Error (`Triangles not implemented yet`);
+    case 'triangle':
+        // Heron's Formula, I went on Wikihow for this, don't judge
+        let s = (image.A + image.B + image.C) / 2;
+        let area = Math.sqrt(s * (s  - image.A) * (s - image.B) * (s - image.C));
+        return Math.round((area * 2) / image.A);
     case 'beside':
-        return height_beside(image.images);
+        return image.images.reduce((acc, image) => Math.max(acc, height(image)), 0);
     case 'above':
-        return height_above(image.images);
+        return image.images.reduce((acc, image) => acc + height(image), 0);
     case 'overlay':
-        return height_overlay(image.images);
+        return image.images.reduce((acc, image) => Math.max(acc, height(image)), 0);
+    case 'place':
+        return height(image.scene);
     default:
-        return Error ('Unknown Image');
+        return Error (`Unknown Image Type: ${image.type}`);
     }
 }
 
-// [Image] -> Integer
-function height_beside (images) {
-    return images.reduce((acc, image) => Math.max(acc, height(image)), 0);
-}
-
-// [Image] -> Integer
-function height_above (images) {
-    return images.reduce((acc, image) => acc + height(image), 0);
-}
-
-// [Image] -> Integer
-function height_overlay (images) {
-    return images.reduce((acc, image) => Math.max(acc, height(image)), 0);
-}
 
 // Image Integer Integer -> SVG
 function render (image, x, y) {
@@ -454,14 +479,16 @@ function render (image, x, y) {
         return render_circle(image, x, y);
     case 'rect':
         return render_rect(image, x, y);
-    case 'triang':
-        return render_triang(image, x, y);
+    case 'triangle':
+        return render_triangle(image, x, y);
     case 'beside':
-        return render_beside(image.images, x, y + height(image) / 2);
+        return render_beside(image, x, y);
     case 'above':
-        return render_above(image.images, x + width(image) / 2, y);
+        return render_above(image, x, y);
     case 'overlay':
-        return render_overlay(image.images, x + width(image) / 2, y + height(image) / 2);
+        return render_overlay(image, x, y);
+    case 'place':
+        return render_place(image, x, y);
     default:
         throw Error (`Unknown Image Type: ${image.type}`);
     }
@@ -480,6 +507,7 @@ function render_circle (image, x, y) {
                        cy={y + image.r}
                        r={image.r}
                        fill={`rgba(${red}, ${green}, ${blue}, ${alpha})`}
+                       key={genKey()}
                />;
     case 'outline':
         // stroke is pretty annoying...
@@ -494,9 +522,10 @@ function render_circle (image, x, y) {
                        fill='none'
                        stroke={`rgba(${red}, ${green}, ${blue}, ${alpha})`}
                        strokeWidth={1}
+                       key={genKey()}
                />;
     default:
-        throw Error (`Unknown Circle Mode: ${image.mode}`);
+        throw Error (`Unknown Image Mode: ${image.mode}`);
     }
 }
 
@@ -514,67 +543,195 @@ function render_rect (image, x, y) {
                      width={image.width}
                      height={image.height}
                      fill={`rgba(${red}, ${green}, ${blue}, ${alpha})`}
+                     key={genKey()}
                />;
     case 'outline':
         // stroke has similar problems here as it does in circle
         return <rect x={x + .5}
-                     y={y + .5}
-                     width={image.width - 1}
-                     height={image.height - 1}
-                     fill='none'
-                     stroke={`rgba(${red}, ${green}, ${blue}, ${alpha})`}
-                     strokeWidth={1}
-               />;
+                      y={y + .5}
+                      width={image.width - 1}
+                      height={image.height - 1}
+                      fill='none'
+                      stroke={`rgba(${red}, ${green}, ${blue}, ${alpha})`}
+                      strokeWidth={1}
+                      key={genKey()}
+                 />;
     default:
-        throw Error (`Unknown Rectangle Mode: ${image.mode}`);
+        throw Error (`Unknown Image Mode: ${image.mode}`);
     }
 }
 
 // Image Integer Integer -> SVG
-function render_triang (image, x, y) {
-    throw Error (`Triangles not implemented yet`);
+function render_triangle (image, x, y) {
+    let red = image.color.r;
+    let green = image.color.g;
+    let blue = image.color.b;
+    let alpha = image.color.a / 255;
+
+    let D = Math.round(Math.sqrt(Math.pow(image.B, 2) - Math.pow(height(image), 2))); 
+    // these are coordinates                                   //         b       
+    let a = {x: x, y: y + height(image)};                      //         .       
+    let b = {x: x + D, y: y};                                  //        /|\      
+    let c = {x: x + width(image), y: y + height(image)};       //       / | \     
+                                                               //   B  /  |  \  C
+                                                               //     /   |h  \
+                                                               //    /    |    \
+                                                               //   ._____|_____.
+                                                               //  a   D  A      c
+    switch (image.mode) {                                       
+    case 'solid':                                               
+        return <polygon
+                 points={`${a.x},${a.y} ${b.x},${b.y} ${c.x},${c.y}`}
+                 fill={`rgba(${red}, ${green}, ${blue}, ${alpha})`}
+                 key={genKey()}
+               />;
+    case 'outline':                                             
+        return <polygon
+                 points={`${a.x},${a.y} ${b.x},${b.y} ${c.x},${c.y}`}
+                 fill='none'
+                 stroke={`rgba(${red}, ${green}, ${blue}, ${alpha})`}
+                 strokeWidth={1}
+                 key={genKey()}
+               />;
+    default:
+        throw Error (`Unknown Image Mode: ${image.mode}`);
+    }
 }
 
 
 // should I flatten [SVG]s?
+// no
 
-// [Image] Integer Integer -> [SVG]
-// cy means center y
-function render_beside (images, x, cy) {
-    let first = images[0];
+// (Integer, Integer -> Integer), (Integer, Integer -> Integer), (Integer, Integer -> Integer), (Integer, Integer -> Integer) -> ([Image], Integer, Integer) -> [SVG]
+function make_list_renderer (xCorrect, yCorrect, xChange, yChange) {
+    function render_list (images, x, y) {
+        if (images.length === 0) {
+            throw Error('I need at least 1 image to render!');
+        }
 
-    if (images.length === 1) {
-        return [render(first, x, cy - (height(first) / 2))];
+        let w = width(images[0]);
+        let h = height(images[0]);
+
+        let first = render(images[0], xCorrect(x, w), yCorrect(y, h));
+
+        if (images.length === 1) {
+            return [first];
+        }
+
+        let rest = render_list(images.slice(1), xChange(x, w), yChange(y, h));
+
+        // return list in reverse because the last child of an svg tag is shown on top
+        // this matters for overlay, but makes no difference in beside, above
+        return [...rest, first];
     }
 
-    // order here shouldn't matter
-    return [render(images[0], x, cy - (height(first) / 2)), ...render_beside(images.slice(1), x + width(first), cy)];
+    return render_list;
 }
 
-// [Image] Integer Integer -> [SVG]
-// cx means center x
-function render_above (images, cx, y) {
-    let first = images[0];
+// Image Integer Integer -> [SVG]
+function render_beside (image, x, y) {
+    let initY = y,
+        yCorrect = (y, h) => y;
 
-    if (images.length === 1) {
-        return [render(first, cx - (width(first) / 2), y)];
+    switch(image.yplace) {
+    case 'top':
+        break;
+    case 'center':
+        initY = y + height(image) / 2;
+        yCorrect = (y, h) => y - h/2;
+        break;
+    case 'bottom':
+        initY = y + height(image);
+        yCorrect = (y, h) => y - h;
+        break;
+    default:
+        throw Error(`Unknown y-place: ${image.yplace}`);
     }
 
-    // order here shouldn't matter
-    return [render(first, cx - (width(first) / 2), y), ...render_above(images.slice(1), cx, y + height(first))];
+    let renderoozle = make_list_renderer((x, w) => x,
+                                         yCorrect,
+                                         (x, dx) => x + dx,
+                                         (y, dy) => y);
+    return renderoozle(image.images, x, initY);
 }
 
-// [Image] Integer Integer -> [SVG]
-// cy means center y, cx means center x
-function render_overlay (images, cx, cy) {
-    let first = images[0];
+// Image Integer Integer -> [SVG]
+function render_above (image, x, y) {
+    let initX = x,
+        xCorrect = (x, w) => x;
 
-    if (images.length === 1) {
-        return [render(first, cx - (width(first) / 2), cy - (height(first) / 2))];
+    switch(image.xplace) {
+    case 'left':
+        break;
+    case 'center':
+        initX = x + width(image) / 2;
+        xCorrect = (x, w) => x - w/2;
+        break;
+    case 'right':
+        initX = x + width(image);
+        xCorrect = (x, w) => x - w;
+        break;
+    default:
+        throw Error(`Unknown x-place: ${image.xplace}`);
     }
 
-    // order here matters
-    return [...render_overlay(images.slice(1), cx, cy), render(first, cx - (width(first) / 2), cy - (height(first) / 2))];
+    let renderoozle = make_list_renderer(xCorrect,
+                                         (y, h) => y,
+                                         (x, dx) => x,
+                                         (y, dy) => y + dy);
+    return renderoozle(image.images, initX, y);
+
+}
+
+function render_overlay (image, x, y) {
+    let initX = x,
+        initY = y,
+        xCorrect = (x, w) => x,
+        yCorrect = (y, h) => y;
+    
+    switch(image.xplace) {
+    case 'left':
+        break;
+    case 'center':
+        initX = x + width(image) / 2;
+        xCorrect = (x, w) => x - w/2;
+        break;
+    case 'right':
+        initX = x + width(image);
+        xCorrect = (x, w) => x - w;
+        break;
+    default:
+        throw Error(`Unknown x-place: ${image.xplace}`);
+    }
+
+    switch(image.yplace) {
+    case 'top':
+        break;
+    case 'center':
+        initY = y + height(image) / 2;
+        yCorrect = (y, h) => y - h/2;
+        break;
+    case 'bottom':
+        initY = y + height(image);
+        yCorrect = (y, h) => y - h;
+        break;
+    default:
+        throw Error(`Unknown y-place: ${image.yplace}`);
+    }
+
+    let renderoozle = make_list_renderer(xCorrect,
+                                         yCorrect,
+                                         (x, dx) => x,
+                                         (y, dy) => y);
+    return renderoozle(image.images, initX, initY);
+}
+
+function render_place (image, x, y) {
+    return [render(image.scene, x, y), render(image.image, image.x - width(image.image) / 2, image.y - height(image.image) / 2)];
+}
+
+function emptyScene (w, h, color = 'white') {
+    return overlay([rectangle(w, h, 'outline', 'black'), rectangle(w, h, 'solid', color)]);
 }
 
 // Image -> top level SVG
@@ -591,5 +748,8 @@ function paint (image) {
     );
 }
 
-//export let test = paint(makeBeside([makeAbove([makeCircle(25, colorDb['PURPLE'], 'solid'), makeBeside([makeRect(10, 50, colorDb['GREEN'], 'outline'), makeRect(10, 50, colorDb['BLUE'], 'solid'), makeRect(10, 40, colorDb['ORANGE'], 'solid')])]), makeOverlay([makeCircle(20, colorDb['ORCHID'], 'solid'), makeRect(40, 50, colorDb['FIREBRICK'], 'outline')])]));
-
+let victorian = makeAbove([makeBeside([makeEquiTriangle(40, 'solid', 'red'), makeEquiTriangle(30, 'solid', 'red')], 'bottom'), makeRectangle(70, 40, 'solid', 'black')]);
+let door = makeRectangle(15, 25, 'solid', 'brown');
+let doorWithKnob = makeOverlay([makeCircle(3, 'solid', 'yellow'), door], 'right', 'center');
+let cheese = placeImage(circle(4, 'solid', 'white'), 18, 20, placeImage(circle(4, 'solid', 'white',), 0, 6, placeImage(circle(4, 'solid', 'white'), 14, 2, placeImage(circle(4, 'solid', 'white'), 8, 14, rectangle(24, 24, 'solid', 'goldenrod')))));
+export let test = paint(placeImage(circle(10, 'solid', 'pink'), 20, 20, emptyScene(160, 90, 'red')));
