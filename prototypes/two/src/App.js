@@ -1,7 +1,8 @@
 import React from 'react';
 import {interp, parseCheck, unparse_cons, unparse_list, initEnv, RAPP_T, RFUNCT_T, RBOOL_T, RLIST_T, varRE} from './interpreter.js';
 import {gray, pink, yellow, allBools, isBooleanFormula} from './header.js';
-import toBSL from './prettyprint.js';
+import toBSL_noGroup from './prettyprint.js';
+import {test} from './image.js';
 import './App.css';
 
 /*****************************
@@ -412,7 +413,7 @@ function SuccinctHead(props) {
                 formulaChange={(newForm) => formulaChange(newForm, formula)}
               />
           ))}
-          {Array(depth).fill(<th>{/* empty cell under some parent dummy formula */}</th>)}
+          {Array(depth).map((_, i) => (<th key={i}>{/* empty cell under some parent dummy formula */}</th>))}
           <th>{/* empty cell above wants */}</th>
         </tr>
     ));
@@ -427,7 +428,7 @@ function SuccinctHead(props) {
               paramsExamplesChange={props.paramsExamplesChange}
             />
             {/* top level formulas */}
-            {[...reals, dummy, <th>{/* empty cell above wants */}</th>]}
+            {[...reals, dummy, <th key={peekKey(1)}>{/* empty cell above wants */}</th>]}
           </tr>
           {/* rest of formulas */}
           {children}
@@ -1134,7 +1135,7 @@ class App extends React.Component {
                   rows={20}
                   cols={70}
                   readOnly={true}
-                  value={toBSL(this.state.tables, unparse, 70, 70)}
+                  value={toBSL_noGroup(this.state.tables, unparse, 70, 70)}
                 />
             );
         } else {
@@ -1188,10 +1189,9 @@ class App extends React.Component {
                 </div>
                 {bslField}
               </div>
-              <div>
-                <svg
-                />
-              </div>
+              {/* <div> */}
+              {/*   {test} */}
+              {/* </div> */}
             </div>
         );
     }
