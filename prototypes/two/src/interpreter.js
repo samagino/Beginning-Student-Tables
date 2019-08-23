@@ -1,3 +1,7 @@
+import {makeCircle, makeRectangle, makeEquiTriangle,
+        makeBeside, makeAbove, makeOverlay,
+        makePlace, emptyScene, makeColor,
+        paint} from './image.js';
 
 /****************
    Interpreter
@@ -11,6 +15,8 @@ const RBOOL_T =   4;
 const RSTRING_T = 5;
 const RLIST_T =   6;
 const RSYM_T =    7;
+const RIMAGE_T =  8;
+const RCOLOR_T =  9;
 
 const varRE = /^[^\s",'`()[\]{}|;#]+/; // except numbers
 const appRE = /^\(/;
@@ -69,6 +75,30 @@ const initEnv = [
                           value: ltsign}},
     {name: '<=', binding: {type: RFUNCT_T,
                            value: lesign}},
+    {name: 'circle', binding: {type: RFUNCT_T,
+                               value: circle}},
+    {name: 'rectangle', binding: {type: RFUNCT_T,
+                               value: rectangle}},
+    {name: 'triangle', binding: {type: RFUNCT_T,
+                               value: triangle}},
+    {name: 'beside', binding: {type: RFUNCT_T,
+                               value: beside}},
+    {name: 'beside/align', binding: {type: RFUNCT_T,
+                               value: besideAlign}},
+    {name: 'above', binding: {type: RFUNCT_T,
+                               value: above}},
+    {name: 'above/align', binding: {type: RFUNCT_T,
+                               value: aboveAlign}},
+    {name: 'overlay', binding: {type: RFUNCT_T,
+                               value: overlay}},
+    {name: 'overlay/align', binding: {type: RFUNCT_T,
+                               value: overlayAlign}},
+    {name: 'place-image', binding: {type: RFUNCT_T,
+                                    value: placeImage}},
+    {name: 'empty-scene', binding: {type: RFUNCT_T,
+                                    value: empty_Scene}},
+    {name: 'color', binding: {type: RFUNCT_T,
+                              value: color}},
     // constants
     {name: 'true', binding: {type: RBOOL_T,
                              value: true}},
@@ -109,7 +139,8 @@ function parse(text) {
 
     } else if (strRE.test(text)) {
         let matches = text.match(strRE);
-        let str = {value: matches[0], type: RSTRING_T};
+        let value = matches[0].substring(1, matches[0].length - 1); // trim off quotes
+        let str = {value: value, type: RSTRING_T};
         let rest = text.slice(matches[0].length).trim();
 
         return {prog: str, rest: rest};
@@ -175,7 +206,8 @@ function parseQ(text) {
 
     } else if (strRE.test(text)) {
         let matches = text.match(strRE);
-        let str = {value: matches[0], type: RSTRING_T};
+        let value = matches[0].substring(1, matches[0].length - 1); // trim off quotes
+        let str = {value: value, type: RSTRING_T};
         let rest = text.slice(matches[0].length).trim();
 
         return {prog: str, rest: rest};
@@ -195,7 +227,7 @@ function parseQ(text) {
 /***
     Environment: [Variable]
     Variable:    {name:    String,
-    binding: Program}
+                  binding: Program}
 ***/
 
 // Program -> Environment -> Program
@@ -240,6 +272,10 @@ function interp(prog, env) {
         typeCheck(funct, RFUNCT_T);
 
         return funct.value(args);
+    case RIMAGE_T:
+        return prog;
+    case RCOLOR_T:
+        return prog;
 
     default:
         throw new TypeError("Unknown Type " + prog.value);
@@ -254,7 +290,7 @@ function unparse_cons(prog) {
     case RBOOL_T:
         return '#' + (prog.value ? 'true' : 'false');
     case RSTRING_T:
-        return prog.value;
+        return `"${prog.value}"`;
     case RLIST_T:
         if (prog.value === null) {
             return '\'()';
@@ -269,6 +305,10 @@ function unparse_cons(prog) {
         return 'function';
     case RAPP_T:
         return `(${unparse_cons(prog.value.funct)} ${prog.value.args.map(unparse_cons).join(' ')})`;
+    case RIMAGE_T:
+        return paint(prog.value);
+    case RCOLOR_T:
+        return 'color';
     default:
         return 'error or something';
     }
@@ -282,7 +322,7 @@ function unparse_list (prog) {
     case RBOOL_T:
         return '#' + (prog.value ? 'true' : 'false');
     case RSTRING_T:
-        return prog.value;
+        return `"${prog.value}"`;
     case RLIST_T:
         let elems = '';
         while (prog.value !== null) {
@@ -345,6 +385,12 @@ function typeCheck(prog, type){
         break;
     case RSYM_T:
         typeString = 'symbol';
+        break;
+    case RIMAGE_T:
+        typeString = 'image';
+        break;
+    case RCOLOR_T:
+        typeString = 'color';
         break;
     default:
         typeString = '???';
@@ -470,9 +516,7 @@ function and(args) {
         return acc.value !== false ? cur : {value: false, type: RBOOL_T};
     }, {value: true, type: RBOOL_T});
 
-}
-function or(args) {
-    return args.reduce((acc, cur) => {
+} function or(args) {return args.reduce((acc, cur) => {
         return acc.value !== false ? acc : cur;
     }, {value: true, type: RBOOL_T});
 
@@ -599,6 +643,203 @@ function lesign(args) {
     } else {
         return {value: true, type: RBOOL_T};
     }
+}
+function circle(args) {
+    if (args.length < 3) {
+        throw new Error('arity mismatch');
+    }
+
+    let firstArg = args[0];
+    let secondArg = args[1];
+    let thirdArg = args[2];
+    
+    typeCheck(firstArg, RNUM_T);
+    // TODO somehow check secondArg for number, string, or symbol
+    //                    thirdArg for string, symbol, or color
+
+    let value = makeCircle(firstArg.value, secondArg.value, thirdArg.value);
+
+    return {value, type: RIMAGE_T};
+}
+function rectangle(args) {
+    if (args.length < 4) {
+        throw new Error('arity mismatch');
+    }
+
+    let firstArg = args[0];
+    let secondArg = args[1];
+    let thirdArg = args[2];
+    let fourthArg = args[3];
+
+    typeCheck(firstArg, RNUM_T);
+    typeCheck(secondArg, RNUM_T);
+
+    let value = makeRectangle(firstArg.value, secondArg.value, thirdArg.value, fourthArg.value);
+    // TODO somehow check thirdArg for number, string, or symbol
+    //                    fourthArg for string, symbol, or color
+
+    return {value, type: RIMAGE_T};
+}
+function triangle(args) {
+    if (args.length < 3) {
+        throw new Error('arity mismatch');
+    }
+
+    let firstArg = args[0];
+    let secondArg = args[1];
+    let thirdArg = args[2];
+    
+    typeCheck(firstArg, RNUM_T);
+
+    let value = makeEquiTriangle(firstArg.value, secondArg.value, thirdArg.value);
+    // TODO somehow check secondArg for number, string, or symbol
+    //                    thirdArg for string, symbol, or color
+
+    return {value, type: RIMAGE_T};
+}
+function beside(args) {
+    if (args.length < 2) {
+        throw new Error('arity mismatch');
+    }
+
+    args.forEach((arg) => typeCheck(arg, RIMAGE_T));
+
+    let value = makeBeside(args.map((arg) => arg.value));
+
+    return {value, type: RIMAGE_T};
+}
+function besideAlign(args) {
+    if (args.length < 3) {
+        throw new Error('arity mismatch');
+    }
+
+    let firstArg = args[0];
+    let restArgs = args.slice(1);
+
+    // TODO somehow check firstArg for string, or symbol
+    restArgs.forEach((arg) => typeCheck(arg, RIMAGE_T));
+
+    let value = makeBeside(restArgs.map((arg) => arg.value), firstArg.value);
+
+    return {value, type: RIMAGE_T};
+}
+function above(args) {
+    if (args.length < 2) {
+        throw new Error('arity mismatch');
+    }
+
+    args.forEach((arg) => typeCheck(arg, RIMAGE_T));
+
+    let value = makeAbove(args.map((arg) => arg.value));
+
+    return {value, type: RIMAGE_T};
+}
+function aboveAlign(args) {
+    if (args.length < 3) {
+        throw new Error('arity mismatch');
+    }
+
+    let firstArg = args[0];
+    let restArgs = args.slice(1);
+
+    // TODO somehow check firstArg for string, or symbol
+    restArgs.forEach((arg) => typeCheck(arg, RIMAGE_T));
+
+    let value = makeAbove(restArgs.map((arg) => arg.value), firstArg.value);
+
+    return {value, type: RIMAGE_T};
+}
+function overlay(args) {
+    if (args.length < 2) {
+        throw new Error('arity mismatch');
+    }
+
+    args.forEach((arg) => typeCheck(arg, RIMAGE_T));
+
+    let value = makeOverlay(args.map((arg) => arg.value));
+
+    return {value, type: RIMAGE_T};
+}
+function overlayAlign(args) {
+    if (args.length < 4) {
+        throw new Error('arity mismatch');
+    }
+
+    let firstArg = args[0];
+    let secondArg = args[1];
+    let restArgs = args.slice(2);
+
+    // TODO somehow check firstArg and secondARg for string, or symbol
+    restArgs.forEach((arg) => typeCheck(arg, RIMAGE_T));
+
+    let value = makeOverlay(restArgs.map((arg) => arg.value), firstArg.value, secondArg.value);
+
+    return {value, type: RIMAGE_T};
+}
+function placeImage(args) {
+    if (args.length < 4) {
+        throw new Error('arity mismatch');
+    }
+
+    let img = args[0];
+    let x = args[1];
+    let y = args[2];
+    let scene = args[3];
+
+    typeCheck(img, RIMAGE_T);
+    typeCheck(x, RNUM_T);
+    typeCheck(y, RNUM_T);
+    typeCheck(scene, RIMAGE_T);
+
+    let value = makePlace(img.value, x.value, y.value, scene.value);
+
+    return {value, type: RIMAGE_T};
+}
+function empty_Scene(args) {
+    if (args.length < 2) {
+        throw new Error('arity mismatch');
+    }
+
+    let firstArg = args[0];
+    let secondArg = args[1];
+    let thirdArg = args[2];
+
+    typeCheck(firstArg, RNUM_T);
+    typeCheck(secondArg, RNUM_T);
+
+    let value;
+    if (thirdArg !== undefined) {
+        //typeCheck(thirdArg, RCOLOR_T); it can also be a string/symbol...
+        value = emptyScene(firstArg.value, secondArg.value, thirdArg.value);
+    } else {
+        value = emptyScene(firstArg.value, secondArg.value);
+    }
+
+    return {value, type: RIMAGE_T};
+}
+function color(args) {
+    if (args.length < 3) {
+        throw new Error('arity mismatch');
+    }
+
+    let firstArg = args[0];
+    let secondArg = args[1];
+    let thirdArg = args[2];
+    let fourthArg = args[3];
+    
+    typeCheck(firstArg, RNUM_T);
+    typeCheck(secondArg, RNUM_T);
+    typeCheck(thirdArg, RNUM_T);
+
+    let value;
+    if (fourthArg !== undefined) {
+        typeCheck(fourthArg, RNUM_T);
+        value = makeColor(firstArg.value, secondArg.value, thirdArg.value, fourthArg.value);
+    } else {
+        value = makeColor(firstArg.value, secondArg.value, thirdArg.value);
+    }
+
+    return {value, type: RCOLOR_T};
 }
 
 export {interp, parseCheck, unparse_cons, unparse_list, initEnv,

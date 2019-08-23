@@ -5,9 +5,7 @@
 
 /***
     Data Definitions:
-    
-    An Image is one of
-      - Circle
+An Image is one of - Circle
       - Rectangle
       - Triangle
       - Beside
@@ -91,9 +89,7 @@ const colorDb = {
     "LIGHT-SALMON" : makeColor(255, 160, 122),
     "DARK-SALMON" : makeColor(233, 150, 122),
     "NAVAJO-WHITE" : makeColor(255, 222, 173),
-    "PEACH-PUFF" : makeColor(255, 218, 185),
-    "DARK-KHAKI" : makeColor(189, 183, 107),
-    "PALE-GOLDENROD" : makeColor(238, 232, 170),
+    "PEACH-PUFF" : makeColor(255, 218, 185), "DARK-KHAKI" : makeColor(189, 183, 107), "PALE-GOLDENROD" : makeColor(238, 232, 170),
     "BLANCHE-DIAMOND" : makeColor(255, 235, 205),
     "MEDIUM-GOLDENROD" : makeColor(234, 234, 173),
     "PAPAYA-WHIP" : makeColor(255, 239, 213),
@@ -368,7 +364,7 @@ function checkColor(maybeColor) {
     if (typeof maybeColor === 'string') {
         let color = colorDb[maybeColor.replace(' ', '').toUpperCase()];
         if (color === undefined) {
-            throw Error(`${maybeColor} is not a valid color`);
+            throw new Error(`${maybeColor} is not a valid color`);
         }
 
         return color;
@@ -378,19 +374,27 @@ function checkColor(maybeColor) {
     return maybeColor;
 }
 
+function checkMode(maybeMode) {
+    if (maybeMode !== 'solid' && maybeMode !== 'outline') {
+        throw new Error(`${maybeMode} is not a valid mode`);
+    }
+
+    return maybeMode;
+}
+
 // Integer String Color -> Image
 function makeCircle (r, mode, color) {
-    return {r, mode, color: checkColor(color), type: 'circle'};
+    return {r, mode: checkMode(mode), color: checkColor(color), type: 'circle'};
 }
 
 // Integer Integer String Color -> Image
 function makeRectangle (width, height, mode, color) {
-    return {width, mode, height, color: checkColor(color), type: 'rect'};
+    return {width, mode: checkMode(mode), height, color: checkColor(color), type: 'rect'};
 }
 
 // Integer Integer String Color -> Image
 function makeTriangle (A, B, C, mode, color) {
-    return {A, B, C, mode, color: checkColor(color), type: 'triangle'};
+    return {A, B, C, mode: checkMode(mode), color: checkColor(color), type: 'triangle'};
 }
 
 function makeEquiTriangle (length, mode, color) {
@@ -442,7 +446,7 @@ function width (image) {
     case 'place':
         return width(image.scene);
     default:
-        return Error (`Unknown Image Type: ${image.type}`);
+        return new Error (`Unknown Image Type: ${image.type}`);
     }
 }
 
@@ -467,7 +471,7 @@ function height (image) {
     case 'place':
         return height(image.scene);
     default:
-        return Error (`Unknown Image Type: ${image.type}`);
+        return new Error (`Unknown Image Type: ${image.type}`);
     }
 }
 
@@ -490,7 +494,7 @@ function render (image, x, y) {
     case 'place':
         return render_place(image, x, y);
     default:
-        throw Error (`Unknown Image Type: ${image.type}`);
+        throw new Error (`Unknown Image Type: ${image.type}`);
     }
 }
 
@@ -525,7 +529,7 @@ function render_circle (image, x, y) {
                        key={genKey()}
                />;
     default:
-        throw Error (`Unknown Image Mode: ${image.mode}`);
+        throw new Error (`Unknown Image Mode: ${image.mode}`);
     }
 }
 
@@ -557,7 +561,7 @@ function render_rect (image, x, y) {
                       key={genKey()}
                  />;
     default:
-        throw Error (`Unknown Image Mode: ${image.mode}`);
+        throw new Error (`Unknown Image Mode: ${image.mode}`);
     }
 }
 
@@ -594,7 +598,7 @@ function render_triangle (image, x, y) {
                  key={genKey()}
                />;
     default:
-        throw Error (`Unknown Image Mode: ${image.mode}`);
+        throw new Error (`Unknown Image Mode: ${image.mode}`);
     }
 }
 
@@ -606,7 +610,7 @@ function render_triangle (image, x, y) {
 function make_list_renderer (xCorrect, yCorrect, xChange, yChange) {
     function render_list (images, x, y) {
         if (images.length === 0) {
-            throw Error('I need at least 1 image to render!');
+            throw new Error('I need at least 1 image to render!');
         }
 
         let w = width(images[0]);
@@ -645,7 +649,7 @@ function render_beside (image, x, y) {
         yCorrect = (y, h) => y - h;
         break;
     default:
-        throw Error(`Unknown y-place: ${image.yplace}`);
+        throw new Error(`Unknown y-place: ${image.yplace}`);
     }
 
     let renderoozle = make_list_renderer((x, w) => x,
@@ -672,7 +676,7 @@ function render_above (image, x, y) {
         xCorrect = (x, w) => x - w;
         break;
     default:
-        throw Error(`Unknown x-place: ${image.xplace}`);
+        throw new Error(`Unknown x-place: ${image.xplace}`);
     }
 
     let renderoozle = make_list_renderer(xCorrect,
@@ -701,7 +705,7 @@ function render_overlay (image, x, y) {
         xCorrect = (x, w) => x - w;
         break;
     default:
-        throw Error(`Unknown x-place: ${image.xplace}`);
+        throw new Error(`Unknown x-place: ${image.xplace}`);
     }
 
     switch(image.yplace) {
@@ -716,7 +720,7 @@ function render_overlay (image, x, y) {
         yCorrect = (y, h) => y - h;
         break;
     default:
-        throw Error(`Unknown y-place: ${image.yplace}`);
+        throw new Error(`Unknown y-place: ${image.yplace}`);
     }
 
     let renderoozle = make_list_renderer(xCorrect,
@@ -748,8 +752,8 @@ function paint (image) {
     );
 }
 
-let victorian = makeAbove([makeBeside([makeEquiTriangle(40, 'solid', 'red'), makeEquiTriangle(30, 'solid', 'red')], 'bottom'), makeRectangle(70, 40, 'solid', 'black')]);
-let door = makeRectangle(15, 25, 'solid', 'brown');
-let doorWithKnob = makeOverlay([makeCircle(3, 'solid', 'yellow'), door], 'right', 'center');
-let cheese = placeImage(circle(4, 'solid', 'white'), 18, 20, placeImage(circle(4, 'solid', 'white',), 0, 6, placeImage(circle(4, 'solid', 'white'), 14, 2, placeImage(circle(4, 'solid', 'white'), 8, 14, rectangle(24, 24, 'solid', 'goldenrod')))));
-export let test = paint(placeImage(circle(10, 'solid', 'pink'), 20, 20, emptyScene(160, 90, 'red')));
+//export paint;
+export {makeCircle, makeRectangle, makeEquiTriangle,
+        makeBeside, makeAbove, makeOverlay,
+        makePlace, emptyScene, makeColor,
+        paint};
