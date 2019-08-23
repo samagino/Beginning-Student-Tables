@@ -487,7 +487,7 @@ function progToDoc_noGroup (program) {
     case RVAR_T:
         return text(program.value);
     case RAPP_T:
-        return nest(1, bracket('(', stack([progToDoc_noGroup(program.value.funct), ...program.value.args.map(progToDoc_noGroup)]), ')'));
+        return nest(1, bracket('(', spread([progToDoc_noGroup(program.value.funct), ...program.value.args.map(progToDoc_noGroup)]), ')'));
     case RFUNCT_T:
         return text('function');
     case RNUM_T:
@@ -500,7 +500,7 @@ function progToDoc_noGroup (program) {
         if (program.value === null) {
             return text("'()");
         } else {
-            return nest(1, bracket('(', stack([text('cons'), progToDoc_noGroup(program.value.a), progToDoc_noGroup(program.value.d)]), ')'));
+            return nest(1, bracket('(', spread([text('cons'), progToDoc_noGroup(program.value.a), progToDoc_noGroup(program.value.d)]), ')'));
         }
     case RSYM_T:
         return text("'" + program.value);
