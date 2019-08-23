@@ -1,106 +1,178 @@
 New Data Definitions:
-        A Table_Method_Program is
-                {tables:        [Table]}
 
-        A Table is
-                {examples:      [Example],
-                 formulas:      [Formula],
-                 params:        [Parameters],
-                 name:          Name_Input,
-                 key:           Number}
+A Table_Method_Program is
+        {tables:        [Table]}
 
-        An Example is
-                {inputs:        [Inputs],
-                 want:          Program_Input,
-                 key:           Number}
+A Table is
+        {examples:      [Example],
+         formulas:      [Formula],
+         params:        [Parameters],
+         name:          Name_Input,
+         key:           Number}
 
-        An Input is
-                {prog:          Program_Input,
-                 key:           Number}
+An Example is
+        {inputs:        [Inputs],
+         want:          Program_Input,
+         key:           Number}
 
-        A Formula is one of
-                - Boolean Formula
-                - Non-Boolean Formula
+An Input is
+        {prog:          Program_Input,
+         key:           Number}
 
-        A Boolean Formula is
-                {prog:          Program_Input,
-                 outputs:       [outExpr],
-                 thenChildren:  [Formula],
-                 key:           Number}
+A Formula is one of
+        - Boolean Formula
+        - Non-Boolean Formula
 
-        A Non-Boolean Formula is
-                {prog:          Program_Input,
-                 outputs:       [outExpr],
-                 key:           Number}
+A Boolean Formula is
+        {prog:          Program_Input,
+         outputs:       [Output],
+         thenChildren:  [Formula],
+         key:           Number}
 
-        A Parameters_And_Key is
-                {params:        [Parameter],
-                 nextKey:       Number}
+A Non-Boolean Formula is
+        {prog:          Program_Input,
+         outputs:       [Output],
+         key:           Number}
 
-        A Parameter is
-                {name:          Name_Input,
-                 key:           Number}
+A Parameters_And_Key is
+        {params:        [Parameter],
+         nextKey:       Number}
 
-        An outExpr is one of
-                - Program
-                - Error
-                - Gray
-                - Pink
-                - Yellow
+A Parameter is
+        {name:          Name_Input,
+         key:           Number}
 
-        A Program_Input is one of
-                - Program
-                - Yellow (initial value)
+An Output is one of
+        - Program
+        - Error
+        - Gray
+        - Pink
+        - Yellow
 
-        A Name_Input is one of
-                - String
-                - Yellow (initial value)
+A Program_Input is one of
+        - Program
+        - Yellow (initial value)
 
-        A Program is one of
-                -  Variable
-                -  Application
-                -  RFunction
-                -  RNum
-                -  RBool
-                -  RString
-                -  RList
-                -  RSym
+A Name_Input is one of
+        - String
+        - Yellow (initial value)
 
-        A Variable is a
-                {value: String,
-                 type:  0}
+A Program is one of
+        -  Variable
+        -  Application
+        -  RFunction
+        -  RNum
+        -  RBool
+        -  RString
+        -  RList
+        -  RSym
+        -  RImage
+        -  RColor
 
-        An Application is a
-                {value: {funct: RFunction,
-                         args:  [Program]},
-                 type:  1}
+A Variable is a
+        {value: String,
+         type:  0}
 
-        A RFunction is a
-                {value: Function
-                 type:  2}
+An Application is a
+        {value: {funct: RFunction,
+                 args:  [Program]},
+         type:  1}
 
-        An RNum is a
-                {value: Number,
-                 type:  3}
+A RFunction is a
+        {value: Function
+         type:  2}
 
-        An RBool is a
-                {value: Boolean,
-                 type:  4}
+An RNum is a
+        {value: Number,
+         type:  3}
 
-        An RString is a
-                {value: String,
-                 type:  5}
+An RBool is a
+        {value: Boolean,
+         type:  4}
 
-        An RList is a
-                {value: List,
-                 type:  6}
+An RString is a
+        {value: String,
+         type:  5}
 
-        A List is one of
-                - Null
-                - {a: Program,
-                   d: RList}
+An RList is a
+        {value: List,
+         type:  6}
 
-        An RSym is a
-                {value: string,
-                 type: 7}
-                 
+A List is one of
+        - Null
+        - {a: Program,
+           d: RList}
+
+An RSym is a
+        {value: string,
+         type: 7}
+         
+An RImage is a
+        {value: Image,
+         type:  8}
+
+An RColor is a
+        {value: Color,
+         type:  8}
+
+
+An Image is one of
+        - Circle
+        - Rectangle
+        - Triangle
+        - Beside
+        - Above
+        - Overlay
+        - Place
+
+A Circle is
+        {r:     Integer,
+         color: Color,
+         mode:  String,
+         type:  'circle'}
+     
+A Rectangle is
+        {width:  Integer,
+         height: Integer,
+         color:  Color,
+         mode:   String,
+         type:   'rect'}
+         
+A Triangle is                   
+        {A:      Integer,             /\
+         B:      Integer,            /  \
+         C:      Integer,        B  /    \  C
+         color:  Color,            /      \
+         mode:   String,          /________\
+         type:   'triangle'}          A      
+       
+    note: only acute triangles are handled
+       
+A Beside is
+        {type:   'beside',
+         yplace:  String,
+         images: [Image]} note: images must be non-empty
+       
+An Above is
+        {type:   'above',
+         xplace:  String,
+         images: [Image]} note: images must be non-empty
+
+An Overlay is
+        {type:   'overlay',
+         yplace: String
+         xplace: String,
+         images: [Image]} note: images must be non-empty
+       
+ Place is
+       {type: place,
+        x:     Integer,
+        y:     Integer,
+        image: Image,
+        scene: Image}
+       
+A Color is
+        {r: Integer,
+         g: Integer,
+         b: Integer,
+         a: Integer}
