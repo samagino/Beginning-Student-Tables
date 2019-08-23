@@ -382,6 +382,30 @@ function checkMode(maybeMode) {
     return maybeMode;
 }
 
+function checkXPlace(maybeXPlace) {
+    if (maybeXPlace === 'middle') {
+        return 'center';
+    }
+
+    if (maybeXPlace !== 'left' && maybeXPlace !== 'right' && maybeXPlace !== 'center') {
+        throw new Error(`${maybeXPlace} is not a valid x-place`);
+    }
+
+    return maybeXPlace;
+}
+
+function checkYPlace(maybeYPlace) {
+    if (maybeYPlace === 'middle') {
+        return 'center';
+    }
+
+    if (maybeYPlace !== 'top' && maybeYPlace !== 'bottom' && maybeYPlace !== 'center') {
+        throw new Error(`${maybeYPlace} is not a valid y-place`);
+    }
+
+    return maybeYPlace;
+}
+
 // Integer String Color -> Image
 function makeCircle (r, mode, color) {
     return {r, mode: checkMode(mode), color: checkColor(color), type: 'circle'};
@@ -403,17 +427,17 @@ function makeEquiTriangle (length, mode, color) {
 
 // [Image] -> Image
 function makeBeside (images, yplace = 'center') {
-    return {images, yplace, type: 'beside'};
+    return {images, yplace: checkYPlace(yplace), type: 'beside'};
 }
 
 // [Image] -> Image
 function makeAbove (images, xplace = 'center') {
-    return {images, xplace, type: 'above'};
+    return {images, xplace: checkXPlace(xplace), type: 'above'};
 }
 
 // [Image] -> Image
 function makeOverlay (images, xplace = 'center', yplace = 'center') {
-    return {images, xplace, yplace, type: 'overlay'};
+    return {images, xplace: checkXPlace(xplace), yplace: checkYPlace(yplace), type: 'overlay'};
 }
 
 function makePlace (image, x, y, scene) {
