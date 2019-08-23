@@ -1,14 +1,15 @@
 --___TODO___--
 
 todo:
-- make toBSL collapse cond expressions (so there's only one at every level)
 - have toBSL use the pretty printer better so it prints more prettily
 - images (svg)
   - make library implementing subset of 2htdp
      - triangle, text
+     - rotate
 - bsl import (BSL to Table)
 
 bugs:
+  - dummy children should always show gray/pink cells when relevent
 
 stuff that may be nice:
 - undo/redo button
