@@ -1,12 +1,17 @@
 --___TODO___--
 
 todo:
-- have toBSL use the pretty printer better so it prints more prettily
+- change repo name to Beginning Tables or something
+   - change HTML title, header
+- make stable version
+- differentiate between programs and values
 - images (svg)
   - make library implementing subset of 2htdp
-     - triangle, text
-     - rotate
+     - pentagon, hexagon
+  - image comparison
+
 - bsl import (BSL to Table)
+- have toBSL use the pretty printer better so it prints more prettily
 
 bugs:
   - dummy children should always show gray/pink cells when relevent
