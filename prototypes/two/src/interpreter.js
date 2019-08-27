@@ -31,8 +31,12 @@ const initEnv = [
     // functions
     {name: '+', binding: {type: RFUNCT_T,
                           value: plus}},
+    {name: 'add1', binding: {type: RFUNCT_T,
+                          value: add1}},
     {name: '-', binding: {type: RFUNCT_T,
                           value: minus}},
+    {name: 'sub1', binding: {type: RFUNCT_T,
+                          value: sub1}},
     {name: '*', binding: {type: RFUNCT_T,
                           value: times}},
     {name: '/', binding: {type: RFUNCT_T,
@@ -75,10 +79,16 @@ const initEnv = [
                           value: ltsign}},
     {name: '<=', binding: {type: RFUNCT_T,
                            value: lesign}},
+    {name: 'string-length', binding: {type: RFUNCT_T,
+                           value: stringLength}},
+    {name: 'string-append', binding: {type: RFUNCT_T,
+                           value: stringAppend}},
     {name: 'circle', binding: {type: RFUNCT_T,
                                value: circle}},
     {name: 'rectangle', binding: {type: RFUNCT_T,
                                value: rectangle}},
+    {name: 'square', binding: {type: RFUNCT_T,
+                               value: square}},
     {name: 'triangle', binding: {type: RFUNCT_T,
                                value: triangle}},
     {name: 'beside', binding: {type: RFUNCT_T,
@@ -403,6 +413,10 @@ function typeCheck(prog, type){
 }
 
 function plus(args) {
+    if (args.length < 2) {
+        throw new Error('arity mismatch');
+    }
+
     args.forEach((cur) => typeCheck(cur, RNUM_T));
 
     return args.reduce((acc, cur) => {
@@ -410,15 +424,48 @@ function plus(args) {
                 type: RNUM_T};
     });
 }
+function add1(args) {
+    if (args.length !== 1) {
+        throw new Error('arity mismatch');
+    }
+
+    typeCheck(args[0], RNUM_T);
+
+    return {value: args[0].value + 1,
+            type: RNUM_T};
+}
 function minus(args) {
+    if (args.length < 1) {
+        throw new Error('arity mismatch');
+    }
+
     args.forEach((cur) => typeCheck(cur, RNUM_T));
+
+    if (args.length === 1) {
+        return {value: 0 - args[0].value,
+                type: RNUM_T};
+    }
 
     return args.reduce((acc, cur) => {
         return {value: acc.value - cur.value,
                 type: RNUM_T};
     });
 }
+function sub1(args) {
+    if (args.length !== 1) {
+        throw new Error('arity mismatch');
+    }
+
+    typeCheck(args[0], RNUM_T);
+
+    return {value: args[0].value - 1,
+            type: RNUM_T};
+}
 function times(args) {
+    if (args.length < 2) {
+        throw new Error('arity mismatch');
+    }
+
     args.forEach((cur) => typeCheck(cur, RNUM_T));
 
     return args.reduce((acc, cur) => {
@@ -427,6 +474,8 @@ function times(args) {
     });
 }
 function divide(args) {
+    args.forEach((cur) => typeCheck(cur, RNUM_T));
+
     if (args.length === 1) {
         let firstArg = args[0];
 
@@ -445,7 +494,6 @@ function divide(args) {
                 type: RNUM_T};
     }
 
-    args.forEach((cur) => typeCheck(cur, RNUM_T));
     return {value: false, type: RBOOL_T};
 }
 function car(args) {
@@ -644,6 +692,30 @@ function lesign(args) {
         return {value: true, type: RBOOL_T};
     }
 }
+function stringLength(args) {
+    if (args.length !== 1) {
+        throw new Error('arity mismatch');
+    }
+
+    let firstArg = args[0];
+
+    typeCheck(firstArg, RSTRING_T);
+
+    return {value: firstArg.value.length,
+            type: RNUM_T};
+}
+function stringAppend(args) {
+    if (args.length < 2) {
+        throw new Error('arity mismatch');
+    }
+
+    args.forEach((arg) => typeCheck(arg, RSTRING_T));
+
+    let value = args.map((arg) => arg.value).reduce((acc, arg) => acc + arg);
+
+    return {value,
+            type: RSTRING_T};
+}
 function circle(args) {
     if (args.length < 3) {
         throw new Error('arity mismatch');
@@ -677,6 +749,23 @@ function rectangle(args) {
     let value = makeRectangle(firstArg.value, secondArg.value, thirdArg.value, fourthArg.value);
     // TODO somehow check thirdArg for number, string, or symbol
     //                    fourthArg for string, symbol, or color
+
+    return {value, type: RIMAGE_T};
+}
+function square(args) {
+    if (args.length < 3) {
+        throw new Error('arity mismatch');
+    }
+
+    let firstArg = args[0];
+    let secondArg = args[1];
+    let thirdArg = args[2];
+
+    typeCheck(firstArg, RNUM_T);
+
+    let value = makeRectangle(firstArg.value, firstArg.value, secondArg.value, thirdArg.value);
+    // TODO somehow check secondArg for number, string, or symbol
+    //                    thirdArg for string, symbol, or color
 
     return {value, type: RIMAGE_T};
 }
