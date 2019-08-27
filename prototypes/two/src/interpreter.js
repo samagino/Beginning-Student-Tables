@@ -706,8 +706,6 @@ function stringAppend(args) {
 
     args.forEach((arg) => typeCheck(arg, [RSTRING_T]));
 
-    let value = args.map((arg) => arg.value).reduce((acc, arg) => acc + arg);
-
     return args.reduce((acc, arg) => (
         {value: acc.value + arg.value,
          type: RSTRING_T}
@@ -725,8 +723,6 @@ function circle(args) {
     typeCheck(firstArg, [RNUM_T]);
     typeCheck(secondArg, [RNUM_T, RSTRING_T, RSYM_T]);
     typeCheck(thirdArg, [RSTRING_T, RSYM_T, RCOLOR_T]);
-    // TODO somehow check secondArg for number, string, or symbol
-    //                    thirdArg for string, symbol, or color
 
     let value = makeCircle(firstArg.value, secondArg.value, thirdArg.value);
 
@@ -748,8 +744,6 @@ function rectangle(args) {
     typeCheck(fourthArg, [RSTRING_T, RSYM_T, RCOLOR_T]);
 
     let value = makeRectangle(firstArg.value, secondArg.value, thirdArg.value, fourthArg.value);
-    // TODO somehow check thirdArg for number, string, or symbol
-    //                    fourthArg for string, symbol, or color
 
     return {value, type: RIMAGE_T};
 }
@@ -765,8 +759,6 @@ function square(args) {
     typeCheck(firstArg, [RNUM_T]);
     typeCheck(secondArg, [RNUM_T, RSTRING_T, RSYM_T]);
     typeCheck(thirdArg, [RSTRING_T, RSYM_T, RCOLOR_T]);
-    // TODO somehow check thirdArg for number, string, or symbol
-    //                    fourthArg for string, symbol, or color
 
     let value = makeRectangle(firstArg.value, firstArg.value, secondArg.value, thirdArg.value);
 
@@ -784,8 +776,6 @@ function triangle(args) {
     typeCheck(firstArg, [RNUM_T]);
     typeCheck(secondArg, [RNUM_T, RSTRING_T, RSYM_T]);
     typeCheck(thirdArg, [RSTRING_T, RSYM_T, RCOLOR_T]);
-    // TODO somehow check thirdArg for number, string, or symbol
-    //                    fourthArg for string, symbol, or color
 
     let value = makeEquiTriangle(firstArg.value, secondArg.value, thirdArg.value);
 
@@ -810,7 +800,7 @@ function besideAlign(args) {
     let firstArg = args[0];
     let restArgs = args.slice(1);
 
-    // TODO somehow check firstArg for string, or symbol
+    typeCheck(firstArg, [RSTRING_T, RSYM_T]);
     restArgs.forEach((arg) => typeCheck(arg, [RIMAGE_T]));
 
     let value = makeBeside(restArgs.map((arg) => arg.value), firstArg.value);
@@ -836,7 +826,7 @@ function aboveAlign(args) {
     let firstArg = args[0];
     let restArgs = args.slice(1);
 
-    // TODO somehow check firstArg for string, or symbol
+    typeCheck(firstArg, [RSTRING_T, RSYM_T]);
     restArgs.forEach((arg) => typeCheck(arg, [RIMAGE_T]));
 
     let value = makeAbove(restArgs.map((arg) => arg.value), firstArg.value);
@@ -863,7 +853,8 @@ function overlayAlign(args) {
     let secondArg = args[1];
     let restArgs = args.slice(2);
 
-    // TODO somehow check firstArg and secondARg for string, or symbol
+    typeCheck(firstArg, [RSTRING_T, RSYM_T]);
+    typeCheck(secondArg, [RSTRING_T, RSYM_T]);
     restArgs.forEach((arg) => typeCheck(arg, [RIMAGE_T]));
 
     let value = makeOverlay(restArgs.map((arg) => arg.value), firstArg.value, secondArg.value);
@@ -903,7 +894,7 @@ function empty_Scene(args) {
 
     let value;
     if (thirdArg !== undefined) {
-        //typeCheck(thirdArg, RCOLOR_T); it can also be a string/symbol...
+        typeCheck(thirdArg, [RCOLOR_T, RSTRING_T, RSYM_T]);
         value = emptyScene(firstArg.value, secondArg.value, thirdArg.value);
     } else {
         value = emptyScene(firstArg.value, secondArg.value);
