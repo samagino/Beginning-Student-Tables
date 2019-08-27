@@ -70,6 +70,10 @@
     clear: left;
 }
 
+.smiley_frowney_face{
+    float: right;
+}
+
 .bsl_field{
     font-family: monospace;
     float: left;

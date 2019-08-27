@@ -920,29 +920,29 @@ function TestCell(props) {
         error = false;
     }
 
-    let img;
+    let face;
     if (error) {
-        img = <img
+        face = <img
                 src={imgPath + 'frowneyface.png'}
                 alt='Error!'
                 style={{float: 'right'}}
                 title={"Oh no! You got an error!"}/>;
     }else if (want === yellow) { // I should make this better
-        img = '';
+        face = '';
     } else if (deepEquals(output, want)) {
-        img =  <img
+        face =  <img
                  src={imgPath + 'smileyface.png'}
                  alt='Yay!'
                  style={{float: 'right'}}
                  title={"Yay! It's right!"}/>;
     } else {
-        img = '';
+        face = '';
     }
 
     return (
         <td className={'output'}>
           {text}
-          {img}
+          {face}
         </td>
     );
 }
