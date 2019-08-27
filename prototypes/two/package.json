@@ -2,7 +2,7 @@
     "name": "two",
     "version": "0.1.0",
     "private": true,
-    "homepage": "https://samagino.github.io/tableMethodThing/",
+    "homepage": "https://samagino.github.io/Beginning-Student-Tables/",
     "dependencies": {
         "gh-pages": "^2.0.1",
         "react": "^16.8.6",
