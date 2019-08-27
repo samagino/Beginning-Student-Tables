@@ -279,7 +279,7 @@ function interp(prog, env) {
         // interpret arguments (valof rand env)
         let args = prog.value.args.map((arg) => interp(arg, env));
 
-        typeCheck(funct, RFUNCT_T);
+        typeCheck(funct, [RFUNCT_T]);
 
         return funct.value(args);
     case RIMAGE_T:
@@ -368,47 +368,40 @@ function parseCheck(text) {
     return parsed.prog;
 }
 
-// Program -> Number -> Side Effect Maybe
-function typeCheck(prog, type){
-    let typeString = '';
-    switch (type) {
-    case RVAR_T:
-        typeString = 'variable';
-        break;
-    case RAPP_T:
-        typeString = 'application';
-        break;
-    case RFUNCT_T:
-        typeString = 'function';
-        break;
-    case RNUM_T:
-        typeString = 'number';
-        break;
-    case RBOOL_T:
-        typeString = 'boolean';
-        break;
-    case RSTRING_T:
-        typeString = 'string';
-        break;
-    case RLIST_T:
-        typeString = 'list';
-        break;
-    case RSYM_T:
-        typeString = 'symbol';
-        break;
-    case RIMAGE_T:
-        typeString = 'image';
-        break;
-    case RCOLOR_T:
-        typeString = 'color';
-        break;
-    default:
-        typeString = '???';
+// Program -> [Number] -> Error Maybe
+// checks if prog is of one of the types in types
+function typeCheck(prog, types) {
+    // Number -> String
+    function getType(type) {
+        switch (type) {
+        case RVAR_T:
+            return 'variable';
+        case RAPP_T:
+            return 'application';
+        case RFUNCT_T:
+            return 'function';
+        case RNUM_T:
+            return 'number';
+        case RBOOL_T:
+            return 'boolean';
+        case RSTRING_T:
+            return 'string';
+        case RLIST_T:
+            return 'list';
+        case RSYM_T:
+            return 'symbol';
+        case RIMAGE_T:
+            return 'image';
+        case RCOLOR_T:
+            return 'color';
+        default:
+            return '???';
+        }
     }
 
-    if (prog.type !== type){
-        // TODO maybe change me to use whatever unpareser is currently being used somehow
-        throw new TypeError(unparse_cons(prog) + ' ain\'t a ' + typeString);
+    if (!types.includes(prog.type)) {
+        let typesString = types.map(getType).reduce((acc, type) => acc + ` or a ${type}`);
+        throw new TypeError(unparse_cons(prog) + ' ain\'t a ' + typesString);
     }
 }
 
@@ -417,7 +410,7 @@ function plus(args) {
         throw new Error('arity mismatch');
     }
 
-    args.forEach((arg) => typeCheck(arg, RNUM_T));
+    args.forEach((arg) => typeCheck(arg, [RNUM_T]));
 
     return args.reduce((acc, arg) => (
         {value: acc.value + arg.value,
@@ -429,7 +422,7 @@ function add1(args) {
         throw new Error('arity mismatch');
     }
 
-    typeCheck(args[0], RNUM_T);
+    typeCheck(args[0], [RNUM_T]);
 
     return {value: args[0].value + 1,
             type: RNUM_T};
@@ -439,7 +432,7 @@ function minus(args) {
         throw new Error('arity mismatch');
     }
 
-    args.forEach((arg) => typeCheck(arg, RNUM_T));
+    args.forEach((arg) => typeCheck(arg, [RNUM_T]));
 
     if (args.length === 1) {
         return {value: 0 - args[0].value,
@@ -456,7 +449,7 @@ function sub1(args) {
         throw new Error('arity mismatch');
     }
 
-    typeCheck(args[0], RNUM_T);
+    typeCheck(args[0], [RNUM_T]);
 
     return {value: args[0].value - 1,
             type: RNUM_T};
@@ -466,7 +459,7 @@ function times(args) {
         throw new Error('arity mismatch');
     }
 
-    args.forEach((arg) => typeCheck(arg, RNUM_T));
+    args.forEach((arg) => typeCheck(arg, [RNUM_T]));
 
     return args.reduce((acc, arg) => (
         {value: acc.value * arg.value,
@@ -474,12 +467,12 @@ function times(args) {
     ));
 }
 function divide(args) {
-    args.forEach((arg) => typeCheck(arg, RNUM_T));
+    args.forEach((arg) => typeCheck(arg, [RNUM_T]));
 
     if (args.length === 1) {
         let firstArg = args[0];
 
-        typeCheck(firstArg, RNUM_T);
+        typeCheck(firstArg, [RNUM_T]);
 
         return {value: 1 / firstArg.value,
                 type: RNUM_T};
@@ -487,8 +480,8 @@ function divide(args) {
         let firstArg = args[0];
         let secondArg = args[1];
 
-        typeCheck(firstArg, RNUM_T);
-        typeCheck(secondArg, RNUM_T);
+        typeCheck(firstArg, [RNUM_T]);
+        typeCheck(secondArg, [RNUM_T]);
 
         return {value: firstArg.value / secondArg.value,
                 type: RNUM_T};
@@ -503,7 +496,7 @@ function car(args) {
 
     let firstArg = args[0];
 
-    typeCheck(firstArg, RLIST_T);
+    typeCheck(firstArg, [RLIST_T]);
 
     return firstArg.value.a;
 }
@@ -514,7 +507,7 @@ function cdr(args) {
 
     let firstArg = args[0];
 
-    typeCheck(firstArg, RLIST_T);
+    typeCheck(firstArg, [RLIST_T]);
 
     return firstArg.value.d;
 }
@@ -527,7 +520,7 @@ function cons(args) {
     let secondArg = args[1];
 
     // because BSL
-    typeCheck(secondArg, RLIST_T);
+    typeCheck(secondArg, [RLIST_T]);
 
     return {value: {a: firstArg, d: secondArg},
             type: RLIST_T};
@@ -580,7 +573,7 @@ function rif(args) {
     let secondArg = args[1];
     let thirdArg = args[2];
 
-    typeCheck(firstArg, RBOOL_T);
+    typeCheck(firstArg, [RBOOL_T]);
 
     return firstArg.value ? secondArg : thirdArg;
 }
@@ -605,7 +598,7 @@ function iscons(args) {
             type: RBOOL_T};
 }
 function equalsign(args) {
-    args.forEach((cur) => typeCheck(cur, RNUM_T));
+    args.forEach((cur) => typeCheck(cur, [RNUM_T]));
 
     let val = args.reduce((acc, cur) => {
 
@@ -623,7 +616,7 @@ function equalsign(args) {
     }
 }
 function gtsign(args) {
-    args.forEach((cur) => typeCheck(cur, RNUM_T));
+    args.forEach((cur) => typeCheck(cur, [RNUM_T]));
 
     let val = args.reduce((acc, cur) => {
 
@@ -641,7 +634,7 @@ function gtsign(args) {
     }
 }
 function gesign(args) {
-    args.forEach((cur) => typeCheck(cur, RNUM_T));
+    args.forEach((cur) => typeCheck(cur, [RNUM_T]));
 
     let val = args.reduce((acc, cur) => {
 
@@ -659,7 +652,7 @@ function gesign(args) {
     }
 }
 function ltsign(args) {
-    args.forEach((cur) => typeCheck(cur, RNUM_T));
+    args.forEach((cur) => typeCheck(cur, [RNUM_T]));
 
     let val = args.reduce((acc, cur) => {
 
@@ -677,7 +670,7 @@ function ltsign(args) {
     }
 }
 function lesign(args) {
-    args.forEach((cur) => typeCheck(cur, RNUM_T));
+    args.forEach((cur) => typeCheck(cur, [RNUM_T]));
 
     let val = args.reduce((acc, cur) => {
 
@@ -701,7 +694,7 @@ function stringLength(args) {
 
     let firstArg = args[0];
 
-    typeCheck(firstArg, RSTRING_T);
+    typeCheck(firstArg, [RSTRING_T]);
 
     return {value: firstArg.value.length,
             type: RNUM_T};
@@ -711,7 +704,7 @@ function stringAppend(args) {
         throw new Error('arity mismatch');
     }
 
-    args.forEach((arg) => typeCheck(arg, RSTRING_T));
+    args.forEach((arg) => typeCheck(arg, [RSTRING_T]));
 
     let value = args.map((arg) => arg.value).reduce((acc, arg) => acc + arg);
 
@@ -729,7 +722,9 @@ function circle(args) {
     let secondArg = args[1];
     let thirdArg = args[2];
     
-    typeCheck(firstArg, RNUM_T);
+    typeCheck(firstArg, [RNUM_T]);
+    typeCheck(secondArg, [RNUM_T, RSTRING_T, RSYM_T]);
+    typeCheck(thirdArg, [RSTRING_T, RSYM_T, RCOLOR_T]);
     // TODO somehow check secondArg for number, string, or symbol
     //                    thirdArg for string, symbol, or color
 
@@ -747,8 +742,10 @@ function rectangle(args) {
     let thirdArg = args[2];
     let fourthArg = args[3];
 
-    typeCheck(firstArg, RNUM_T);
-    typeCheck(secondArg, RNUM_T);
+    typeCheck(firstArg, [RNUM_T]);
+    typeCheck(secondArg, [RNUM_T]);
+    typeCheck(thirdArg, [RNUM_T, RSTRING_T, RSYM_T]);
+    typeCheck(fourthArg, [RSTRING_T, RSYM_T, RCOLOR_T]);
 
     let value = makeRectangle(firstArg.value, secondArg.value, thirdArg.value, fourthArg.value);
     // TODO somehow check thirdArg for number, string, or symbol
@@ -765,11 +762,13 @@ function square(args) {
     let secondArg = args[1];
     let thirdArg = args[2];
 
-    typeCheck(firstArg, RNUM_T);
+    typeCheck(firstArg, [RNUM_T]);
+    typeCheck(secondArg, [RNUM_T, RSTRING_T, RSYM_T]);
+    typeCheck(thirdArg, [RSTRING_T, RSYM_T, RCOLOR_T]);
+    // TODO somehow check thirdArg for number, string, or symbol
+    //                    fourthArg for string, symbol, or color
 
     let value = makeRectangle(firstArg.value, firstArg.value, secondArg.value, thirdArg.value);
-    // TODO somehow check secondArg for number, string, or symbol
-    //                    thirdArg for string, symbol, or color
 
     return {value, type: RIMAGE_T};
 }
@@ -782,11 +781,13 @@ function triangle(args) {
     let secondArg = args[1];
     let thirdArg = args[2];
     
-    typeCheck(firstArg, RNUM_T);
+    typeCheck(firstArg, [RNUM_T]);
+    typeCheck(secondArg, [RNUM_T, RSTRING_T, RSYM_T]);
+    typeCheck(thirdArg, [RSTRING_T, RSYM_T, RCOLOR_T]);
+    // TODO somehow check thirdArg for number, string, or symbol
+    //                    fourthArg for string, symbol, or color
 
     let value = makeEquiTriangle(firstArg.value, secondArg.value, thirdArg.value);
-    // TODO somehow check secondArg for number, string, or symbol
-    //                    thirdArg for string, symbol, or color
 
     return {value, type: RIMAGE_T};
 }
@@ -795,7 +796,7 @@ function beside(args) {
         throw new Error('arity mismatch');
     }
 
-    args.forEach((arg) => typeCheck(arg, RIMAGE_T));
+    args.forEach((arg) => typeCheck(arg, [RIMAGE_T]));
 
     let value = makeBeside(args.map((arg) => arg.value));
 
@@ -810,7 +811,7 @@ function besideAlign(args) {
     let restArgs = args.slice(1);
 
     // TODO somehow check firstArg for string, or symbol
-    restArgs.forEach((arg) => typeCheck(arg, RIMAGE_T));
+    restArgs.forEach((arg) => typeCheck(arg, [RIMAGE_T]));
 
     let value = makeBeside(restArgs.map((arg) => arg.value), firstArg.value);
 
@@ -821,7 +822,7 @@ function above(args) {
         throw new Error('arity mismatch');
     }
 
-    args.forEach((arg) => typeCheck(arg, RIMAGE_T));
+    args.forEach((arg) => typeCheck(arg, [RIMAGE_T]));
 
     let value = makeAbove(args.map((arg) => arg.value));
 
@@ -836,7 +837,7 @@ function aboveAlign(args) {
     let restArgs = args.slice(1);
 
     // TODO somehow check firstArg for string, or symbol
-    restArgs.forEach((arg) => typeCheck(arg, RIMAGE_T));
+    restArgs.forEach((arg) => typeCheck(arg, [RIMAGE_T]));
 
     let value = makeAbove(restArgs.map((arg) => arg.value), firstArg.value);
 
@@ -847,7 +848,7 @@ function overlay(args) {
         throw new Error('arity mismatch');
     }
 
-    args.forEach((arg) => typeCheck(arg, RIMAGE_T));
+    args.forEach((arg) => typeCheck(arg, [RIMAGE_T]));
 
     let value = makeOverlay(args.map((arg) => arg.value));
 
@@ -863,7 +864,7 @@ function overlayAlign(args) {
     let restArgs = args.slice(2);
 
     // TODO somehow check firstArg and secondARg for string, or symbol
-    restArgs.forEach((arg) => typeCheck(arg, RIMAGE_T));
+    restArgs.forEach((arg) => typeCheck(arg, [RIMAGE_T]));
 
     let value = makeOverlay(restArgs.map((arg) => arg.value), firstArg.value, secondArg.value);
 
@@ -879,10 +880,10 @@ function placeImage(args) {
     let y = args[2];
     let scene = args[3];
 
-    typeCheck(img, RIMAGE_T);
-    typeCheck(x, RNUM_T);
-    typeCheck(y, RNUM_T);
-    typeCheck(scene, RIMAGE_T);
+    typeCheck(img, [RIMAGE_T]);
+    typeCheck(x, [RNUM_T]);
+    typeCheck(y, [RNUM_T]);
+    typeCheck(scene, [RIMAGE_T]);
 
     let value = makePlace(img.value, x.value, y.value, scene.value);
 
@@ -897,8 +898,8 @@ function empty_Scene(args) {
     let secondArg = args[1];
     let thirdArg = args[2];
 
-    typeCheck(firstArg, RNUM_T);
-    typeCheck(secondArg, RNUM_T);
+    typeCheck(firstArg, [RNUM_T]);
+    typeCheck(secondArg, [RNUM_T]);
 
     let value;
     if (thirdArg !== undefined) {
@@ -920,13 +921,13 @@ function color(args) {
     let thirdArg = args[2];
     let fourthArg = args[3];
     
-    typeCheck(firstArg, RNUM_T);
-    typeCheck(secondArg, RNUM_T);
-    typeCheck(thirdArg, RNUM_T);
+    typeCheck(firstArg, [RNUM_T]);
+    typeCheck(secondArg, [RNUM_T]);
+    typeCheck(thirdArg, [RNUM_T]);
 
     let value;
     if (fourthArg !== undefined) {
-        typeCheck(fourthArg, RNUM_T);
+        typeCheck(fourthArg, [RNUM_T]);
         value = makeColor(firstArg.value, secondArg.value, thirdArg.value, fourthArg.value);
     } else {
         value = makeColor(firstArg.value, secondArg.value, thirdArg.value);
