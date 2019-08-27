@@ -339,7 +339,7 @@ function progToDoc (program) {
     case RBOOL_T:
         return text('#' + program.value);
     case RSTRING_T:
-        return text(program.value);
+        return text('"' + program.value + '"');
     case RLIST_T: // this just does cons, not list
         if (program.value === null) {
             return text("'()");
@@ -367,7 +367,7 @@ function progToDoc_list (program) {
     case RBOOL_T:
         return text('#' + program.value);
     case RSTRING_T:
-        return text(program.value);
+        return text('"' + program.value + '"');
     case RLIST_T:
         if (program.value === null) {
             return text("'()");
@@ -495,7 +495,7 @@ function progToDoc_noGroup (program) {
     case RBOOL_T:
         return text('#' + program.value);
     case RSTRING_T:
-        return text(program.value);
+        return text('"' + program.value + '"');
     case RLIST_T:
         if (program.value === null) {
             return text("'()");
