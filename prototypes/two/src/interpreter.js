@@ -417,12 +417,12 @@ function plus(args) {
         throw new Error('arity mismatch');
     }
 
-    args.forEach((cur) => typeCheck(cur, RNUM_T));
+    args.forEach((arg) => typeCheck(arg, RNUM_T));
 
-    return args.reduce((acc, cur) => {
-        return {value: acc.value + cur.value,
-                type: RNUM_T};
-    });
+    return args.reduce((acc, arg) => (
+        {value: acc.value + arg.value,
+         type: RNUM_T}
+    ));
 }
 function add1(args) {
     if (args.length !== 1) {
@@ -439,17 +439,17 @@ function minus(args) {
         throw new Error('arity mismatch');
     }
 
-    args.forEach((cur) => typeCheck(cur, RNUM_T));
+    args.forEach((arg) => typeCheck(arg, RNUM_T));
 
     if (args.length === 1) {
         return {value: 0 - args[0].value,
                 type: RNUM_T};
     }
 
-    return args.reduce((acc, cur) => {
-        return {value: acc.value - cur.value,
-                type: RNUM_T};
-    });
+    return args.reduce((acc, arg) => (
+        {value: acc.value - arg.value,
+         type: RNUM_T}
+    ));
 }
 function sub1(args) {
     if (args.length !== 1) {
@@ -466,15 +466,15 @@ function times(args) {
         throw new Error('arity mismatch');
     }
 
-    args.forEach((cur) => typeCheck(cur, RNUM_T));
+    args.forEach((arg) => typeCheck(arg, RNUM_T));
 
-    return args.reduce((acc, cur) => {
-        return {value: acc.value * cur.value,
-                type: RNUM_T};
-    });
+    return args.reduce((acc, arg) => (
+        {value: acc.value * arg.value,
+         type: RNUM_T}
+    ));
 }
 function divide(args) {
-    args.forEach((cur) => typeCheck(cur, RNUM_T));
+    args.forEach((arg) => typeCheck(arg, RNUM_T));
 
     if (args.length === 1) {
         let firstArg = args[0];
@@ -533,10 +533,12 @@ function cons(args) {
             type: RLIST_T};
 }
 function list(args) {
-    return args.reverse().reduce((acc, arg) => ({value: {a: arg, d: acc},
-                                                       type: RLIST_T}),
-                                       {value: null,
-                                        type: RLIST_T});
+    // this indentation is pretty jank
+    return args.reverse().reduce((acc, arg) => (
+        {value: {a: arg, d: acc},
+         type: RLIST_T}),
+                                 {value: null,
+                                  type: RLIST_T});
 }
 function not(args) {
     if (args.length !== 1) {
@@ -713,8 +715,10 @@ function stringAppend(args) {
 
     let value = args.map((arg) => arg.value).reduce((acc, arg) => acc + arg);
 
-    return {value,
-            type: RSTRING_T};
+    return args.reduce((acc, arg) => (
+        {value: acc.value + arg.value,
+         type: RSTRING_T}
+    ));
 }
 function circle(args) {
     if (args.length < 3) {
