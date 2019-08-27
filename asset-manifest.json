@@ -1,15 +1,15 @@
 {
   "files": {
-    "main.css": "/tableMethodThing/static/css/main.028f32a8.chunk.css",
-    "main.js": "/tableMethodThing/static/js/main.1543f906.chunk.js",
-    "main.js.map": "/tableMethodThing/static/js/main.1543f906.chunk.js.map",
-    "runtime~main.js": "/tableMethodThing/static/js/runtime~main.7632f906.js",
-    "runtime~main.js.map": "/tableMethodThing/static/js/runtime~main.7632f906.js.map",
-    "static/js/2.1a7136d6.chunk.js": "/tableMethodThing/static/js/2.1a7136d6.chunk.js",
-    "static/js/2.1a7136d6.chunk.js.map": "/tableMethodThing/static/js/2.1a7136d6.chunk.js.map",
-    "index.html": "/tableMethodThing/index.html",
-    "precache-manifest.f2683df273c720943a08c043d697db80.js": "/tableMethodThing/precache-manifest.f2683df273c720943a08c043d697db80.js",
-    "service-worker.js": "/tableMethodThing/service-worker.js",
-    "static/css/main.028f32a8.chunk.css.map": "/tableMethodThing/static/css/main.028f32a8.chunk.css.map"
+    "main.css": "/Beginning-Student-Tables/static/css/main.028f32a8.chunk.css",
+    "main.js": "/Beginning-Student-Tables/static/js/main.18dd7b4e.chunk.js",
+    "main.js.map": "/Beginning-Student-Tables/static/js/main.18dd7b4e.chunk.js.map",
+    "runtime~main.js": "/Beginning-Student-Tables/static/js/runtime~main.badfee33.js",
+    "runtime~main.js.map": "/Beginning-Student-Tables/static/js/runtime~main.badfee33.js.map",
+    "static/js/2.1a7136d6.chunk.js": "/Beginning-Student-Tables/static/js/2.1a7136d6.chunk.js",
+    "static/js/2.1a7136d6.chunk.js.map": "/Beginning-Student-Tables/static/js/2.1a7136d6.chunk.js.map",
+    "index.html": "/Beginning-Student-Tables/index.html",
+    "precache-manifest.23fbc8499f6804873465880be84f2568.js": "/Beginning-Student-Tables/precache-manifest.23fbc8499f6804873465880be84f2568.js",
+    "service-worker.js": "/Beginning-Student-Tables/service-worker.js",
+    "static/css/main.028f32a8.chunk.css.map": "/Beginning-Student-Tables/static/css/main.028f32a8.chunk.css.map"
   }
 }
