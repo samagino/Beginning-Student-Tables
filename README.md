@@ -1,9 +1,11 @@
-# Table Method Thing
+# Beginning Student Tables
+(formerly known as the Table Method Thing)
+
 It's like the Recursive Argument Method except not at all
 
 ## How to use
 ### easy way
-click me: https://samagino.github.io/tableMethodThing/
+click me: https://samagino.github.io/Beginning-Student-Tables/
 
 note: the version of the Table Method Thing at this link may be several commits behind
 ### slightly less easy way that lets you play around with the code more
