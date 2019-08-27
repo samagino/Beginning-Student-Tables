@@ -351,15 +351,32 @@ TODO:
 
 // Integer, Integer, Integer[, Integer] -> Color 
 function makeColor (r, g, b, a = 255) {
+    if (r < 0 || r > 255 ||
+        g < 0 || g > 255 ||
+        b < 0 || b > 255 ||
+        a < 0 || a > 255 ){
+        throw new Error('r g b a values must be between 0 and 255 (inclusive)');
+    }
+
     return {r, g, b, a};
 }
 
 // Color, Integer -> Color
 function changeAlpha (color, a) {
-    return {...color, a};
+    return makeColor(color.r, color.g, color.b, a);
 }
 
-// String | Color -> Color
+// Integer -> Integer
+// pretty much makes sure the argument is non-negative
+function checkDimension(maybeDimension) {
+    if (maybeDimension < 0) {
+        throw new Error('shape dimensions must be non-negative');
+    }
+
+    return maybeDimension;
+}
+
+// (String or Color) -> Color
 function checkColor(maybeColor) {
     if (typeof maybeColor === 'string') {
         let color = colorDb[maybeColor.replace(' ', '').toUpperCase()];
@@ -406,19 +423,31 @@ function checkYPlace(maybeYPlace) {
     return maybeYPlace;
 }
 
-// Integer String Color -> Image
+// Integer (String or Integer) Color -> Image
 function makeCircle (r, mode, color) {
-    return {r, mode: checkMode(mode), color: checkColor(color), type: 'circle'};
+    if (typeof mode === 'string') {
+        return {r: checkDimension(r), mode: checkMode(mode), color: checkColor(color), type: 'circle'};
+    } else {
+        return {r: checkDimension(r), mode: 'solid', color: changeAlpha(checkColor(color), mode), type: 'circle'};
+    }
 }
 
-// Integer Integer String Color -> Image
+// Integer Integer (String or Integer) Color -> Image
 function makeRectangle (width, height, mode, color) {
-    return {width, mode: checkMode(mode), height, color: checkColor(color), type: 'rect'};
+    if (typeof mode === 'string') {
+        return {width: checkDimension(width), height: checkDimension(height), mode: checkMode(mode),  color: checkColor(color), type: 'rect'};
+    } else {
+        return {width: checkDimension(width), height: checkDimension(height), mode: 'solid',  color: changeAlpha(checkColor(color), mode), type: 'rect'};
+    }
 }
 
-// Integer Integer String Color -> Image
+// Integer Integer Integer (String or Integer) Color -> Image
 function makeTriangle (A, B, C, mode, color) {
-    return {A, B, C, mode: checkMode(mode), color: checkColor(color), type: 'triangle'};
+    if (typeof mode === 'string') {
+        return {A: checkDimension(A), B: checkDimension(B), C: checkDimension(C), mode: checkMode(mode), color: checkColor(color), type: 'triangle'};
+    } else {
+        return {A: checkDimension(A), B: checkDimension(B), C: checkDimension(C), mode: 'solid', color: changeAlpha(checkColor(color), mode), type: 'triangle'};
+    }
 }
 
 function makeEquiTriangle (length, mode, color) {
