@@ -928,5 +928,5 @@ function color(args) {
 }
 
 export {interp, parseCheck, unparse_cons, unparse_list, initEnv,
-        RVAR_T, RAPP_T, RFUNCT_T, RNUM_T, RBOOL_T, RSTRING_T, RLIST_T, RSYM_T,
+        RVAR_T, RAPP_T, RFUNCT_T, RNUM_T, RBOOL_T, RSTRING_T, RLIST_T, RSYM_T, RIMAGE_T, RCOLOR_T,
         varRE};

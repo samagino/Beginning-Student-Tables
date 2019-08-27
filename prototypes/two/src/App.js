@@ -1,5 +1,5 @@
 import React from 'react';
-import {interp, parseCheck, unparse_cons, unparse_list, initEnv, RAPP_T, RFUNCT_T, RBOOL_T, RLIST_T, varRE} from './interpreter.js';
+import {interp, parseCheck, unparse_cons, unparse_list, initEnv, RAPP_T, RFUNCT_T, RBOOL_T, RLIST_T, RIMAGE_T, varRE} from './interpreter.js';
 import {gray, pink, yellow, allBools, isBooleanFormula} from './header.js';
 import toBSL_noGroup from './prettyprint.js';
 import {test} from './image.js';
@@ -73,6 +73,11 @@ function deepEquals(proga, progb) {
         let functCheck = deepEquals(proga.value.funct, progb.value.funct);
         let argCheck = proga.value.args.map((arga, i) => deepEquals(arga, progb.value.args[i])).every((elem) => elem);
         return functCheck && argCheck;
+    }
+
+    if (proga.type === RIMAGE_T) {
+        // TODO: figure out Image comparison
+        return false;
     }
 
     return proga.value === progb.value;
@@ -742,6 +747,7 @@ function SuccinctBody(props) {
             <td>{/* empty cell to align with top level formula dummy input */}</td>
             <Want
               dummy={false}
+              want={example.want}
               wantChange={(want) => exampleChange({...example, want},
                                                   example)}
             />
@@ -974,18 +980,34 @@ function Want(props) {
         return true;
     }
 
+    let valueCell;
+    if (props.dummy || props.want === yellow) {
+        valueCell = <script/>;
+    } else {
+        let evalWant = interp(props.want, initEnv);
+        if (deepEquals(evalWant, props.want)) {
+            valueCell = <script/>;
+        } else {
+            valueCell = <td>{unparse(evalWant)}</td>;
+        }
+    }
+
+
     return (
-        <td>
-          <div className='full_cell'>
-            <ValidatedInput
-              dummy={props.dummy}
-              placeholder={'Want'}
-              isValid={validProg}
-              onValid={(text) => props.wantChange(parseCheck(text))}
-              onEmpty={() => props.wantChange(yellow)}
-            />
-          </div>
-        </td>
+        <React.Fragment>
+          <td>
+            <div className='full_cell'>
+              <ValidatedInput
+                dummy={props.dummy}
+                placeholder={'Want'}
+                isValid={validProg}
+                onValid={(text) => props.wantChange(parseCheck(text))}
+                onEmpty={() => props.wantChange(yellow)}
+              />
+            </div>
+          </td>
+          {valueCell}
+        </React.Fragment>
     );
 }
 
