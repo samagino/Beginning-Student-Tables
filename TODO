@@ -1,14 +1,14 @@
 --___TODO___--
 
 todo:
-- change repo name to Beginning Tables or something
-   - change HTML title, header
 - make stable version
 - differentiate between programs and values
+- show evaluated form of wants (if it differs from what's in the field)
 - images (svg)
   - make library implementing subset of 2htdp
      - pentagon, hexagon
   - image comparison
+  - make image painting work in lists etc.
 
 - bsl import (BSL to Table)
 - have toBSL use the pretty printer better so it prints more prettily
