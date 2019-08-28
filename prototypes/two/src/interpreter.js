@@ -498,6 +498,10 @@ function car(args) {
 
     typeCheck(firstArg, [RLIST_T]);
 
+    if (firstArg.value === null) {
+        throw new Error('expected a cons, but given empty list');
+    }
+
     return firstArg.value.a;
 }
 function cdr(args) {
@@ -506,6 +510,10 @@ function cdr(args) {
     }
 
     let firstArg = args[0];
+
+    if (firstArg.value === null) {
+        throw new Error('expected a cons, but given empty list');
+    }
 
     typeCheck(firstArg, [RLIST_T]);
 
