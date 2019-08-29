@@ -1,8 +1,7 @@
 import React from 'react';
-import {interp, parseCheck, unparse_cons, unparse_list, initEnv, RAPP_T, RFUNCT_T, RBOOL_T, RLIST_T, RIMAGE_T, varRE} from './interpreter.js';
+import {interp, parseCheck, unparse_cons, toString_cons, toString_list, unparse_list, initEnv, RAPP_T, RFUNCT_T, RBOOL_T, RLIST_T, RIMAGE_T, varRE} from './interpreter.js';
 import {gray, pink, yellow, allBools, isBooleanFormula} from './header.js';
 import toBSL_noGroup from './prettyprint.js';
-import {test} from './image.js';
 import './App.css';
 
 /*****************************
@@ -44,6 +43,7 @@ function peekKey(lookahead) {
     Globals
 **************/
 let unparse = unparse_cons;
+let toString = toString_cons;
 let showBSL = false;
 
 /*****************
@@ -1046,11 +1046,14 @@ class App extends React.Component {
                     }
 
                     // I have no idea what should happen if this is called on a table with no params
-                    if (example.inputs.reduce((acc, input, i) => {
-                        return acc && deepEquals(interp(input.prog, initEnv), args[i]);
-                    }, true)) {
+                    if (example.inputs.every((input, i) => {
+                        if (input.prog === yellow) {
+                            return false;
+                        }
+                        return deepEquals(interp(input.prog, initEnv), args[i]);
+                    })) {
                         if (example.want === yellow) {
-                            throw new ReferenceError(`(${table.name} ${args.map(unparse).join(' ')}) doesn't have a want`);
+                            throw new ReferenceError(`(${table.name} ${args.map(toString).join(' ')}) doesn't have a want`);
                         } else {
                             return interp(example.want, initEnv);
                         }
@@ -1061,7 +1064,7 @@ class App extends React.Component {
 
                 if (expr === undefined) {
                     // it's like a reference error in the super meta table language
-                    throw new ReferenceError(args.map(unparse).join() + ' is not an example in ' + table.name);
+                    throw new ReferenceError(args.map(toString).join() + ' is not an example in ' + table.name);
                 }
 
                 return expr;
@@ -1157,7 +1160,7 @@ class App extends React.Component {
                   rows={20}
                   cols={70}
                   readOnly={true}
-                  value={toBSL_noGroup(this.state.tables, unparse, 70, 70)}
+                  value={toBSL_noGroup(this.state.tables, toString, 70, 70)}
                 />
             );
         } else {
@@ -1183,8 +1186,10 @@ class App extends React.Component {
                   defaultValue='cons'
                   onChange={(e) => {
                       if (e.target.value === 'cons'){
+                          toString = toString_cons;
                           unparse = unparse_cons;
                       } else {
+                          toString = toString_list;
                           unparse = unparse_list;
                       }
                       // this just rerenders everything, the state remains unchanged
@@ -1211,9 +1216,6 @@ class App extends React.Component {
                 </div>
                 {bslField}
               </div>
-              {/* <div> */}
-              {/*   {test} */}
-              {/* </div> */}
             </div>
         );
     }
