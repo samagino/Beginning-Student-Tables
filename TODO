@@ -6,7 +6,7 @@ todo:
 - show evaluated form of wants (if it differs from what's in the field)
 - images (svg)
   - make library implementing subset of 2htdp
-     - pentagon, hexagon
+     - pentagon, hexagon, star
   - image comparison
   - make image painting work in lists etc.
 
@@ -15,6 +15,10 @@ todo:
 
 bugs:
   - dummy children should always show gray/pink cells when relevent
+
+bugs I don't know how to fix:
+  - when using unparser that can display both text and images, error messages
+    don't look right because js error messages can't display images
 
 stuff that may be nice:
 - undo/redo button
