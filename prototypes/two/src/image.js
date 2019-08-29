@@ -5,9 +5,11 @@
 
 /***
     Data Definitions:
-An Image is one of - Circle
+An Image is one of 
+      - Circle
       - Rectangle
       - Triangle
+      - Polygon
       - Beside
       - Above
       - Overlay
@@ -33,6 +35,12 @@ An Image is one of - Circle
        color:  Color,            /      \
        mode:   String,          /________\
        type:   'triangle'}          A      
+       
+    A Polygon is
+      {coordinates: [{x: Integer, y: Integer}],
+       color:       Color,
+       mode:        String,
+       type:        'polygon'}
        
     note: only acute triangles are handled
        
@@ -89,7 +97,9 @@ const colorDb = {
     "LIGHT-SALMON" : makeColor(255, 160, 122),
     "DARK-SALMON" : makeColor(233, 150, 122),
     "NAVAJO-WHITE" : makeColor(255, 222, 173),
-    "PEACH-PUFF" : makeColor(255, 218, 185), "DARK-KHAKI" : makeColor(189, 183, 107), "PALE-GOLDENROD" : makeColor(238, 232, 170),
+    "PEACH-PUFF" : makeColor(255, 218, 185),
+    "DARK-KHAKI" : makeColor(189, 183, 107),
+    "PALE-GOLDENROD" : makeColor(238, 232, 170),
     "BLANCHE-DIAMOND" : makeColor(255, 235, 205),
     "MEDIUM-GOLDENROD" : makeColor(234, 234, 173),
     "PAPAYA-WHIP" : makeColor(255, 239, 213),
@@ -423,7 +433,7 @@ function checkYPlace(maybeYPlace) {
     return maybeYPlace;
 }
 
-// Integer (String or Integer) Color -> Image
+// Integer (String or Integer) Color -> Circle
 function makeCircle (r, mode, color) {
     if (typeof mode === 'string') {
         return {r: checkDimension(r), mode: checkMode(mode), color: checkColor(color), type: 'circle'};
@@ -432,7 +442,7 @@ function makeCircle (r, mode, color) {
     }
 }
 
-// Integer Integer (String or Integer) Color -> Image
+// Integer Integer (String or Integer) Color -> Rectangle
 function makeRectangle (width, height, mode, color) {
     if (typeof mode === 'string') {
         return {width: checkDimension(width), height: checkDimension(height), mode: checkMode(mode),  color: checkColor(color), type: 'rect'};
@@ -441,7 +451,7 @@ function makeRectangle (width, height, mode, color) {
     }
 }
 
-// Integer Integer Integer (String or Integer) Color -> Image
+// Integer Integer Integer (String or Integer) Color -> Triangle
 function makeTriangle (A, B, C, mode, color) {
     if (typeof mode === 'string') {
         return {A: checkDimension(A), B: checkDimension(B), C: checkDimension(C), mode: checkMode(mode), color: checkColor(color), type: 'triangle'};
@@ -450,8 +460,30 @@ function makeTriangle (A, B, C, mode, color) {
     }
 }
 
+// Integer (String or Integer) Color -> Triangle
 function makeEquiTriangle (length, mode, color) {
     return makeTriangle(length, length, length, mode, color);
+}
+
+// [{x: Integer, y: Integer}], (String or Integer), Color -> Polygon
+function makePolygon (coords, mode, color) {
+    if (typeof mode === 'string') {
+        return {coordinates: coords, mode: checkMode(mode), color: checkColor(color), type: 'polygon'};
+    } else {
+        return {coordinates: coords, mode: 'solid', color: changeAlpha(checkColor(color), mode), type: 'polygon'};
+    }
+}
+
+// Integer, (String or Integer), Color -> Polygon
+function makePentagon (length, mode, color) {
+}
+
+// Integer, (String or Integer), Color -> Polygon
+function makeHexagon (length, mode, color) {
+}
+
+// Integer, (String or Integer), Color -> Polygon
+function makeStar (length, mode, color) {
 }
 
 // [Image] -> Image
@@ -490,6 +522,8 @@ function width (image) {
         return image.width;
     case 'triangle':
         return image.A;
+    case 'polygon':
+        return image.coordinates.map((coord) => coord.x).reduce((acc, x) => Math.max(acc, x));
     case 'beside':
         return image.images.reduce((acc, image) => acc + width(image), 0);
     case 'above':
@@ -515,6 +549,8 @@ function height (image) {
         let s = (image.A + image.B + image.C) / 2;
         let area = Math.sqrt(s * (s  - image.A) * (s - image.B) * (s - image.C));
         return Math.round((area * 2) / image.A);
+    case 'polygon':
+        return image.coordinates.map((coord) => coord.y).reduce((acc, y) => Math.max(acc, y));
     case 'beside':
         return image.images.reduce((acc, image) => Math.max(acc, height(image)), 0);
     case 'above':
@@ -538,6 +574,8 @@ function render (image, x, y) {
         return render_rect(image, x, y);
     case 'triangle':
         return render_triangle(image, x, y);
+    case 'polygon':
+        return render_polygon(image, x, y);
     case 'beside':
         return render_beside(image, x, y);
     case 'above':
@@ -642,9 +680,36 @@ function render_triangle (image, x, y) {
                  fill={`rgba(${red}, ${green}, ${blue}, ${alpha})`}
                  key={genKey()}
                />;
-    case 'outline':                                             
+    case 'outline':
         return <polygon
                  points={`${a.x},${a.y} ${b.x},${b.y} ${c.x},${c.y}`}
+                 fill='none'
+                 stroke={`rgba(${red}, ${green}, ${blue}, ${alpha})`}
+                 strokeWidth={1}
+                 key={genKey()}
+               />;
+    default:
+        throw new Error (`Unknown Image Mode: ${image.mode}`);
+    }
+}
+
+function render_polygon (image, x, y) {
+    let red = image.color.r;
+    let green = image.color.g;
+    let blue = image.color.b;
+    let alpha = image.color.a / 255;
+
+    let points = image.coordinates.map((coord) => `${coord.x + x},${coord.y + y}`).reduce((acc, cur) => acc + ' ' + cur);
+    switch (image.mode) {
+    case 'solid':                                               
+        return <polygon
+                 points={points}
+                 fill={`rgba(${red}, ${green}, ${blue}, ${alpha})`}
+                 key={genKey()}
+               />;
+    case 'outline':
+        return <polygon
+                 points={points}
                  fill='none'
                  stroke={`rgba(${red}, ${green}, ${blue}, ${alpha})`}
                  strokeWidth={1}
