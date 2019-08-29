@@ -17,6 +17,7 @@ const RLIST_T =   6;
 const RSYM_T =    7;
 const RIMAGE_T =  8;
 const RCOLOR_T =  9;
+const RIF_T =   10;
 
 const varRE = /^[^\s",'`()[\]{}|;#]+/; // except numbers
 const appRE = /^\(/;
@@ -59,8 +60,6 @@ const initEnv = [
                             value: and}},
     {name: 'or', binding: {type: RFUNCT_T,
                            value: or}},
-    {name: 'if', binding: {type: RFUNCT_T,
-                           value: rif}},
     {name: 'eqv?', binding: {type: RFUNCT_T,
                              value: iseqv}},
     {name: 'null?', binding: {type: RFUNCT_T,
@@ -168,7 +167,41 @@ function parse(text) {
             text = parseArg.rest;
         }
 
-        let app = {value: {funct: funct, args: args}, type: RAPP_T};
+        let app;
+	if (funct.value === 'or') {
+	    if (args.length == 2) {
+		app = {value: {tst: args[0], els: args[1], thn: {value : true, type : RBOOL_T} }, type: RIF_T};
+	    }
+	    else if (args.length < 2) {
+		throw new SyntaxError('Invalid Syntax: "' + text + '"');
+	    }
+	    else {
+		// should have a loop here
+		throw new SyntaxError('Invalid Syntax: "' + text + '"');
+	    }
+	}
+	else if (funct.value === 'and') {
+	    if (args.length == 2) {
+		app = {value: {tst: args[0], thn: args[1], els: {value : false, type : RBOOL_T} }, type: RIF_T};
+	    }
+	    else if (args.length < 2) {
+		throw new SyntaxError('Invalid Syntax: "' + text + '"');
+	    }
+	    else {
+		// should have a loop here
+		throw new SyntaxError('Invalid Syntax: "' + text + '"');
+	    }
+	}
+	else if (funct.value === 'if') {
+	    if (args.length === 3) {
+		app = {value: {tst: args[0], thn: args[1], els: args[2]}, type: RIF_T};
+	    }
+	    else {
+		throw new SyntaxError('Invalid Syntax: "' + text + '"');
+	    }
+	} else {	
+	    app = {value: {funct: funct, args: args}, type: RAPP_T};
+	}
         let rest = text.slice(1).trim(); // remove close paren
 
         return {prog: app, rest: rest};
@@ -273,9 +306,21 @@ function interp(prog, env) {
         return lookup(prog.value);
     case RFUNCT_T:
         return prog;
+    case RIF_T:
+        let tst = interp(prog.value.tst, env);
+	typeCheck(tst, [RBOOL_T]);
+
+	if (tst.value) {
+	    return interp(prog.value.thn, env);
+	}
+	else {
+	    return interp(prog.value.els, env);
+	}
+	
     case RAPP_T:
         // interpret function (valof rator env)
         let funct = interp(prog.value.funct, env);
+
         // interpret arguments (valof rand env)
         let args = prog.value.args.map((arg) => interp(arg, env));
 
