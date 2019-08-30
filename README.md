@@ -54,5 +54,5 @@ If this doesn't make sense, the README in ```prototypes/two``` contains more inf
 
 I followed the instructions at
 https://create-react-app.dev/docs/deployment#github-pages-https-pagesgithubcom
-to set up gh-pages, so if something doesn't work that site might help
+to set up the gh-pages branch, so if something doesn't work that site might help
 you out
