@@ -50,9 +50,15 @@ If this doesn't make sense, the README in ```prototypes/two``` contains more inf
    npm install gh-pages
    ```
 
-3. run ```npm run deploy``` to compile the project and push it to gh-pages
+3. run 
+   ```
+   npm run deploy
+   ``` 
+   This command compiles the project and pushes the compiled version
+   to gh-pages
+   
 
 I followed the instructions at
 https://create-react-app.dev/docs/deployment#github-pages-https-pagesgithubcom
-to set up the gh-pages branch, so if something doesn't work that site might help
-you out
+to set up the gh-pages branch, so if something doesn't work that site
+might help you out
