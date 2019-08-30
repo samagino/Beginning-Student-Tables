@@ -38,3 +38,21 @@ note: the version of the Table Method Thing at this link may be several commits 
 6. have fun!
 
 If this doesn't make sense, the README in ```prototypes/two``` contains more info.
+
+## How to Publish (i.e. pushing to gh-pages)
+1. go to project directory (two)
+   ```
+   cd path/to/repo/prototypes/two
+   ```
+
+2. using npm, install ```gh-pages```
+   ```
+   npm install gh-pages
+   ```
+
+3. run ```npm run deploy``` to compile the project and push it to gh-pages
+
+I followed the instructions at
+https://create-react-app.dev/docs/deployment#github-pages-https-pagesgithubcom
+to set up gh-pages, so if something doesn't work that site might help
+you out
