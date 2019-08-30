@@ -693,19 +693,6 @@ function and(args) {
     }, {value: true, type: RBOOL_T});
 
 }
-function rif(args) {
-    if (args.length !== 3) {
-        throw new Error('arity mismatch');
-    }
-
-    let firstArg = args[0];
-    let secondArg = args[1];
-    let thirdArg = args[2];
-
-    typeCheck(firstArg, [RBOOL_T]);
-
-    return firstArg.value ? secondArg : thirdArg;
-}
 function isnull(args) {
     if (args.length !== 1) {
         throw new Error('arity mismatch');
