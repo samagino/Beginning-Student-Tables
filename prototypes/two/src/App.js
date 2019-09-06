@@ -1,6 +1,8 @@
 import React from 'react';
+import ReactDOMServer from 'react-dom/server';
 import {interp, parseCheck, unparse_cons, toString_cons, toString_list, unparse_list, initEnv, RAPP_T, RFUNCT_T, RBOOL_T, RLIST_T, RIMAGE_T, varRE} from './interpreter.js';
 import {gray, pink, yellow, allBools, isBooleanFormula} from './header.js';
+import {paint, width, height, makeRectangle, makeOverlay} from './image.js';
 import toBSL_noGroup from './prettyprint.js';
 import './App.css';
 
@@ -53,6 +55,7 @@ let showBSL = false;
 // checks if two programs are equivalent, recurs on lists and applications
 // may not quite work on functions because I use js functions, not data represented closures or something
 //    thus 2 functions are only equal if they're a reference to the same object
+// maybe move this to interpreter.js?
 function deepEquals(proga, progb) {
     if (proga.type !== progb.type) {
         return false;
@@ -76,8 +79,58 @@ function deepEquals(proga, progb) {
     }
 
     if (proga.type === RIMAGE_T) {
+        // Image -> Uint8ClampedArray
+        // takes an image and returns an array containing RGBA values of all pixels in the image
+        // a lot of this was taken from https://stackoverflow.com/questions/3768565/drawing-an-svg-file-on-a-html5-canvas
+        // sometimes this doesn't work...
+        //   - when it is first used in a certain instance of the table method, it returns an array containing only zeros,
+        //     however, after this I'm pretty sure it returns the array it should be returning
+        //   - maybe something hasn't been properly initialized by the first time around?
+        function toRGBAArray (image) {
+            let can = document.createElement('canvas');
+            let ctx = can.getContext('2d');
+            let svg = paint(image);
+
+            // pretty much just turns the jsx into a string
+            let xml = ReactDOMServer.renderToString(svg);
+
+            // make the xml base 64 for some reason (I dunno why)
+            let svg64 = btoa(xml);
+            // header that does stuff I guess
+            let b64Start = 'data:image/svg+xml;base64,';
+
+            // prepend a the header to the xml data
+            let image64 = b64Start + svg64;
+
+            // make image that contains the xml data so we can draw it
+            let img = document.createElement('img');
+            img.src = image64;
+
+            // draw the image onto the canvas
+            ctx.drawImage(img, 0, 0);
+
+            return ctx.getImageData(0, 0, width(image), height(image)).data;
+        }
+
+        let dataA_red = toRGBAArray(makeOverlay([proga.value, makeRectangle(width(proga.value), width(proga.value), 'solid', 'red')]));
+        let dataA_green = toRGBAArray(makeOverlay([proga.value, makeRectangle(width(proga.value), width(proga.value), 'solid', 'green')]));
+
+        let dataB_red = toRGBAArray(makeOverlay([progb.value, makeRectangle(width(progb.value), width(progb.value), 'solid', 'red')]));
+        let dataB_green = toRGBAArray(makeOverlay([progb.value, makeRectangle(width(progb.value), width(progb.value), 'solid', 'green')]));
+
+        if (dataA_red.length !== dataB_red.length) { // images have different sizes
+            return false;
+        }
+
+        let redSame = dataA_red.every((datumA_red, i) => datumA_red === dataB_red[i]);
+        let greenSame = dataA_green.every((datumA_green, i) => datumA_green === dataB_green[i]);
+
+        return redSame && greenSame;
+
+        //console.log(toRGBAArray(proga.value));
+
         // TODO: figure out Image comparison
-        return false;
+        //return false;
     }
 
     return proga.value === progb.value;

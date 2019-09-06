@@ -356,7 +356,8 @@ function genKey() {
 
 /*
 TODO:
-  Figure out how triangles should work
+  Figure out how stars, pentagons, hexagons should work (yay geometry)
+  turn rectangles and triangles into polygons?
 */
 
 // Integer, Integer, Integer[, Integer] -> Color 
@@ -397,7 +398,8 @@ function checkColor(maybeColor) {
         return color;
     } 
 
-    // TODO: check if maybeColor is actually a color object
+    // T_ODO: check if maybeColor is actually a color object
+    // nvm, I do that in interpreter.js
     return maybeColor;
 }
 
@@ -484,6 +486,7 @@ function makeHexagon (length, mode, color) {
 
 // Integer, (String or Integer), Color -> Polygon
 function makeStar (length, mode, color) {
+    
 }
 
 // [Image] -> Image
@@ -505,13 +508,10 @@ function makePlace (image, x, y, scene) {
     return {image, x, y, scene, type: 'place'};
 }
 
-let circle = makeCircle;
-let rectangle = makeRectangle;
-let triangle = makeEquiTriangle;
-let beside = makeBeside;
-let above = makeAbove;
-let overlay = makeOverlay;
-let placeImage = makePlace;
+// Integer, Integer[, (Color or String)] -> Image
+function emptyScene (w, h, color = 'white') {
+    return makeOverlay([makeRectangle(w, h, 'outline', 'black'), makeRectangle(w, h, 'solid', color)]);
+}
 
 // Image -> Integer
 function width (image) {
@@ -565,7 +565,7 @@ function height (image) {
 }
 
 
-// Image Integer Integer -> SVG
+// Image, Integer, Integer -> SVG
 function render (image, x, y) {
     switch (image.type) {
     case 'circle':
@@ -589,7 +589,7 @@ function render (image, x, y) {
     }
 }
 
-// Image Integer Integer -> SVG
+// Circle, Integer, Integer -> SVG
 function render_circle (image, x, y) {
     let red = image.color.r;
     let green = image.color.g;
@@ -624,7 +624,7 @@ function render_circle (image, x, y) {
     }
 }
 
-// Image Integer Integer -> SVG
+// Rectangle, Integer, Integer -> SVG
 function render_rect (image, x, y) {
     let red = image.color.r;
     let green = image.color.g;
@@ -656,7 +656,7 @@ function render_rect (image, x, y) {
     }
 }
 
-// Image Integer Integer -> SVG
+// Triangle, Integer, Integer -> SVG
 function render_triangle (image, x, y) {
     let red = image.color.r;
     let green = image.color.g;
@@ -693,6 +693,7 @@ function render_triangle (image, x, y) {
     }
 }
 
+// Polygon, Integer, Integer -> SVG
 function render_polygon (image, x, y) {
     let red = image.color.r;
     let green = image.color.g;
@@ -722,7 +723,7 @@ function render_polygon (image, x, y) {
 
 
 // should I flatten [SVG]s?
-// no
+// no, not really any point. react seems to figure it out
 
 // (Integer, Integer -> Integer), (Integer, Integer -> Integer), (Integer, Integer -> Integer), (Integer, Integer -> Integer) -> ([Image], Integer, Integer) -> [SVG]
 function make_list_renderer (xCorrect, yCorrect, xChange, yChange) {
@@ -750,7 +751,7 @@ function make_list_renderer (xCorrect, yCorrect, xChange, yChange) {
     return render_list;
 }
 
-// Image Integer Integer -> [SVG]
+// Beside, Ingeger, Integer -> [SVG]
 function render_beside (image, x, y) {
     let initY = y,
         yCorrect = (y, h) => y;
@@ -777,7 +778,7 @@ function render_beside (image, x, y) {
     return renderoozle(image.images, x, initY);
 }
 
-// Image Integer Integer -> [SVG]
+// Above, Integer, Integer -> [SVG]
 function render_above (image, x, y) {
     let initX = x,
         xCorrect = (x, w) => x;
@@ -805,6 +806,7 @@ function render_above (image, x, y) {
 
 }
 
+// Overlay, Integer, Integer -> [SVG]
 function render_overlay (image, x, y) {
     let initX = x,
         initY = y,
@@ -848,12 +850,9 @@ function render_overlay (image, x, y) {
     return renderoozle(image.images, initX, initY);
 }
 
+// Place, Integer, Integer -> SVG
 function render_place (image, x, y) {
     return [render(image.scene, x, y), render(image.image, image.x - width(image.image) / 2, image.y - height(image.image) / 2)];
-}
-
-function emptyScene (w, h, color = 'white') {
-    return overlay([rectangle(w, h, 'outline', 'black'), rectangle(w, h, 'solid', color)]);
 }
 
 // Image -> top level SVG
@@ -870,8 +869,7 @@ function paint (image) {
     );
 }
 
-//export paint;
-export {makeCircle, makeRectangle, makeEquiTriangle,
+export {makeCircle, makeRectangle, makeEquiTriangle, makeStar, makePentagon, makeHexagon,
         makeBeside, makeAbove, makeOverlay,
         makePlace, emptyScene, makeColor,
-        paint};
+        paint, width, height};
