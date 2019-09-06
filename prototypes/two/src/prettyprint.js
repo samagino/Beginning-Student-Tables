@@ -521,6 +521,8 @@ function toBSL_noGroup(tables, unparse, width, ribbon) {
     // Table -> Doc
     function tableToDoc(table) {
         let name = fieldToDoc(table.name);
+        let sig = fieldToDoc(table.signature);
+        let purp = fieldToDoc(table.purpose);
         let params = spread(table.params.map((param) => fieldToDoc(param.name)));
 
         let checkExpects = stack(table.examples.map((example) => {
@@ -531,8 +533,10 @@ function toBSL_noGroup(tables, unparse, width, ribbon) {
         }));
 
         let body = formulasToDoc(table.formulas);
+        let signature = spread([text(';;'), name, text(':'), sig]);
+        let purpose = spread([text(';;'), purp]);
         let funct = nest(2, bracket('(', spread([text('define'), stack([bracket('(', spread([name, params]), ')'), body])]), ')'));
-        return stack([funct, line, checkExpects]);
+        return stack([signature, purpose, funct, nil, checkExpects]);
     }
 
     // [Formula] -> Doc

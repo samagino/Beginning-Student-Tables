@@ -126,11 +126,6 @@ function deepEquals(proga, progb) {
         let greenSame = dataA_green.every((datumA_green, i) => datumA_green === dataB_green[i]);
 
         return redSame && greenSame;
-
-        //console.log(toRGBAArray(proga.value));
-
-        // TODO: figure out Image comparison
-        //return false;
     }
 
     return proga.value === progb.value;
@@ -140,11 +135,23 @@ function deepEquals(proga, progb) {
    React Components
 *********************/
 
+// it's a picture of a colon
+function Colon (props) {
+    return (
+        <div className='no_grow'>
+          <img
+            src='./images/colon.png'
+            alt=':'
+          />
+        </div>
+    );
+}
+
 /*** Buttons ***/
 // Button that probably removes something
 function RemButton(props){
     return (
-        <div className='cross_button'>
+        <div className='no_grow'>
           <input
             type={'image'}
             style={props.style}
@@ -252,56 +259,120 @@ function Succinct(props) {
     }
 
     const reals = props.tables.map((table) => (
-        <div key={table.key} className='table_method' >
-          <div className='full_cell'>
-            <ValidatedInput
-              dummy={false}
-              placeholder='Table Name'
-              isValid={(text) => validName(text, table)}
-              onValid={(text) => tableChange({...table,
-                                              name: text},
-                                             table)}
-              onEmpty={() => tableChange({...table,
-                                          name: yellow},
-                                         table)}
-            />
-            <RemButton
-              onClick={() => remTable(table)}
-              title='Remove this table'
+        <div key={table.key} className='flex_horiz'>
+          <div className='flex_vert no_grow'>
+            <div className='flex_horiz no_grow'>
+              <ValidatedInput
+                dummy={false}
+                placeholder='Table Name'
+                isValid={(text) => validName(text, table)}
+                onValid={(text) => tableChange({...table,
+                                                name: text},
+                                               table)}
+                onEmpty={() => tableChange({...table,
+                                            name: yellow},
+                                           table)}
+              />
+              <Colon/>
+              <ValidatedInput
+                dummy={false}
+                placeholder='Signature'
+                isValid={(text) => text !== ''}
+                onValid={(text) => tableChange({...table,
+                                                signature: text},
+                                               table)}
+                onEmpty={() => tableChange({...table,
+                                            signature: yellow},
+                                           table)}
+              />
+              <RemButton
+                onClick={() => remTable(table)}
+                title='Remove this table'
+              />
+            </div>
+            <div className='flex_horiz no_grow'>
+              <ValidatedInput
+                dummy={false}
+                placeholder='Purpose'
+                isValid={(text) => text !== ''}
+                onValid={(text) => tableChange({...table,
+                                                purpose: text},
+                                               table)}
+                onEmpty={() => tableChange({...table,
+                                            purpose: yellow},
+                                           table)}
+              />
+            </div>
+            <SuccinctTab
+              table={table}
+              tableNames={props.tables.map((table) => table.name)}
+              tableChange={(newTab) => tableChange(newTab, table)}
             />
           </div>
-          <SuccinctTab
-            table={table}
-            tableNames={props.tables.map((table) => table.name)}
-            tableChange={(newTab) => tableChange(newTab, table)}
-          />
+          <div className='grow'>{/* div to prevent text fields from stretching across the screen */}</div>
         </div>
     ));
 
     const dummy = (
-        <div key={peekKey()} className='table_method'>
-          <div className='full_cell'>
-            <ValidatedInput
-              dummy={true}
-              placeholder='Table Name'
-              isValid={(text) => validName(text, {params: []})}
-              onValid={(text) => tableChange({name: text,
-                                              examples: [],
-                                              formulas: [],
-                                              params: [],
-                                              key: takeKey()},
-                                             {})}
+        <div key={peekKey()} className='flex_horiz'>
+          <div className='flex_vert no_grow'>
+            <div className='flex_horiz no_grow'>
+              <ValidatedInput
+                dummy={true}
+                placeholder='Table Name'
+                isValid={(text) => validName(text, {params: []})}
+                onValid={(text) => tableChange({name: text,
+                                                signature: yellow,
+                                                purpose: yellow,
+                                                examples: [],
+                                                formulas: [],
+                                                params: [],
+                                                key: takeKey()},
+                                               {})}
+              />
+              <Colon/>
+              <ValidatedInput
+                dummy={true}
+                placeholder='Signature'
+                isValid={(text) => text !== ''}
+                onValid={(text) => tableChange({name: yellow,
+                                                signature: text,
+                                                purpose: yellow,
+                                                examples: [],
+                                                formulas: [],
+                                                params: [],
+                                                key: takeKey()},
+                                               {})}
+              />
+            </div>
+            <div className='flex_horiz no_grow'>
+              <ValidatedInput
+                dummy={true}
+                placeholder='Purpose'
+                isValid={(text) => text !== ''}
+                onValid={(text) => tableChange({name: yellow,
+                                                signature: yellow,
+                                                purpose: text,
+                                                examples: [],
+                                                formulas: [],
+                                                params: [],
+                                                key: takeKey()},
+                                               {})}
+              />
+            </div>
+            <SuccinctTab
+              table={{name: yellow,
+                      signature: yellow,
+                      purpose: yellow,
+                      examples: [],
+                      formulas: [],
+                      params: [],
+                      key: peekKey()}}
+              tableNames={props.tables.map((table) => table.name)}
+              tableChange={(newTab) => tableChange(newTab, {})}
             />
           </div>
-          <SuccinctTab
-            table={{name: yellow,
-                    examples: [],
-                    formulas: [],
-                    params: [],
-                    key: peekKey()}}
-            tableNames={props.tables.map((table) => table.name)}
-            tableChange={(newTab) => tableChange(newTab, {})}
-          />
+          <div className='grow'>{/* div to prevent text fields from stretching across the screen */}</div>
         </div>
     );
 
@@ -326,7 +397,7 @@ function SuccinctTab(props) {
     }
 
     return (
-        <table className={'html_table'}>
+        <table className={'grow'}>
           <SuccinctHead
             params={props.table.params}
             examples={props.table.examples}
@@ -423,7 +494,7 @@ function SuccinctHead(props) {
 
     const reals = props.formulas.map((formula) => (
         <th key={formula.key} colSpan={countWidth(formula)} >
-          <div className='full_cell'>
+          <div className='flex_horiz'>
             <ValidatedInput
               placeholder={'Formula'}
               dummy={false}
@@ -445,7 +516,7 @@ function SuccinctHead(props) {
 
     const dummy = (
         <th key={peekKey()} colSpan={1}>
-          <div className='full_cell'>
+          <div className='flex_horiz'>
             <ValidatedInput
               dummy={true}
               placeholder='Formula'
@@ -548,7 +619,7 @@ function Parameters(props) {
 
     const reals = props.params.map((param) => (
         <th key={param.key} >
-          <div className='full_cell'>
+          <div className='flex_horiz'>
             <ValidatedInput
               dummy={false}
               placeholder='Parameter'
@@ -570,7 +641,7 @@ function Parameters(props) {
 
     const dummy = (
         <th key={peekKey()}>
-          <div className='full_cell'>
+          <div className='flex_horiz'>
             <ValidatedInput
               dummy={true}
               placeholder='Parameter'
@@ -660,7 +731,7 @@ function DepictFormula(props) {
         if (isBooleanFormula(props.formula)) {
             const reals = props.formula.thenChildren.map((child) => (
                 <th key={child.key} colSpan={countWidth(child)} >
-                  <div className='full_cell'>
+                  <div className='flex_horiz'>
                     <ValidatedInput
                       dummy={false}
                       placeholder={'Formula'}
@@ -682,7 +753,7 @@ function DepictFormula(props) {
 
             const dummy = (
                 <th key={peekKey()} colSpan={1}>
-                  <div className='full_cell'>
+                  <div className='flex_horiz'>
                     <ValidatedInput
                       dummy={true}
                       placeholder='Formula'
@@ -865,7 +936,7 @@ function Inputs(props) {
         <React.Fragment>
           {props.inputs.map((input, i) => (
               <td key={input.key} >
-                <div className='full_cell'>
+                <div className='flex_horiz'>
                   <ValidatedInput
                     dummy={props.dummy}
                     placeholder={'Input'}
@@ -1007,7 +1078,6 @@ function TestCell(props) {
 }
 
 function DummyCell (props) {
-    console.log(props.output);
     if (props.output === gray) {
         return (
             <td className={'gray'}>
@@ -1049,7 +1119,7 @@ function Want(props) {
     return (
         <React.Fragment>
           <td>
-            <div className='full_cell'>
+            <div className='flex_horiz'>
               <ValidatedInput
                 dummy={props.dummy}
                 placeholder={'Want'}
@@ -1080,6 +1150,8 @@ class App extends React.Component {
                        formulas: [{prog: yellow, outputs: [yellow], key: takeKey()}],
                        params: [{name: yellow, key: takeKey()}],
                        name: yellow,
+                       signature: yellow,
+                       purpose: yellow,
                        key: takeKey()}];
         this.state = {tables};
 
@@ -1197,7 +1269,7 @@ class App extends React.Component {
 
     programChange(newProg) {
         let calkedProg = this.calculate(newProg);
-        //console.log(calkedProg);
+        console.log(calkedProg);
         //console.log('next key: ', peekKey());
         this.setState((state) => {
             return {tables: calkedProg};

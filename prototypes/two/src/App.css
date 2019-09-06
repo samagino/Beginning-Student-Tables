@@ -49,16 +49,9 @@
 }
 
 
-.html_table{
-    clear: left;
-    float: left;
+table{
     border-collapse: collapse;
     border: 2px solid black;
-}
-
-.table_method{
-    float: left;
-    clear: left;
 }
 
 .bsl_io{
@@ -66,8 +59,6 @@
 }
 
 .bsl_checkbox{
-    float: left;
-    clear: left;
 }
 
 .smiley_frowney_face{
@@ -76,13 +67,9 @@
 
 .bsl_field{
     font-family: monospace;
-    float: left;
-    clear: left;
 }
 
 .language_select{
-    float: left;
-    clear: left;
 }
 
 thead, tbody{
@@ -95,10 +82,20 @@ th, td{
     border: 1px solid black;
 }
 
-.full_cell{
+.flex_horiz{
     display: flex;
+    flex-direction: row;
 }
 
-.cross_button{
+.flex_vert{
+    display: flex;
+    flex-direction: column;
+}
+
+.grow{
+    flex: auto;
+}
+
+.no_grow{
     flex: initial;
 }
