@@ -6,18 +6,25 @@ todo:
   - make library implementing subset of 2htdp
      - pentagon, hexagon, star
   - image comparison
-  - make image painting work in lists etc.
-- represent signature and purpose statement in table (also put in bsl field)
+     - figure out wierd state problem (description in comments of App.js)
 
 - bsl import (BSL to Table)
 - have toBSL use the pretty printer better so it prints more prettily
 
 bugs:
   - dummy children should always show gray/pink cells when relevent
+  - sometimes table names, parameter names are accepted as valid when
+    they shouldn't be
 
 bugs I don't know how to fix:
   - when using unparser that can display both text and images, error messages
     don't look right because js error messages can't display images
+     - current workaround:
+       have a seperate function called toString that only returns a string (not
+       an array of strings and svg) which is used to make error messages
+     - possible better fix:
+       make a new "Error" data type that holds a message which is an array
+       of strings and svg and use this instead of js Errors
 
 stuff that may be nice:
 - undo/redo button
