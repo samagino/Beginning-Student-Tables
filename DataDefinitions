@@ -8,6 +8,8 @@ A Table is
          formulas:      [Formula],
          params:        [Parameters],
          name:          Name_Input,
+         signature:     String,
+         purpose:       String,
          key:           Number}
 
 An Example is
