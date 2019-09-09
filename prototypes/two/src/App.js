@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOMServer from 'react-dom/server';
-import {interp, parseCheck, unparse_cons, toString_cons, toString_list, unparse_list, initEnv, RAPP_T, RFUNCT_T, RBOOL_T, RLIST_T, RIMAGE_T, varRE} from './interpreter.js';
+import {interp, parseCheck, unparse_cons, toString_cons, toString_list, unparse_list, initEnv, RAPP_T, RFUNCT_T, RBOOL_T, RLIST_T, RIMAGE_T} from './interpreter.js';
 import {gray, pink, yellow, allBools, isBooleanFormula} from './header.js';
 import {paint, width, height, makeRectangle, makeOverlay} from './image.js';
 import toBSL_noGroup from './prettyprint.js';
@@ -14,6 +14,9 @@ import './App.css';
 const dryRun = {yo: 'don\'t actually change anything'};
 // image path
 const imgPath = './images/';
+// this one's different because it has a $ at the end so it tests
+// the string until the end
+const varRE = /^[^\s",'`()[\]{}|;#]+$/; // except numbers
 
 
 /*********************
@@ -33,12 +36,8 @@ function takeKey() {
 // shoud be used to look at current state of key without actually taking it
 // optionally takes a number as an argument, in which case it returns the key that number
 // of steps ahead of the current key
-function peekKey(lookahead) {
-    if (lookahead === undefined) {
-        return keyCount;
-    } else {
-        return keyCount + lookahead;
-    }
+function peekKey(lookahead = 0) {
+    return keyCount + lookahead;
 }
 
 /**************
