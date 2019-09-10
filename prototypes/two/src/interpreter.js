@@ -82,6 +82,8 @@ const initEnv = [
                            value: stringLength}},
     {name: 'string-append', binding: {type: RFUNCT_T,
                            value: stringAppend}},
+    {name: 'string=?', binding: {type: RFUNCT_T,
+                                 value: isstrequal}},
     {name: 'circle', binding: {type: RFUNCT_T,
                                value: circle}},
     {name: 'rectangle', binding: {type: RFUNCT_T,
@@ -801,6 +803,24 @@ function lesign(args) {
         return val;
     } else {
         return {value: true, type: RBOOL_T};
+    }
+}
+function isstrequal(args) {
+    args.forEach((arg) => typeCheck(arg, [RSTRING_T]));
+
+    let value = args.map((arg) => arg.value).reduce((acc, val) => {
+
+        if (acc === false) {
+            return false;
+        }
+
+        return acc === val ? acc : false;
+    });
+
+    if (value !== false) {
+        return {value: true, type: RBOOL_T};
+    } else {
+        return {value, type: RBOOL_T};
     }
 }
 function stringLength(args) {
