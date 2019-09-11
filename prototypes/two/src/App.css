@@ -124,3 +124,7 @@ th, td{
     font-weight: bold;
     vertical-align: middle;
 }
+
+.table{
+    margin-bottom: 16px;
+}

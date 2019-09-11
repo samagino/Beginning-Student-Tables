@@ -250,7 +250,7 @@ function Succinct(props) {
     }
 
     const reals = props.tables.map((table) => (
-        <div key={table.key} className='flex_horiz'>
+        <div key={table.key} className='flex_horiz table'>
           <div className='flex_vert no_grow'>
             <div className='flex_horiz no_grow'>
               <ValidatedInput
@@ -305,7 +305,7 @@ function Succinct(props) {
     ));
 
     const dummy = (
-        <div key={peekKey()} className='flex_horiz'>
+        <div key={peekKey()} className='flex_horiz table'>
           <div className='flex_vert no_grow'>
             <div className='flex_horiz no_grow'>
               <ValidatedInput
