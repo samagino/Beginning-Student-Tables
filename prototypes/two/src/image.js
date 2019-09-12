@@ -602,7 +602,6 @@ function render_circle (image, x, y) {
                        cy={y + image.r}
                        r={image.r}
                        fill={`rgba(${red}, ${green}, ${blue}, ${alpha})`}
-                       key={genKey()}
                />;
     case 'outline':
         // stroke is pretty annoying...
@@ -617,7 +616,6 @@ function render_circle (image, x, y) {
                        fill='none'
                        stroke={`rgba(${red}, ${green}, ${blue}, ${alpha})`}
                        strokeWidth={1}
-                       key={genKey()}
                />;
     default:
         throw new Error (`Unknown Image Mode: ${image.mode}`);
@@ -638,7 +636,6 @@ function render_rect (image, x, y) {
                      width={image.width}
                      height={image.height}
                      fill={`rgba(${red}, ${green}, ${blue}, ${alpha})`}
-                     key={genKey()}
                />;
     case 'outline':
         // stroke has similar problems here as it does in circle
@@ -649,7 +646,6 @@ function render_rect (image, x, y) {
                       fill='none'
                       stroke={`rgba(${red}, ${green}, ${blue}, ${alpha})`}
                       strokeWidth={1}
-                      key={genKey()}
                  />;
     default:
         throw new Error (`Unknown Image Mode: ${image.mode}`);
@@ -678,7 +674,6 @@ function render_triangle (image, x, y) {
         return <polygon
                  points={`${a.x},${a.y} ${b.x},${b.y} ${c.x},${c.y}`}
                  fill={`rgba(${red}, ${green}, ${blue}, ${alpha})`}
-                 key={genKey()}
                />;
     case 'outline':
         return <polygon
@@ -686,7 +681,6 @@ function render_triangle (image, x, y) {
                  fill='none'
                  stroke={`rgba(${red}, ${green}, ${blue}, ${alpha})`}
                  strokeWidth={1}
-                 key={genKey()}
                />;
     default:
         throw new Error (`Unknown Image Mode: ${image.mode}`);
@@ -706,7 +700,6 @@ function render_polygon (image, x, y) {
         return <polygon
                  points={points}
                  fill={`rgba(${red}, ${green}, ${blue}, ${alpha})`}
-                 key={genKey()}
                />;
     case 'outline':
         return <polygon
@@ -714,7 +707,6 @@ function render_polygon (image, x, y) {
                  fill='none'
                  stroke={`rgba(${red}, ${green}, ${blue}, ${alpha})`}
                  strokeWidth={1}
-                 key={genKey()}
                />;
     default:
         throw new Error (`Unknown Image Mode: ${image.mode}`);
@@ -863,6 +855,7 @@ function paint (image) {
              xmlns='http://www.w3.org/2000/svg'
              width={width(image)}
              height={height(image)}
+             key={genKey()}
         >
           {picture}
         </svg>
