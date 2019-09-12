@@ -251,6 +251,16 @@ function Succinct(props) {
         return varRE.test(text) && !lookup(text, env);
     }
 
+    function validSignature(text, modTab) {
+        let arrows = text.match(/\s+->\s+/g);
+
+        if (arrows === null) {
+            return false;
+        }
+
+        return arrows.length === modTab.params.length;
+    }
+
     const reals = props.tables.map((table) => (
         <div key={table.key} className='flex_horiz table'>
           <div className='flex_vert no_grow'>
@@ -270,7 +280,7 @@ function Succinct(props) {
               <ValidatedInput
                 dummy={false}
                 placeholder='Signature'
-                isValid={(text) => text !== ''}
+                isValid={(text) => validSignature(text, table)}
                 onValid={(text) => tableChange({...table,
                                                 signature: text},
                                                table)}
