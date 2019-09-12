@@ -418,7 +418,7 @@ function unparse_cons(prog) {
         if (prog.value === null) {
             return ['\'()'];
         } else {
-            return ['(cons ', ...unparse_cons(prog.value.a), ...unparse_cons(prog.value.d), ')'];
+            return ['(cons ', ...unparse_cons(prog.value.a), ' ', ...unparse_cons(prog.value.d), ')'];
         }
     case RSYM_T:
         return ["'" + prog.value];
@@ -427,7 +427,7 @@ function unparse_cons(prog) {
     case RFUNCT_T:
         return ['#<procedure>'];
     case RAPP_T:
-        return ['(', ...unparse_cons(prog.value.funct), ...prog.value.args.map(unparse_cons).flat(), ')'];
+        return ['(', ...unparse_cons(prog.value.funct), ' ', ...prog.value.args.map(unparse_cons).flat(), ')'];
     case RIMAGE_T:
         return [paint(prog.value)];
     case RCOLOR_T:
