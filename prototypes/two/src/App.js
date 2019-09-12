@@ -1,9 +1,9 @@
 import React from 'react';
 import ReactDOMServer from 'react-dom/server';
-import {interp, parseCheck, unparse_cons, toString_cons, toString_list, unparse_list, initEnv, RAPP_T, RFUNCT_T, RBOOL_T, RLIST_T, RIMAGE_T} from './interpreter.js';
+import {interp, parseCheck, unparse_cons, toString_cons, toString_list, unparse_list, initEnv, RAPP_T, RFUNCT_T, RLIST_T, RIMAGE_T} from './interpreter.js';
 import {gray, pink, yellow, allBools, isBooleanFormula} from './header.js';
 import {paint, width, height, makeRectangle, makeOverlay} from './image.js';
-import toBSL_noGroup from './prettyprint.js';
+import toBSL from './prettyprint.js';
 import './App.css';
 
 /*****************************
@@ -111,11 +111,14 @@ function deepEquals(proga, progb) {
             return ctx.getImageData(0, 0, width(image), height(image)).data;
         }
 
-        let dataA_red = toRGBAArray(makeOverlay([proga.value, makeRectangle(width(proga.value), width(proga.value), 'solid', 'red')]));
-        let dataA_green = toRGBAArray(makeOverlay([proga.value, makeRectangle(width(proga.value), width(proga.value), 'solid', 'green')]));
+        let imgA = proga.value;
+        let imgB = progb.value
 
-        let dataB_red = toRGBAArray(makeOverlay([progb.value, makeRectangle(width(progb.value), width(progb.value), 'solid', 'red')]));
-        let dataB_green = toRGBAArray(makeOverlay([progb.value, makeRectangle(width(progb.value), width(progb.value), 'solid', 'green')]));
+        let dataA_red = toRGBAArray(makeOverlay([imgA, makeRectangle(width(imgA), width(imgA), 'solid', 'red')]));
+        let dataA_green = toRGBAArray(makeOverlay([imgA, makeRectangle(width(imgA), width(imgA), 'solid', 'green')]));
+
+        let dataB_red = toRGBAArray(makeOverlay([imgB, makeRectangle(width(imgB), width(imgB), 'solid', 'red')]));
+        let dataB_green = toRGBAArray(makeOverlay([imgB, makeRectangle(width(imgB), width(imgB), 'solid', 'green')]));
 
         if (dataA_red.length !== dataB_red.length) { // images have different sizes
             return false;
@@ -181,7 +184,6 @@ class ValidatedInput extends React.Component {
         } else if (text === '' && !this.props.dummy) {
             this.props.onEmpty();
         }
-
     }
 
     render() {
@@ -1114,7 +1116,6 @@ function Want(props) {
         }
     }
 
-
     return (
         <React.Fragment>
           <td>
@@ -1141,7 +1142,6 @@ function Want(props) {
   |#inputs !== #outputs| (well it can but not always)
   ---------------------
 */
-
 class App extends React.Component {
     constructor(props){
         super(props);
@@ -1268,7 +1268,7 @@ class App extends React.Component {
 
     programChange(newProg) {
         let calkedProg = this.calculate(newProg);
-        console.log(calkedProg);
+        //console.log(calkedProg);
         //console.log('next key: ', peekKey());
         this.setState((state) => {
             return {tables: calkedProg};
@@ -1284,7 +1284,7 @@ class App extends React.Component {
                   rows={20}
                   cols={70}
                   readOnly={true}
-                  value={toBSL_noGroup(this.state.tables, toString, 70, 70)}
+                  value={toBSL(this.state.tables, toString, 70, 70)}
                 />
             );
         } else {
