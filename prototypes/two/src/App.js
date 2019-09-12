@@ -4,6 +4,7 @@ import {interp, parseCheck, unparse_cons, toString_cons, toString_list, unparse_
 import {gray, pink, yellow, allBools, isBooleanFormula} from './header.js';
 import {paint, width, height, makeRectangle, makeOverlay} from './image.js';
 import toBSL from './prettyprint.js';
+import Octicon, {X, Alert, Check} from '@primer/octicons-react';
 import './App.css';
 
 /*****************************
@@ -12,8 +13,6 @@ import './App.css';
 // value to indicate a dry run, i.e. don't actually change the underlying structure, just say
 // if the given value exists or not
 const dryRun = {yo: 'don\'t actually change anything'};
-// image path
-const imgPath = './images/';
 // this one's different because it has a $ at the end so it tests
 // the string until the end
 const varRE = /^[^\s",'`()[\]{}|;#]+$/; // except numbers
@@ -140,12 +139,7 @@ function deepEquals(proga, progb) {
 // it's a picture of a colon
 function Colon (props) {
     return (
-        <div className='no_grow'>
-          <img
-            src='./images/colon.png'
-            alt=':'
-          />
-        </div>
+        <div className='colon'>:</div>
     );
 }
 
@@ -153,14 +147,12 @@ function Colon (props) {
 // Button that probably removes something
 function RemButton(props){
     return (
-        <div className='no_grow'>
-          <input
-            type={'image'}
-            style={props.style}
-            src={'./images/smallCross.png'}
-            alt='Remove'
-            title={props.title}
-            onClick={props.onClick}/>
+        <div className='remove'
+             onClick={props.onClick}
+             title={props.title}>
+          <Octicon
+            icon={X} size="small" verticalAlign="middle"
+            ariaLabel='Remove'/>
         </div>
     );
 }
@@ -260,7 +252,7 @@ function Succinct(props) {
     }
 
     const reals = props.tables.map((table) => (
-        <div key={table.key} className='flex_horiz'>
+        <div key={table.key} className='flex_horiz table'>
           <div className='flex_vert no_grow'>
             <div className='flex_horiz no_grow'>
               <ValidatedInput
@@ -315,7 +307,7 @@ function Succinct(props) {
     ));
 
     const dummy = (
-        <div key={peekKey()} className='flex_horiz'>
+        <div key={peekKey()} className='flex_horiz table'>
           <div className='flex_vert no_grow'>
             <div className='flex_horiz no_grow'>
               <ValidatedInput
@@ -508,7 +500,7 @@ function SuccinctHead(props) {
                                            formula)}
             />
             <RemButton
-              title={'Remove formula'}
+              title={'Remove this formula'}
               onClick={() => remFormula(formula)}
             />
           </div>
@@ -633,7 +625,7 @@ function Parameters(props) {
                                          param)}
             />
             <RemButton
-              title='remove this parameter'
+              title='Remove this parameter'
               onClick={() => remParam(param)}
             />
           </div>
@@ -745,7 +737,7 @@ function DepictFormula(props) {
                                                  child)}
                     />
                     <RemButton
-                      title={'Remove formula'}
+                      title={'Remove this formula'}
                       onClick={() => remChild(child)}
                     />
                   </div>
@@ -1053,19 +1045,19 @@ function TestCell(props) {
 
     let face;
     if (error) {
-        face = <img
-                src={imgPath + 'frowneyface.png'}
-                alt='Error!'
-                style={{float: 'right'}}
-                title={"Oh no! You got an error!"}/>;
+        face = <div title={"Oh no! You got an error!"} className="alert">
+                 <Octicon
+                  icon={Alert} size="small" verticalAlign="middle"
+                  ariaLabel='Error!'/>
+               </div>;
     }else if (want === yellow) { // I should make this better
         face = '';
     } else if (deepEquals(output, want)) {
-        face =  <img
-                 src={imgPath + 'smileyface.png'}
-                 alt='Yay!'
-                 style={{float: 'right'}}
-                 title={"Yay! It's right!"}/>;
+        face = <div title={"Yay! It's right!"} className="check">
+                 <Octicon
+                  icon={Check} size="small" verticalAlign="middle"
+                  ariaLabel='Yay!'/>
+               </div>;
     } else {
         face = '';
     }

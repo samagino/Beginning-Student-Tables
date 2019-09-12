@@ -1,5 +1,5 @@
 .dummy_input{
-    background-color: lightgreen;
+    background-color: palegreen;
     font-family: monospace;
     flex: auto;
 }
@@ -98,4 +98,33 @@ th, td{
 
 .no_grow{
     flex: initial;
+}
+
+.remove{
+    flex: initial;
+    color: maroon;
+}
+
+.alert{
+    flex: initial;
+    float: right;
+    color: red;
+}
+
+.check{
+    flex: initial;
+    float: right;
+    color: green;
+}
+
+.colon{
+    flex: initial;
+    font-family: monospace;
+    font-size: large;
+    font-weight: bold;
+    vertical-align: middle;
+}
+
+.table{
+    margin-bottom: 16px;
 }
