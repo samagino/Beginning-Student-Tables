@@ -170,40 +170,40 @@ function parse(text) {
         }
 
         let app;
-	if (funct.value === 'or') {
-	    if (args.length == 2) {
-		app = {value: {tst: args[0], els: args[1], thn: {value : true, type : RBOOL_T} }, type: RIF_T};
-	    }
-	    else if (args.length < 2) {
-		throw new SyntaxError('Invalid Syntax: "' + text + '"');
-	    }
-	    else {
-		// should have a loop here
-		throw new SyntaxError('Invalid Syntax: "' + text + '"');
-	    }
-	}
-	else if (funct.value === 'and') {
-	    if (args.length == 2) {
-		app = {value: {tst: args[0], thn: args[1], els: {value : false, type : RBOOL_T} }, type: RIF_T};
-	    }
-	    else if (args.length < 2) {
-		throw new SyntaxError('Invalid Syntax: "' + text + '"');
-	    }
-	    else {
-		// should have a loop here
-		throw new SyntaxError('Invalid Syntax: "' + text + '"');
-	    }
-	}
-	else if (funct.value === 'if') {
-	    if (args.length === 3) {
-		app = {value: {tst: args[0], thn: args[1], els: args[2]}, type: RIF_T};
-	    }
-	    else {
-		throw new SyntaxError('Invalid Syntax: "' + text + '"');
-	    }
-	} else {	
-	    app = {value: {funct: funct, args: args}, type: RAPP_T};
-	}
+        if (funct.value === 'or') {
+            if (args.length === 2) {
+                app = {value: {tst: args[0], els: args[1], thn: {value : true, type : RBOOL_T} }, type: RIF_T};
+            }
+            else if (args.length < 2) {
+                throw new SyntaxError('Invalid Syntax: "' + text + '"');
+            }
+            else {
+                // should have a loop here
+                throw new SyntaxError('Invalid Syntax: "' + text + '"');
+            }
+        }
+        else if (funct.value === 'and') {
+            if (args.length === 2) {
+                app = {value: {tst: args[0], thn: args[1], els: {value : false, type : RBOOL_T} }, type: RIF_T};
+            }
+            else if (args.length < 2) {
+                throw new SyntaxError('Invalid Syntax: "' + text + '"');
+            }
+            else {
+                // should have a loop here
+                throw new SyntaxError('Invalid Syntax: "' + text + '"');
+            }
+        }
+        else if (funct.value === 'if') {
+            if (args.length === 3) {
+                app = {value: {tst: args[0], thn: args[1], els: args[2]}, type: RIF_T};
+            }
+            else {
+                throw new SyntaxError('Invalid Syntax: "' + text + '"');
+            }
+        } else {
+            app = {value: {funct: funct, args: args}, type: RAPP_T};
+        }
         let rest = text.slice(1).trim(); // remove close paren
 
         return {prog: app, rest: rest};
