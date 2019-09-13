@@ -1,4 +1,4 @@
-Hey everyone, I want to show you a new tool that we developed at Indiana
+I want to show you a new tool that we developed at Indiana
 University to help beginning students design programs systematically.
 This tool is called Beginning Student Tables, and here's how it works.
 
@@ -17,21 +17,21 @@ example but not the second.  But we are getting close.  We can take
 this intermediate result and divide it by 1.8.  Now we've got it.  The
 checkmarks show which results match the expected outputs we want, on the
 right.  Our goal is to make a column that has checkmarks all the way
-down.  We can add more examples to test our formulas further.
+down.  We can add more examples to take our formula and test it further.
 
-By the way, this tool is on the Web, so you can try it out yourself.
+By the way, this tool is on the Web, so you could try it out yourself.
 
 What if we have a more complicated problem, where we need to use
 different formulas under different conditions?  Suppose we want a
 function that returns the larger of two numbers, x and y.  Again we
 write down the name of the function, the signature of the function, and
 the purpose of the function.  We also write some examples.  However, it
-is clear that neither the formula x nor the formula y will work all the
-time.  Instead, we need to see if x is less than y.  When the programmer
+is clear that neither the formula x nor the formula y will give us what we want all the
+time.  Instead, we need to check if x is less than y.  When the programmer
 enters a formula whose results are all true or false, Beginning Student
 Tables treats it as a condition, and allows the programmer to enter
 formulas under the condition.  These subformulas are only evaluated on
-those rows where the conditions above them are true.  This way, the
+those rows where the conditions above them are true.  So the
 programmer can try out many conditions and look for formulas that are
 reliable in each condition and cover all possible test cases.  Just as
 multiple formulas are allowed, multiple conditions are allowed, and they
@@ -41,30 +41,35 @@ By the way, when we get a table we like, we can export it as code.
 
 For bigger programming tasks, a formula can invoke a table.  Suppose
 we want to find the larger of three numbers.  We can write a formula
-that invokes the max we already have.  But there's a difference between
-invoking a function like < and invoking a table like max.  Invoking max
-is merely looking up the inputs 1 and 2 in the table, so we have to
+that takes three numbers and finds the largest number,
+using the larger that we already have.  But there's a difference between
+invoking a function like less-than and invoking a table like larger.  Invoking larger
+is merely looking up the inputs 1 and 2 in the table that we already have, so we have to
 add those inputs and specify the expected output.  And again for the
-outer call to max.  This behavior prompts the programmer to write enough
-tests for a helper function like max, and trust the helper function even
+outer call to larger.  This behavior prompts the programmer to write enough
+tests for a helper function like larger,
+and also tells the programmer to trust the helper function larger even
 before its definition is finished.
 
 These ingredients together guide the programmer to design recursive
 functions.  Suppose we want to compute the factorial of a natural
-number.  Here are some examples.  Now, because a natural number is
-either 0 or 1 plus another natural number, we know that we probably want
+number.  Well, here are some examples.  Now, because a natural number is
+either 0 or 1 plus another natural number, we know we probably want
 the conditions n=0 and n>0.  Moreover, if n>0 then we probably want n-1
-or its factorial.  Looking at what we have and what we want, we discover
+and its factorial.  Looking at what we have (the factorial of n-1)
+and what we want (on the right), we discover
 that we can multiply what we have by n to get what we want.  Note that
 again, invoking fact is merely looking up the input in the table, so
 if we leave out the expected output for 4, the test for 5 complains,
-and if we leave out the test case for 4 altogether, the test for 5
-also complains.  We call this lookup behavior pseudo-recursion.  It
+and if we leave out the test for 4 altogether, the test for 5
+also complains.  We call this behavior pseudo-recursion.  This
 generalizes to mutual recursion, where tables like even and odd invoke
 each other.
 
 Even though I've only shown numbers and booleans, we can also program
-with strings, images, and lists.  Again, our tool is called Beginning
+with strings (like to concatenate them), images (like to animate them),
+and lists (like to sort them).  Again, our tool is called Beginning
 Student Tables, and you can try it out yourself on the Web.  It's
-developed by _, _, and _. We welcome any comments or questions.  Thank
+developed by Sam Maginot, Sam Tobin-Hochstadt, and myself,
+Chung-chieh Shan.  We welcome any comments or questions.  Thank
 you for watching!
