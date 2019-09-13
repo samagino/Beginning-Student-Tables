@@ -233,7 +233,7 @@ function Succinct(props) {
 
     // String -> Boolean
     function validName(text, modTab) {
-        function lookup(name, env) {
+        function inEnv(name, env) {
             return env.reduce((acc, variable) => {
                 if (acc) {
                     return true;
@@ -248,7 +248,7 @@ function Succinct(props) {
         let paramVars = modTab.params.map((param) => ({name: param, binding: null}));
         let env = [...initEnv, ...tableVars, ...paramVars];
 
-        return varRE.test(text) && !lookup(text, env);
+        return varRE.test(text) && !inEnv(text, env);
     }
 
     function validSignature(text, modTab) {
@@ -570,7 +570,7 @@ function SuccinctHead(props) {
 
 function Parameters(props) {
     function validParam(text, modParam) {
-        function lookup(name, env) {
+        function inEnv(name, env) {
             return env.reduce((acc, variable) => {
                 if (acc) {
                     return true;
@@ -586,7 +586,7 @@ function Parameters(props) {
         let tableVars = props.tableNames.map((name) => ({name: name, binding: null}));
         let env = [...initEnv, ...tableVars, ...paramVars];
 
-        return varRE.test(text) && !lookup(text, env);
+        return varRE.test(text) && !inEnv(text, env);
     }
 
     function remParam(deadParam) {
@@ -600,7 +600,7 @@ function Parameters(props) {
         props.paramsExamplesChange(aliveParams, modExamples);
     }
 
-    // String -> Number -> Side Effect
+    // String, Number -> Side Effect
     // changes the name of the given parameter
     // if that parameter doesn't exist yet, it makes it
     function paramChange(newParam, modParam) {

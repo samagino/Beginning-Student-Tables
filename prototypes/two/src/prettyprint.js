@@ -94,9 +94,6 @@ function concat (docL, docR) {
     if (typeof docR !== 'function') {
         throw new Error("docR isn't a thunk");
     }
-    if (typeof docL === 'function') {
-        throw new Error('oh shit, docL is a function!')
-    }
     // switch(docR.type) {
     // case 'union':
     //     return union(concat(docL, docR.left), concat(docL, docR.right));
