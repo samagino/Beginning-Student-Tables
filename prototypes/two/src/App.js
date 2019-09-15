@@ -251,14 +251,20 @@ function Succinct(props) {
         return varRE.test(text) && !inEnv(text, env);
     }
 
+    // TODO: make more sophisticated parser that can handle functions as parameters in signature
     function validSignature(text, modTab) {
-        let arrows = text.match(/\s+->\s+/g);
+        let sides = text.split(/\s+->\s+/g);
 
-        if (arrows === null) {
+        if (sides.length !== 2) {
             return false;
         }
 
-        return arrows.length === modTab.params.length;
+        let paramTypes = sides[0].match(/[a-zA-Z]+/g);
+        let outType = sides[1].match(/[a-zA-Z]+/g);
+
+        let noNull = paramTypes !== null && outType !== null;
+
+        return noNull && paramTypes.length === modTab.params.length && outType.length === 1;
     }
 
     const reals = props.tables.map((table) => (
