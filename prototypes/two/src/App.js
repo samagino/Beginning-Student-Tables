@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOMServer from 'react-dom/server';
-import {interp, parseCheck, unparse_cons, toString_cons, toString_list, unparse_list, initEnv, RAPP_T, RFUNCT_T, RLIST_T, RIMAGE_T} from './interpreter.js';
+import { interp, parseCheck, unparse_cons, toString_cons, toString_list, unparse_list, initEnv, isRAPP, RFUNCT_T, isRLIST, isRIMAGE, isRBOOL} from './interpreter.js';
 import {gray, pink, yellow, allBools, isBooleanFormula} from './header.js';
 import {paint, width, height, makeRectangle, makeOverlay} from './image.js';
 import toBSL from './prettyprint.js';
@@ -59,7 +59,7 @@ function deepEquals(proga, progb) {
         return false;
     }
 
-    if (proga.type === RLIST_T) {
+    if (isRLIST(proga)) {
         if (proga.value === null || progb.value === null) {
             return proga.value === progb.value;
         }
@@ -67,7 +67,7 @@ function deepEquals(proga, progb) {
     }
 
     // this case will prolly never even happen...
-    if (proga.type === RAPP_T) {
+    if (isRAPP(proga)) {
         if (proga.value.args.length !== progb.value.args.length) {
             return false;
         }
@@ -76,7 +76,7 @@ function deepEquals(proga, progb) {
         return functCheck && argCheck;
     }
 
-    if (proga.type === RIMAGE_T) {
+    if (isRIMAGE(proga)) {
         // Image -> Uint8ClampedArray
         // takes an image and returns an array containing RGBA values of all pixels in the image
         // a lot of this was taken from https://stackoverflow.com/questions/3768565/drawing-an-svg-file-on-a-html5-canvas
@@ -251,7 +251,7 @@ function Succinct(props) {
         return varRE.test(text) && !inEnv(text, env);
     }
 
-    // TODO: make more sophisticated parser that can handle functions as parameters in signature
+    // TODO make more sophisticated parser that can handle functions as parameters in signature
     function validSignature(text, modTab) {
         let sides = text.split(/\s+->\s+/g);
 
@@ -483,7 +483,6 @@ function SuccinctHead(props) {
             return formula.thenChildren.reduce((acc, child) => acc + countWidth(child), 2);
         }
     }
-
 
     // Number -> [Number]
     // takes a number, returns an array that counts from 1 to that number, input of 0 gives empty array
@@ -1004,13 +1003,9 @@ function Outputs(props) {
                        />
                        {/* make dummy outputs look like the cell to their left */}
                        {/* this is pretty jank */}
-                       {formula.thenChildren.length > 0 ?
-                        <DummyCell
-                          output={formula.thenChildren[0].outputs[props.row]}
-                        />
-                        :
-                        <td></td>
-                       }
+                       <DummyCell
+                         parentOutput={formula.outputs[props.row]}
+                       />
                      </React.Fragment>
                      : <script/> }
                   </React.Fragment>
@@ -1087,12 +1082,13 @@ function TestCell(props) {
 }
 
 function DummyCell (props) {
-    if (props.output === gray) {
+    console.log(props.parentOutput);
+    if (props.parentOutput === gray || props.parentOutput === pink || props.parentOutput.value === false) {
         return (
             <td className={'gray'}>
             </td>
         );
-    } else if (props.output === pink) {
+    } else if (!isRBOOL(props.parentOutput)) {
         return (
             <td className={'pink'}>
             </td>

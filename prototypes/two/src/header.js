@@ -1,4 +1,4 @@
-import {RBOOL_T} from './interpreter.js';
+import {isRBOOL} from './interpreter.js';
 
 /************
     Colors
@@ -22,7 +22,7 @@ export function allBools(progs){
         return false;
     }
 
-    return progs.every((prog) => prog.type === RBOOL_T || prog === gray);
+    return progs.every((prog) => prog === gray || isRBOOL(prog));
 }
 
 export function isBooleanFormula(formula) {

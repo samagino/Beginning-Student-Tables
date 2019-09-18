@@ -294,185 +294,185 @@ function interp(prog, env) {
     }
 
     switch(prog.type) {
-    case RNUM_T:
-        return prog;
-    case RBOOL_T:
-        return prog;
-    case RSTRING_T:
-        return prog;
-    case RLIST_T:
-        return prog;
-    case RSYM_T:
-        return prog;
-    case RVAR_T:
-        return lookup(prog.value);
-    case RFUNCT_T:
-        return prog;
-    case RIF_T:
-        let tst = interp(prog.value.tst, env);
-	typeCheck(tst, [RBOOL_T]);
+        case RNUM_T:
+            return prog;
+        case RBOOL_T:
+            return prog;
+        case RSTRING_T:
+            return prog;
+        case RLIST_T:
+            return prog;
+        case RSYM_T:
+            return prog;
+        case RVAR_T:
+            return lookup(prog.value);
+        case RFUNCT_T:
+            return prog;
+        case RIF_T:
+            let tst = interp(prog.value.tst, env);
+            typeCheck(tst, [RBOOL_T]);
 
-	if (tst.value) {
-	    return interp(prog.value.thn, env);
-	}
-	else {
-	    return interp(prog.value.els, env);
-	}
-	
-    case RAPP_T:
-        // interpret function (valof rator env)
-        let funct = interp(prog.value.funct, env);
+            if (tst.value) {
+                return interp(prog.value.thn, env);
+            }
+            else {
+                return interp(prog.value.els, env);
+            }
 
-        // interpret arguments (valof rand env)
-        let args = prog.value.args.map((arg) => interp(arg, env));
+        case RAPP_T:
+            // interpret function (valof rator env)
+            let funct = interp(prog.value.funct, env);
 
-        typeCheck(funct, [RFUNCT_T]);
+            // interpret arguments (valof rand env)
+            let args = prog.value.args.map((arg) => interp(arg, env));
 
-        return funct.value(args);
-    case RIMAGE_T:
-        return prog;
-    case RCOLOR_T:
-        return prog;
+            typeCheck(funct, [RFUNCT_T]);
 
-    default:
-        console.log(prog);
-        throw new TypeError("Unknown Type " + prog.value);
+            return funct.value(args);
+        case RIMAGE_T:
+            return prog;
+        case RCOLOR_T:
+            return prog;
+
+        default:
+            console.log(prog);
+            throw new TypeError("Unknown Type " + prog.value);
     }
 }
 
 // Program -> String
 function toString_cons(prog) {
     switch (prog.type) {
-    case RNUM_T:
-        return prog.value;
-    case RBOOL_T:
-        return '#' + prog.value;
-    case RSTRING_T:
-        return `"${prog.value}"`;
-    case RLIST_T:
-        if (prog.value === null) {
-            return '\'()';
-        } else {
-            return `(cons ${toString_cons(prog.value.a)} ${toString_cons(prog.value.d)})`;
-        }
-    case RSYM_T:
-        return "'" + prog.value;
-    case RVAR_T:
-        return prog.value;
-    case RFUNCT_T:
-        return '#<procedure>';
-    case RAPP_T:
-        return `(${toString_cons(prog.value.funct)} ${prog.value.args.map(toString_cons).join(' ')})`;
-    case RIMAGE_T:
-        return '#<image>';
-    case RCOLOR_T:
-        return '#<color>';
-    default:
-        return 'error or something';
+        case RNUM_T:
+            return prog.value;
+        case RBOOL_T:
+            return '#' + prog.value;
+        case RSTRING_T:
+            return `"${prog.value}"`;
+        case RLIST_T:
+            if (prog.value === null) {
+                return '\'()';
+            } else {
+                return `(cons ${toString_cons(prog.value.a)} ${toString_cons(prog.value.d)})`;
+            }
+        case RSYM_T:
+            return "'" + prog.value;
+        case RVAR_T:
+            return prog.value;
+        case RFUNCT_T:
+            return '#<procedure>';
+        case RAPP_T:
+            return `(${toString_cons(prog.value.funct)} ${prog.value.args.map(toString_cons).join(' ')})`;
+        case RIMAGE_T:
+            return '#<image>';
+        case RCOLOR_T:
+            return '#<color>';
+        default:
+            return 'error or something';
     }
 }
 
 // Program -> String
 function toString_list (prog) {
     switch (prog.type) {
-    case RNUM_T:
-        return prog.value;
-    case RBOOL_T:
-        return '#' + prog.value;
-    case RSTRING_T:
-        return `"${prog.value}"`;
-    case RLIST_T:
-        let elems = '';
-        while (prog.value !== null) {
-            elems += ' ' + toString_list(prog.value.a);
-            prog = prog.value.d;
-        }
-        return `(list${elems})`;
-    case RSYM_T:
-        return "'" + prog.value;
-    case RVAR_T:
-        return prog.value;
-    case RFUNCT_T:
-        return '#<procedure>';
-    case RAPP_T:
-        return `(${toString_cons(prog.value.funct)} ${prog.value.args.map(toString_cons).join(' ')})`;
-    case RIMAGE_T:
-        return '#<image>';
-    case RCOLOR_T:
-        return '#<color>';
-    default:
-        return 'error or something';
+        case RNUM_T:
+            return prog.value;
+        case RBOOL_T:
+            return '#' + prog.value;
+        case RSTRING_T:
+            return `"${prog.value}"`;
+        case RLIST_T:
+            let elems = '';
+            while (prog.value !== null) {
+                elems += ' ' + toString_list(prog.value.a);
+                prog = prog.value.d;
+            }
+            return `(list${elems})`;
+        case RSYM_T:
+            return "'" + prog.value;
+        case RVAR_T:
+            return prog.value;
+        case RFUNCT_T:
+            return '#<procedure>';
+        case RAPP_T:
+            return `(${toString_cons(prog.value.funct)} ${prog.value.args.map(toString_cons).join(' ')})`;
+        case RIMAGE_T:
+            return '#<image>';
+        case RCOLOR_T:
+            return '#<color>';
+        default:
+            return 'error or something';
     }
 }
 
 // Program -> [(String or SVG)]
 function unparse_cons(prog) {
     switch (prog.type) {
-    case RNUM_T:
-        return [prog.value];
-    case RBOOL_T:
-        return ['#' + prog.value];
-    case RSTRING_T:
-        return [`"${prog.value}"`];
-    case RLIST_T:
-        if (prog.value === null) {
-            return ['\'()'];
-        } else {
-            return ['(cons ', ...unparse_cons(prog.value.a), ' ', ...unparse_cons(prog.value.d), ')'];
-        }
-    case RSYM_T:
-        return ["'" + prog.value];
-    case RVAR_T:
-        return [prog.value];
-    case RFUNCT_T:
-        return ['#<procedure>'];
-    case RAPP_T:
-        return ['(', ...unparse_cons(prog.value.funct), ' ', ...prog.value.args.map(unparse_cons).flat(), ')'];
-    case RIMAGE_T:
-        return [paint(prog.value)];
-    case RCOLOR_T:
-        return ['#<color>'];
-    default:
-        return 'error or something';
+        case RNUM_T:
+            return [prog.value];
+        case RBOOL_T:
+            return ['#' + prog.value];
+        case RSTRING_T:
+            return [`"${prog.value}"`];
+        case RLIST_T:
+            if (prog.value === null) {
+                return ['\'()'];
+            } else {
+                return ['(cons ', ...unparse_cons(prog.value.a), ' ', ...unparse_cons(prog.value.d), ')'];
+            }
+        case RSYM_T:
+            return ["'" + prog.value];
+        case RVAR_T:
+            return [prog.value];
+        case RFUNCT_T:
+            return ['#<procedure>'];
+        case RAPP_T:
+            return ['(', ...unparse_cons(prog.value.funct), ' ', ...prog.value.args.map(unparse_cons).flat(), ')'];
+        case RIMAGE_T:
+            return [paint(prog.value)];
+        case RCOLOR_T:
+            return ['#<color>'];
+        default:
+            return 'error or something';
     }
 }
 
 // Program -> [(String or SVG)]
 function unparse_list (prog) {
     switch (prog.type) {
-    case RNUM_T:
-        return [prog.value];
-    case RBOOL_T:
-        return ['#' + prog.value];
-    case RSTRING_T:
-        return [`"${prog.value}"`];
-    case RLIST_T:
-        // special case for empty list
-        if (prog.value === null) {
-            return ['\'()'];
-        }
+        case RNUM_T:
+            return [prog.value];
+        case RBOOL_T:
+            return ['#' + prog.value];
+        case RSTRING_T:
+            return [`"${prog.value}"`];
+        case RLIST_T:
+            // special case for empty list
+            if (prog.value === null) {
+                return ['\'()'];
+            }
 
-        let elems = [];
-        while (prog.value !== null) {
-            elems = [...elems, ' ', ...unparse_list(prog.value.a)];
-            prog = prog.value.d;
-        }
+            let elems = [];
+            while (prog.value !== null) {
+                elems = [...elems, ' ', ...unparse_list(prog.value.a)];
+                prog = prog.value.d;
+            }
 
-        return ['(list', ...elems, ')'];
-    case RSYM_T:
-        return ["'" + prog.value];
-    case RVAR_T:
-        return [prog.value];
-    case RFUNCT_T:
-        return ['#<procedure>'];
-    case RAPP_T:
-        return ['(', ...unparse_cons(prog.value.funct), ...prog.value.args.map(unparse_cons).flat(), ')'];
-    case RIMAGE_T:
-        return [paint(prog.value)];
-    case RCOLOR_T:
-        return ['#<color>'];
-    default:
-        return 'error or something';
+            return ['(list', ...elems, ')'];
+        case RSYM_T:
+            return ["'" + prog.value];
+        case RVAR_T:
+            return [prog.value];
+        case RFUNCT_T:
+            return ['#<procedure>'];
+        case RAPP_T:
+            return ['(', ...unparse_cons(prog.value.funct), ...prog.value.args.map(unparse_cons).flat(), ')'];
+        case RIMAGE_T:
+            return [paint(prog.value)];
+        case RCOLOR_T:
+            return ['#<color>'];
+        default:
+            return 'error or something';
     }
 }
 
@@ -526,6 +526,46 @@ function typeCheck(prog, types) {
         let typesString = types.map(getType).reduce((acc, type) => acc + ` or a ${type}`);
         throw new TypeError(toString_cons(prog) + ' ain\'t a ' + typesString);
     }
+}
+
+/**
+ * Type Checking Functions
+ *
+ * so I don't have to do prog.type === RTYPE_T all the time
+ */
+
+function isRVAR (prog) {
+    return prog.type === RVAR_T;
+}
+function isRAPP (prog) {
+    return prog.type === RAPP_T;
+}
+function isRFUNCT (prog) {
+    return prog.type === RFUNCT_T;
+}
+function isRNUM (prog) {
+    return prog.type === RNUM_T;
+}
+function isRBOOL (prog) {
+    return prog.type === RBOOL_T;
+}
+function isRSTRING (prog) {
+    return prog.type === RSTRING_T;
+}
+function isRLIST (prog) {
+    return prog.type === RLIST_T;
+}
+function isRSYM (prog) {
+    return prog.type === RSYM_T;
+}
+function isRIMAGE (prog) {
+    return prog.type === RIMAGE_T;
+}
+function isRCOLOR (prog) {
+    return prog.type === RCOLOR_T;
+}
+function isRIF (prog) {
+    return prog.type === RIF_T;
 }
 
 function plus(args) {
@@ -1064,6 +1104,7 @@ function color(args) {
 }
 
 export {interp, parseCheck, initEnv,
-        RVAR_T, RAPP_T, RFUNCT_T, RNUM_T, RBOOL_T, RSTRING_T, RLIST_T, RSYM_T, RIMAGE_T, RCOLOR_T,
+        isRVAR, isRAPP, isRFUNCT, isRNUM, isRBOOL, isRSTRING, isRLIST, isRSYM, isRIMAGE, isRCOLOR, isRIF,
+        RVAR_T, RAPP_T, RFUNCT_T, RNUM_T, RBOOL_T, RSTRING_T, RLIST_T, RSYM_T, RIMAGE_T, RCOLOR_T, RIF_T,
         unparse_cons, unparse_list, toString_cons, toString_list,
         varRE};

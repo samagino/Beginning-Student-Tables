@@ -12,7 +12,6 @@ todo:
 - have toBSL use the pretty printer better so it prints more prettily
 
 bugs:
-  - dummy children should always show gray/pink cells when relevent
 
 bugs I don't know how to fix:
   - when using unparser that can display both text and images, error messages
