@@ -9,7 +9,7 @@ import {makeCircle, makeRectangle, makeEquiTriangle,
 
 const RVAR_T =    0;
 const RAPP_T =    1;
-const RFUNCT_T =   2;
+const RFUNCT_T =  2;
 const RNUM_T =    3;
 const RBOOL_T =   4;
 const RSTRING_T = 5;
@@ -17,7 +17,8 @@ const RLIST_T =   6;
 const RSYM_T =    7;
 const RIMAGE_T =  8;
 const RCOLOR_T =  9;
-const RIF_T =   10;
+const RIF_T =     10;
+const RSTRUCT_T = 11;
 
 const varRE = /^[^\s",'`()[\]{}|;#]+/; // except numbers
 const appRE = /^\(/;
@@ -28,7 +29,7 @@ const quoteRE = /^'/;
 const symRE = /^[^\s",'`()[\]{}|;#]+/; // except numbers
 const listRE = /^\(/;
 
-const initEnv = [
+const tempName = [
     // functions
     {name: '+', binding: {type: RFUNCT_T,
                           value: plus}},
@@ -120,6 +121,8 @@ const initEnv = [
     {name: 'empty', binding: {type: RLIST_T,
                               value: null}},
 ];
+
+const initEnv = makeStruct('point', ['x', 'y'], tempName);
 
 // String -> {prog: Program, rest: String}
 // parses all expressions except quoted expressions
@@ -335,7 +338,7 @@ function interp(prog, env) {
             return prog;
 
         default:
-            console.log(prog);
+            //console.log(prog);
             throw new TypeError("Unknown Type " + prog.value);
     }
 }
@@ -367,6 +370,8 @@ function toString_cons(prog) {
             return '#<image>';
         case RCOLOR_T:
             return '#<color>';
+        case RSTRUCT_T:
+            return `#<${prog.value.id}>`;
         default:
             return 'error or something';
     }
@@ -400,6 +405,8 @@ function toString_list (prog) {
             return '#<image>';
         case RCOLOR_T:
             return '#<color>';
+        case RSTRUCT_T:
+            return `#<${prog.value.id}>`;
         default:
             return 'error or something';
     }
@@ -432,7 +439,10 @@ function unparse_cons(prog) {
             return [paint(prog.value)];
         case RCOLOR_T:
             return ['#<color>'];
+        case RSTRUCT_T:
+            return [`#<${prog.value.id}>`];
         default:
+            //console.log(prog);
             return 'error or something';
     }
 }
@@ -471,6 +481,8 @@ function unparse_list (prog) {
             return [paint(prog.value)];
         case RCOLOR_T:
             return ['#<color>'];
+        case RSTRUCT_T:
+            return [`#<${prog.value.id}>`];
         default:
             return 'error or something';
     }
@@ -526,6 +538,95 @@ function typeCheck(prog, types) {
         let typesString = types.map(getType).reduce((acc, type) => acc + ` or a ${type}`);
         throw new TypeError(toString_cons(prog) + ' ain\'t a ' + typesString);
     }
+}
+
+/**
+ * More Data Definitions (TODO: add me to the file DataDefinitions)
+ * An RSTRUCT is a
+ *   {value: Struct, type: RSTRUCT_T}
+ *
+ * A Struct is a
+ *   {id:     Super-Id,
+ *    fields: [Field]
+ *
+ * A Super-Id is a
+ *   String?
+ *
+ * A Field is a
+ *   {id:      Field-Id,
+ *    binding: Program}
+ *
+ * A Field-Id is a
+ *   String?
+ */
+
+// Super-Id, [Field-Id], Environment -> Environment
+// makes a racket structure according to id and field and appends
+// a function to make an id, a function to check if something is an id
+// and n functions that each access one of the fields of an id
+// to the given environment (and returns it)
+function makeStruct(superID, fieldIDs, env) {
+    const numFields = fieldIDs.length;
+
+    // [Program] -> Struct
+    function construct (args) {
+        if (args.length !== numFields) {
+            throw new Error(`make-${superID}: arity mismatch, expected ${numFields} arguments but given ${args.length}`);
+        }
+
+        let fields = args.map((prog, i) => ({id: fieldIDs[i], binding: prog}));
+        return {value: {id: superID, fields}, type: RSTRUCT_T};
+    }
+
+    // [Program] -> RBOOL
+    function isID (args) {
+        if (args.length !== 1) { //TODO: make something that generalizes arrity mismatches
+            throw new Error(`${superID}?: arity mismatch, expected 1 argument but given ${args.length}`);
+        }
+
+        let struct = args[0];
+
+        return {value: struct.type === RSTRUCT_T && struct.value.id === superID,
+                type: RBOOL_T};
+    }
+
+    let fieldExtractors = fieldIDs.map((fid) => (
+        // Struct -> Program
+        function (args) {
+            if (args.length !== 1) { //TODO: make something that generalizes arrity mismatches
+                throw new Error(`${superID}-${fid}: arity mismatch, expected 1 argument but given ${args.length}`);
+            }
+
+            if (args[0].type !== RSTRUCT_T || args[0].value.id !== superID) {
+                throw new Error(`${superID}-${fid}: expects a ${superID}`);
+            }
+
+            let struct = args[0].value;
+
+            // hey, it's lookup again!
+            return struct.fields.reduce((acc, field) =>  {
+                if (acc !== undefined) {
+                    return acc;
+                } else if (field.id === fid) {
+                    //console.log(field);
+                    return field.binding;
+                } else {
+                    return undefined;
+                }
+            }, undefined);
+        }
+    ));
+
+    let extedEnv = [{name: `make-${superID}`, binding: {type:  RFUNCT_T,
+                                                        value: construct}},
+                    {name: `${superID}?`, binding: {type: RFUNCT_T,
+                                                    value: isID}},
+                    ...fieldExtractors.map((extract, i) => (
+                        {name: `${superID}-${fieldIDs[i]}`, binding: {type: RFUNCT_T,
+                                                                      value: extract}}
+                    ))];
+
+    return [...env, ...extedEnv];
 }
 
 /**
