@@ -30,7 +30,7 @@ is clear that neither the formula x nor the formula y will give us what we want 
 time.  Instead, we need to check if x is less than y.  When the programmer
 enters a formula whose results are all true or false, Beginning Student
 Tables treats it as a condition, and allows the programmer to enter
-formulas under the condition.  These subformulas are only evaluated on
+formulas under the condition.  These formulas are only evaluated on
 those rows where the conditions above them are true.  So the
 programmer can try out many conditions and look for formulas that are
 reliable in each condition and cover all possible test cases.  Just as
