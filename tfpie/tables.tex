@@ -1,23 +1,15 @@
 \documentclass[submission,copyright,creativecommons]{eptcs}
-\providecommand{\event}{SOS 2007} % Name of the event you are submitting to
+\providecommand{\event}{TFPIE 2020} % Name of the event you are submitting to
 \usepackage{breakurl}             % Not needed if you use pdflatex only.
 \usepackage{underscore}           % Only needed if you use pdflatex.
 
-\title{An Example of a Paper\\ with a Rather Large Title-to-Content Ratio}
-\author{Rob van Glabbeek
-\institute{NICTA\\ Sydney, Australia}
-\institute{School of Computer Science and Engineering\\
-University of New South Wales\thanks{A fine university.}\\
-Sydney, Australia}
-\email{rvg@cs.stanford.edu}
-\and
-Co Author \qquad\qquad Yet S. Else
-\institute{Stanford Univeristy\\
-California, USA}
-\email{\quad is@gmail.com \quad\qquad somebody@else.org}
+\title{Programming with Tables}
+\author{Samuel Maginot\qquad Chung-chieh Shan\qquad Sam Tobin-Hochstadt
+\institute{Indiana University, Bloomington, IN, USA}
+\email{samagino@iu.edu\qquad ccshan@iu.edu\qquad samth@iu.edu}
 }
-\def\titlerunning{A Longtitled Paper}
-\def\authorrunning{R.J. van Glabbeek, C. Author \& Y.S. Else}
+\def\titlerunning{Programming with Tables}
+\def\authorrunning{S. Maginot, C. Shan \& S. Tobin-Hochstadt}
 \begin{document}
 \maketitle
 
@@ -27,6 +19,79 @@ This is another sentence in the abstract.
 This is yet another sentence in the abstract.
 This is the final sentence in the abstract.
 \end{abstract}
+
+I want to show you a new tool that we developed at Indiana
+University to help beginning students design programs systematically.
+This tool is called Beginning Student Tables, and here's how it works.
+
+Suppose we want a function that converts Fahrenheit to Celsius.  We
+write down the name of the function, the signature of the function,
+and the purpose of the function.  But what is the formula?  Before we
+develop the general formula, we should first come up with some specific
+examples of the function at work---in other words, we should put down
+some unit tests, made of inputs and outputs.  For example, we know that
+32 degrees Fahrenheit is 0 degrees Celsius, and 212 degrees Fahrenheit
+is 100 degrees Celsius.
+
+Looking at these examples, our first attempt at a general formula might
+be to take the input f and subtract 32\@.  This works for the first
+example but not the second.  But we are getting close.  We can take
+this intermediate result and divide it by 1.8\@.  Now we've got it.  The
+checkmarks show which results match the expected outputs we want, on the
+right.  Our goal is to make a column that has checkmarks all the way
+down.  We can add more examples to take our formula and test it further.
+
+By the way, this tool is on the Web, so you could try it out yourself.
+
+What if we have a more complicated problem, where we need to use
+different formulas under different conditions?  Suppose we want a
+function that returns the larger of two numbers, x and y.  Again we
+write down the name of the function, the signature of the function, and
+the purpose of the function.  We also write some examples.  However, it
+is clear that neither the formula x nor the formula y will give us what we want all the
+time.  Instead, we need to check if x is less than y.  When the programmer
+enters a formula whose results are all true or false, Beginning Student
+Tables treats it as a condition, and allows the programmer to enter
+formulas under the condition.  These formulas are only evaluated on
+those rows where the conditions above them are true.  So the
+programmer can try out many conditions and look for formulas that are
+reliable in each condition and cover all possible test cases.  Just as
+multiple formulas are allowed, multiple conditions are allowed, and they
+may overlap.
+
+By the way, when we get a table we like, we can export it as code.
+
+For bigger programming tasks, a formula can invoke a table.  Suppose
+we want to find the larger of three numbers.  We can write a formula
+that takes three numbers and finds the largest number,
+using the larger that we already have.  But there's a difference between
+invoking a function like less-than and invoking a table like larger.  Invoking larger
+is merely looking up the inputs 1 and 2 in the table that we already have, so we have to
+add those inputs and specify the expected output.  And again for the
+outer call to larger.  This behavior prompts the programmer to write enough
+tests for a helper function like larger,
+and also tells the programmer to trust the helper function larger even
+before its definition is finished.
+
+These ingredients together guide the programmer to design recursive
+functions.  Suppose we want to compute the factorial of a natural
+number.  Well, here are some examples.  Now, because a natural number is
+either $0$ or $1$ plus another natural number, we know we probably want
+the conditions $n=0$ and $n>0$.  Moreover, if $n>0$ then we probably want $n-1$
+and its factorial.  Looking at what we have (the factorial of $n-1$)
+and what we want (on the right), we discover
+that we can multiply what we have by~$n$ to get what we want.  Note that
+again, invoking fact is merely looking up the input in the table, so
+if we leave out the expected output for~$4$, the test for~$5$ complains,
+and if we leave out the test for~$4$ altogether, the test for~$5$
+also complains.  We call this behavior pseudo-recursion.  This
+generalizes to mutual recursion, where tables like even and odd invoke
+each other.
+
+Even though I've only shown numbers and booleans, we can also program
+with strings (like to concatenate them), images (like to animate them),
+and lists (like to sort them).  Again, our tool is called Beginning
+Student Tables, and you can try it out yourself on the Web.
 
 \section{Introduction}
 
