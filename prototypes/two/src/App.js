@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOMServer from 'react-dom/server';
-import { interp, parseCheck, unparse_cons, toString_cons, toString_list, unparse_list, initEnv, isRAPP, RFUNCT_T, isRLIST, isRIMAGE, isRBOOL} from './interpreter.js';
+import { interp, parseCheck, parsePrefix, interpPrefix, unparse_cons, toString_cons, toString_list, unparse_list, initEnv, isRAPP, RFUNCT_T, isRLIST, isRIMAGE, isRBOOL} from './interpreter.js';
 import {gray, pink, yellow, allBools, isBooleanFormula} from './header.js';
 import {paint, width, height, makeRectangle, makeOverlay} from './image.js';
 import toBSL from './prettyprint.js';
@@ -42,9 +42,11 @@ function peekKey(lookahead = 0) {
 /**************
     Globals
 **************/
+// TODO: maybe get rid of these?
 let unparse = unparse_cons;
 let toString = toString_cons;
 let showBSL = false;
+let globalEnv = initEnv;
 
 /*****************
     Deep Equals
@@ -86,6 +88,8 @@ function deepEquals(proga, progb) {
         //   - maybe something hasn't been properly initialized by the first time around?
         function toRGBAArray (image) {
             let can = document.createElement('canvas');
+            can.width = width(image);
+            can.height = height(image);
             let ctx = can.getContext('2d');
             let svg = paint(image);
 
@@ -93,6 +97,8 @@ function deepEquals(proga, progb) {
             let xml = ReactDOMServer.renderToString(svg);
 
             // make the xml base 64 for some reason (I dunno why)
+
+
             let svg64 = btoa(xml);
             // header that does stuff I guess
             let b64Start = 'data:image/svg+xml;base64,';
@@ -119,7 +125,7 @@ function deepEquals(proga, progb) {
         let dataB_red = toRGBAArray(makeOverlay([imgB, makeRectangle(width(imgB), width(imgB), 'solid', 'red')]));
         let dataB_green = toRGBAArray(makeOverlay([imgB, makeRectangle(width(imgB), width(imgB), 'solid', 'green')]));
 
-        if (dataA_red.length !== dataB_red.length) { // images have different sizes
+        if (width(imgA) !== width(imgB) || height(imgA) !== height(imgB)) { // images have different dimensions
             return false;
         }
 
@@ -130,6 +136,12 @@ function deepEquals(proga, progb) {
     }
 
     return proga.value === progb.value;
+}
+
+// [Table], [Table] -> ???
+// diffs two lists of tables to find the differences
+function diffTables(tablesA, tablesB) {
+
 }
 
 /*********************
@@ -246,7 +258,7 @@ function Succinct(props) {
 
         let tableVars = props.tables.filter((table) => table !== modTab).map((otherTab) => ({name: otherTab.name, binding: null}));
         let paramVars = modTab.params.map((param) => ({name: param, binding: null}));
-        let env = [...initEnv, ...tableVars, ...paramVars];
+        let env = [...globalEnv, ...tableVars, ...paramVars];
 
         return varRE.test(text) && !inEnv(text, env);
     }
@@ -589,7 +601,7 @@ function Parameters(props) {
         // These are not technically Variables, see note above
         let paramVars = props.params.filter((param) => param !== modParam).map((param) => ({name: param.name, binding: null}));
         let tableVars = props.tableNames.map((name) => ({name: name, binding: null}));
-        let env = [...initEnv, ...tableVars, ...paramVars];
+        let env = [...globalEnv, ...tableVars, ...paramVars];
 
         return varRE.test(text) && !inEnv(text, env);
     }
@@ -923,7 +935,7 @@ function SuccinctBody(props) {
 function Inputs(props) {
     function validProg(text) {
         try {
-            interp(parseCheck(text), initEnv);
+            parseCheck(text);
         } catch(e) {
             return false;
         }
@@ -940,30 +952,70 @@ function Inputs(props) {
         props.inputsChange(alteredInputs);
     }
 
-    return (
-        <React.Fragment>
-          {props.inputs.map((input, i) => (
-              <td key={input.key} >
-                <div className='flex_horiz'>
-                  <ValidatedInput
-                    dummy={props.dummy}
-                    placeholder={'Input'}
-                    isValid={validProg}
-                    onValid={props.dummy ?
-                             (text) => inputChange({prog: parseCheck(text)},
-                                                   input)
-                             :
-                             (text) => inputChange({...input,
-                                                    prog: parseCheck(text)},
+    // this looks awful...
+    let inputFields = props.inputs.map((input, i) => {
+        if (props.dummy) {
+            return (
+                <td key={input.key} >
+                  <div className='flex_horiz'>
+                    <ValidatedInput
+                      dummy={props.dummy}
+                      placeholder={'Input'}
+                      isValid={validProg}
+                      onValid={(text) => inputChange({prog: parseCheck(text)},
+                                                     input)}
+                    />
+                  </div>
+                </td>
+            );
+
+        } else {
+            let error = <div/>;
+            if (input.prog !== yellow) {
+                try {
+                    interp(input.prog, globalEnv);
+                } catch (e) {
+                    error = (
+                        <div>
+                          {e.message}
+                          <div title={"Oh no! You got an error!"} className="alert">
+                            <Octicon
+                              icon={Alert} size="small" verticalAlign="middle"
+                              ariaLabel='Error!'/>
+                          </div>;
+                        </div>
+                    );
+                }
+            }
+
+            return (
+                <td key={input.key} >
+                  <div className='flex_vert'>
+                    <div className='flex_horiz'>
+                      <ValidatedInput
+                        dummy={props.dummy}
+                        placeholder={'Input'}
+                        isValid={validProg}
+                        onValid={(text) => inputChange({...input,
+                                                        prog: parseCheck(text)},
+                                                       input)}
+                        onEmpty={() => inputChange({...input,
+                                                    prog: yellow},
                                                    input)}
-                    
-                    onEmpty={() => inputChange({...input,
-                                                prog: yellow},
-                                               input)}
-                  />
-                </div>
-              </td>
-          ))}
+                      />
+                    </div>
+                    {error}
+                  </div>
+                </td>
+            );
+
+        }
+    });
+
+    return (
+
+        <React.Fragment>
+          {inputFields}
         </React.Fragment>
     );
 }
@@ -1001,8 +1053,6 @@ function Outputs(props) {
                          want={props.want}
                          row={props.row}
                        />
-                       {/* make dummy outputs look like the cell to their left */}
-                       {/* this is pretty jank */}
                        <DummyCell
                          parentOutput={formula.outputs[props.row]}
                        />
@@ -1042,7 +1092,11 @@ function TestCell(props) {
     let want = yellow;
 
     if (props.want !== yellow) {
-        want = interp(props.want, initEnv);
+        try {
+            want = interp(props.want, globalEnv);
+        } catch (e) {
+            want = yellow;
+        }
     }
 
     let text, error;
@@ -1101,7 +1155,7 @@ function DummyCell (props) {
 function Want(props) {
     function validProg(text) {
         try {
-            interp(parseCheck(text), initEnv);
+            parseCheck(text);
         } catch(e) {
             return false;
         }
@@ -1112,11 +1166,24 @@ function Want(props) {
     if (props.dummy || props.want === yellow) {
         valueCell = <script/>;
     } else {
-        let evalWant = interp(props.want, initEnv);
-        if (deepEquals(evalWant, props.want)) {
-            valueCell = <script/>;
-        } else {
-            valueCell = <td>{unparse(evalWant)}</td>;
+        try {
+            let evalWant = interp(props.want, globalEnv);
+            if (deepEquals(evalWant, props.want)) {
+                valueCell = <script/>;
+            } else {
+                valueCell = <td>{unparse(evalWant)}</td>;
+            }
+        } catch (e) {
+            valueCell = (
+                <td>
+                  {e.message}
+                  <div title={"Oh no! You got an error!"} className="alert">
+                    <Octicon
+                      icon={Alert} size="small" verticalAlign="middle"
+                      ariaLabel='Error!'/>
+                  </div>;
+                </td>
+            );
         }
     }
 
@@ -1178,12 +1245,18 @@ class App extends React.Component {
                         if (input.prog === yellow) {
                             return false;
                         }
-                        return deepEquals(interp(input.prog, initEnv), args[i]);
+                        let bool;
+                        try {
+                            bool = deepEquals(interp(input.prog, globalEnv), args[i]);
+                        } catch (e) {
+                            bool = false;
+                        }
+                        return bool;
                     })) {
                         if (example.want === yellow) {
                             throw new ReferenceError(`(${table.name} ${args.map(toString).join(' ')}) doesn't have a want`);
                         } else {
-                            return interp(example.want, initEnv);
+                            return interp(example.want, globalEnv); // TODO: maybe try-catch this?
                         }
                     }
 
@@ -1202,25 +1275,36 @@ class App extends React.Component {
         }
 
         let lookups = program.map((table) => ({name: table.name, binding: {value: makeLookup(table), type: RFUNCT_T}}));
-        let globalEnv = [...initEnv, ...lookups];
+        let tableEnv = [...globalEnv, ...lookups];
 
         function calcTable(table) {
             function calcFormula(formula, examples) {
                 let outputs = examples.map((example) => {
+
                     if (example === gray) {
                         return gray;
-                    } else if (example === pink) {
-                        return pink;
                     } else if (!example.inputs.every((input) => input.prog !== yellow) || formula.prog === yellow) {
                         // if any of the inputs or the formula isn't initialized, return yellow
                         return yellow;
                     }
 
-                    let localEnv = table.params.map((param, i) => ({name: param.name, binding: interp(example.inputs[i].prog, initEnv)}));
-                    let env = [...globalEnv, ...localEnv];
-
+                    let error = false;
                     try {
-                        var output = interp(formula.prog, env);
+                        example.inputs.map((input) => interp(input.prog, tableEnv));
+                    } catch (e) {
+                        error = true;
+                    }
+
+                    if (example === pink || error) {
+                        return pink;
+                    }
+
+                    let localEnv = table.params.map((param, i) => ({name: param.name, binding: interp(example.inputs[i].prog, tableEnv)}));
+                    let env = [...tableEnv, ...localEnv];
+
+                    let output;
+                    try {
+                        output = interp(formula.prog, env);
                     } catch (e) {
                         output = e;
                     }
@@ -1343,6 +1427,30 @@ class App extends React.Component {
                   <label htmlFor='bsl_output'>Show BSL Output</label>
                 </div>
                 {bslField}
+              </div>
+              <div>
+                {/*TODO: all this is pretty jank, make it less jank*/}
+                <textarea
+                  className='bsl_field'
+                  rows={20}
+                  cols={70}
+                  spellCheck={false}
+                  onChange={(e) => {
+                      let text = e.target.value;
+                      let progs;
+                      try {
+                          progs = parsePrefix(text);
+                      } catch (e) {
+                          return;
+                      }
+                    
+                      // update the global environment
+                      globalEnv = interpPrefix(progs, initEnv);
+
+                      // recalculate the tables
+                      this.programChange(this.state.tables);
+                  }}
+                />
               </div>
             </div>
         );

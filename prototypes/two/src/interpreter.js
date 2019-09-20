@@ -186,7 +186,9 @@ function parse(text) {
             }
         }
         else if (funct.value === 'and') {
-            if (args.length === 2) {
+
+
+         if (args.length === 2) {
                 app = {value: {tst: args[0], thn: args[1], els: {value : false, type : RBOOL_T} }, type: RIF_T};
             }
             else if (args.length < 2) {
@@ -272,6 +274,90 @@ function parseQ(text) {
     throw new SyntaxError('Invalid Syntax: "' + text + '"');
 }
 
+/**
+ * A Prefix Prog is one of
+ *   - defStruct
+ *
+ * A DefStruct is a
+ *   {superID:  String,
+ *    fieldIDs: [String],
+ *    type: 'struct'}
+ */
+
+// String -> [PrefixProg]
+function parsePrefix (text) {
+    const commentRE = /;.*/g;
+    const defStructRE = /^\(define-struct/;
+    const nameRE = /^[^\s,'`()[\]{}|;#\d]+/;
+
+    text = text.replace(commentRE, '');
+    text = text.trim();
+
+    let progs = [];
+
+    while(text !== '') {
+        let parsed = parsePrefixExpr(text);
+
+        text = parsed.rest;
+        progs = [...progs, parsed.prog];
+    }
+
+    return progs;
+
+    // Text -> {prog: PrefixProg, rest: String}
+    function parsePrefixExpr (text) {
+        if (defStructRE.test(text)) {
+            text = text.slice('(define-struct'.length);
+            text = text.trim();
+
+            if (!nameRE.test(text)) {
+                throw new Error('Invalid Struct Name');
+            }
+
+            let superID = text.match(nameRE)[0];
+            text = text.slice(superID.length)
+            text = text.trim();
+
+            if (text[0] !== '(') {
+                throw new Error('Invalid Struct Definition');
+            }
+
+            text = text.slice('('.length);
+            text = text.trim();
+
+            let fieldIDs = [];
+            while (text[0] !== ')') {
+                if (!nameRE.test(text)) {
+                    throw new Error('Invalid Field Name');
+                }
+
+                let fieldID = text.match(nameRE)[0];
+
+                text = text.slice(fieldID.length);
+                text = text.trim();
+
+                fieldIDs = [...fieldIDs, fieldID];
+            }
+
+            if (text[0] !== ')') {
+                throw new Error('Invalid Struct Definition');
+            }
+            text = text.slice(')'.length);
+            text = text.trim();
+
+            if (text[0] !== ')') {
+                throw new Error('Invalid Struct Definition');
+            }
+            text = text.slice(')'.length);
+            text = text.trim();
+
+            return {prog: {superID, fieldIDs, type: 'struct'}, rest: text}
+        } else {
+            throw new Error(`Invalid Prefix Form: ${text}`);
+        }
+    }
+}
+
 /***
     Environment: [Variable]
     Variable:    {name:    String,
@@ -341,6 +427,19 @@ function interp(prog, env) {
             //console.log(prog);
             throw new TypeError("Unknown Type " + prog.value);
     }
+}
+
+function interpPrefix (progs, env) {
+    let ext = progs.reduce((curEnv, prog) => {
+        switch (prog.type) {
+            case 'struct':
+                return makeStruct(prog.superID, prog.fieldIDs, curEnv);
+            default:
+                throw new Error('Invalid Prefix Prog');
+        }
+    }, env);
+
+    return ext;
 }
 
 // Program -> String
@@ -1204,7 +1303,7 @@ function color(args) {
     return {value, type: RCOLOR_T};
 }
 
-export {interp, parseCheck, initEnv,
+export {interp, parseCheck, initEnv, parsePrefix, interpPrefix,
         isRVAR, isRAPP, isRFUNCT, isRNUM, isRBOOL, isRSTRING, isRLIST, isRSYM, isRIMAGE, isRCOLOR, isRIF,
         RVAR_T, RAPP_T, RFUNCT_T, RNUM_T, RBOOL_T, RSTRING_T, RLIST_T, RSYM_T, RIMAGE_T, RCOLOR_T, RIF_T,
         unparse_cons, unparse_list, toString_cons, toString_list,
