@@ -844,7 +844,7 @@ function render_overlay (image, x, y) {
 
 // Place, Integer, Integer -> SVG
 function render_place (image, x, y) {
-    return [render(image.scene, x, y), render(image.image, image.x - width(image.image) / 2, image.y - height(image.image) / 2)];
+    return [render(image.scene, x, y), render(image.image, x + image.x - width(image.image) / 2, y + image.y - height(image.image) / 2)];
 }
 
 // Image -> top level SVG
