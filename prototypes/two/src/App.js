@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOMServer from 'react-dom/server';
-import { interp, parseCheck, parsePrefix, interpPrefix, unparse_cons, toString_cons, toString_list, unparse_list, initEnv, isRAPP, RFUNCT_T, isRLIST, isRIMAGE, isRBOOL} from './interpreter.js';
+import {interp, parseCheck, parsePrefix, interpPrefix, unparse_cons, toString_cons, toString_list, unparse_list, initEnv, isRAPP, RFUNCT_T, isRLIST, isRIMAGE, isRBOOL} from './interpreter.js';
 import {gray, pink, yellow, allBools, isBooleanFormula} from './header.js';
 import {paint, width, height, makeRectangle, makeOverlay} from './image.js';
 import toBSL from './prettyprint.js';
@@ -136,12 +136,6 @@ function deepEquals(proga, progb) {
     }
 
     return proga.value === progb.value;
-}
-
-// [Table], [Table] -> ???
-// diffs two lists of tables to find the differences
-function diffTables(tablesA, tablesB) {
-
 }
 
 /*********************
@@ -689,19 +683,13 @@ function Parameters(props) {
 */
 function DepictFormula(props) {
     function validProg(text) {
-        let isgood = true;
-
         try {
             parseCheck(text);
         } catch(e) {
-            if (e instanceof SyntaxError) {
-                isgood = false;
-            } else {
-                throw e;
-            }
+            return false;
         }
 
-        return isgood;
+        return true;
     }
 
     // this is pretty macabre...
@@ -954,23 +942,27 @@ function Inputs(props) {
 
     // this looks awful...
     let inputFields = props.inputs.map((input, i) => {
+        console.log(input.key);
+        let error = <div/>;
         if (props.dummy) {
             return (
                 <td key={input.key} >
-                  <div className='flex_horiz'>
-                    <ValidatedInput
-                      dummy={props.dummy}
-                      placeholder={'Input'}
-                      isValid={validProg}
-                      onValid={(text) => inputChange({prog: parseCheck(text)},
-                                                     input)}
-                    />
+                  <div className='flex_vert'>
+                    <div className='flex_horiz'>
+                      <ValidatedInput
+                        dummy={props.dummy}
+                        placeholder={'Input'}
+                        isValid={validProg}
+                        onValid={(text) => inputChange({prog: parseCheck(text)},
+                                                       input)}
+                      />
+                    </div>
+                    {error}
                   </div>
                 </td>
             );
 
         } else {
-            let error = <div/>;
             if (input.prog !== yellow) {
                 try {
                     interp(input.prog, globalEnv);
@@ -1171,11 +1163,11 @@ function Want(props) {
             if (deepEquals(evalWant, props.want)) {
                 valueCell = <script/>;
             } else {
-                valueCell = <td>{unparse(evalWant)}</td>;
+                valueCell = <td className='output'>{unparse(evalWant)}</td>;
             }
         } catch (e) {
             valueCell = (
-                <td>
+                <td className='output'>
                   {e.message}
                   <div title={"Oh no! You got an error!"} className="alert">
                     <Octicon
@@ -1256,7 +1248,8 @@ class App extends React.Component {
                         if (example.want === yellow) {
                             throw new ReferenceError(`(${table.name} ${args.map(toString).join(' ')}) doesn't have a want`);
                         } else {
-                            return interp(example.want, globalEnv); // TODO: maybe try-catch this?
+                            // Note: don't need to catch exception here because it will be caught in calcFormula
+                            return interp(example.want, globalEnv);
                         }
                     }
 
