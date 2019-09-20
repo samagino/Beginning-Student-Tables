@@ -18,9 +18,8 @@ Also, a state is a list of tables (also called a Table Method Program)
 * bugs:
 ** bugs I know how to fix but haven't yet
 *** image comparison (actually I dunno if I know how to fix this)
-figure out wierd state problem (description in comments of App.js)
-checking equality on place-image doesn't always produce correct results
-
+- figure out wierd state problem (description in comments of App.js)
+- checking equality on place-image doesn't always produce correct results
 e.g.
 #+BEGIN_SRC
 (place-image (circle 5 'solid 'red) 200 30 (empty-scene 100 100))
