@@ -29,7 +29,7 @@ const quoteRE = /^'/;
 const symRE = /^[^\s",'`()[\]{}|;#]+/; // except numbers
 const listRE = /^\(/;
 
-const tempName = [
+const protoEnv = [
     // functions
     {name: '+', binding: {type: RFUNCT_T,
                           value: plus}},
@@ -122,7 +122,7 @@ const tempName = [
                               value: null}},
 ];
 
-const initEnv = makeStruct('point', ['x', 'y'], tempName);
+const initEnv = makeStruct('posn', ['x', 'y'], protoEnv);
 
 // String -> {prog: Program, rest: String}
 // parses all expressions except quoted expressions
