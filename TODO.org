@@ -19,6 +19,7 @@ Also, a state is a list of tables (also called a Table Method Program)
 ** bugs I know how to fix but haven't yet
 *** image comparison (actually I dunno if I know how to fix this)
 figure out wierd state problem (description in comments of App.js)
+[[file:prototypes/two/src/App.js::// sometimes this doesn't work...][App.js]]
 
 checking equality on place-image doesn't always produce correct results, e.g.
 #+BEGIN_SRC
