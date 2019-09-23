@@ -1352,9 +1352,11 @@ class App extends React.Component {
         return program.map(calcTable);
     }
 
-    componentDidUpdate(_, prevState) {
+    // React people say that this is unsafe (https://reactjs.org/docs/react-component.html#unsafe_componentwillupdate)
+    // but it sends the ith list of snapshots to the server whereas the safe componentDidUpdate sends the i-1th
+    componentWillUpdate(_, nextState) {
         // He's always watching...
-        tellBigBrother(JSON.stringify(prevState.snapshots));
+        tellBigBrother(JSON.stringify(nextState.snapshots));
     }
 
     programChange(newProg) {
