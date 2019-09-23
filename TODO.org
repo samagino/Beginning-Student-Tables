@@ -14,15 +14,13 @@ pentagon, hexagon, star
 whenever state changes, add it to log (which is a list of states)
 Also, a state is a list of tables (also called a Table Method Program)
 
-*** figure out how to do something with snapshots
-upload them or whatever
-
-fetch https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API
-
-set_timeout https://developer.mozilla.org/en-US/docs/Web/API/WindowOrWorkerGlobalScope/setTimeout
-
-figure out why CORS error is happening
-
+*** make thing that can render snapshots
+pretty much a different version of the stuff in App.js with a couple of
+differences
+ - print the value of inputs instead of using ValidatedInputs
+ - some way to addjust playback
+     - arrow buttons
+     - scrollbar or (better way)
 
 * bugs:
 ** bugs I know how to fix but haven't yet
