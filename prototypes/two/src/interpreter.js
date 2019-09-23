@@ -533,13 +533,13 @@ function unparse_cons(prog) {
         case RFUNCT_T:
             return ['#<procedure>'];
         case RAPP_T:
-            return ['(', ...unparse_cons(prog.value.funct), ' ', ...prog.value.args.map(unparse_cons).reduce((acc, arr) => [...acc, ' ', ...arr]), ')'];
+            return ['(', ...unparse_cons(prog.value.funct), ...prog.value.args.map(unparse_cons).reduce((acc, arr) => [...acc, ' ', ...arr], ''), ')'];
         case RIMAGE_T:
             return [paint(prog.value)];
         case RCOLOR_T:
             return ['#<color>'];
         case RSTRUCT_T:
-            return [`(make-${prog.value.id} `, ...prog.value.fields.map((field) => unparse_cons(field.binding)).reduce((acc, arr) => [...acc, ' ', ...arr]), ')'];
+            return [`(make-${prog.value.id}`, ...prog.value.fields.map((field) => unparse_cons(field.binding)).reduce((acc, arr) => [...acc, ' ', ...arr], ''), ')'];
         default:
             //console.log(prog);
             return 'error or something';
@@ -575,13 +575,13 @@ function unparse_list (prog) {
         case RFUNCT_T:
             return ['#<procedure>'];
         case RAPP_T:
-            return ['(', ...unparse_cons(prog.value.funct), ' ', ...prog.value.args.map(unparse_list).reduce((acc, arr) => [...acc, ' ', ...arr]), ')'];
+            return ['(', ...unparse_list(prog.value.funct), ...prog.value.args.map(unparse_list).reduce((acc, arr) => [...acc, ' ', ...arr], ''), ')'];
         case RIMAGE_T:
             return [paint(prog.value)];
         case RCOLOR_T:
             return ['#<color>'];
         case RSTRUCT_T:
-            return [`(make-${prog.value.id} `, ...prog.value.fields.map((field) => unparse_list(field.binding)).reduce((acc, arr) => [...acc, ' ', ...arr]), ')'];
+            return [`(make-${prog.value.id}`, ...prog.value.fields.map((field) => unparse_list(field.binding)).reduce((acc, arr) => [...acc, ' ', ...arr], ''), ')'];
         default:
             return 'error or something';
     }
