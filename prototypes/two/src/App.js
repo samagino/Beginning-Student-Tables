@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOMServer from 'react-dom/server';
-import {interp, parseCheck, parsePrefix, interpPrefix, unparse_cons, toString_cons, toString_list, unparse_list, initEnv, isRAPP, RFUNCT_T, isRLIST, isRIMAGE, isRBOOL} from './interpreter.js';
+import {interp, parseCheck, parsePrefix, interpPrefix, unparse_cons, toString_cons, toString_list, unparse_list, initEnv, isRAPP, RFUNCT_T, isRLIST, isRIMAGE, isRBOOL, isRSTRUCT} from './interpreter.js';
 import {gray, pink, yellow, allBools, isBooleanFormula} from './header.js';
 import {paint, width, height, makeRectangle, makeOverlay} from './image.js';
 import toBSL from './prettyprint.js';
@@ -77,6 +77,22 @@ function deepEquals(proga, progb) {
         let functCheck = deepEquals(proga.value.funct, progb.value.funct);
         let argCheck = proga.value.args.map((arga, i) => deepEquals(arga, progb.value.args[i])).every((elem) => elem);
         return functCheck && argCheck;
+    }
+
+    if (isRSTRUCT(proga)) {
+        let structa = proga.value;
+        let structb = progb.value;
+
+        let idSame = structa.id === structb.id;
+
+        let fieldsSame;
+        if (structa.fields.length === structb.fields.length) {
+            fieldsSame = structa.fields.every((fielda, i) => deepEquals(fielda.binding, structb.fields[i].binding));
+        } else {
+            fieldsSame = false;
+        }
+
+        return idSame && fieldsSame;
     }
 
     if (isRIMAGE(proga)) {

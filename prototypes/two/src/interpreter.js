@@ -767,6 +767,9 @@ function isRCOLOR (prog) {
 function isRIF (prog) {
     return prog.type === RIF_T;
 }
+function isRSTRUCT (prog) {
+    return prog.type === RSTRUCT_T;
+}
 
 function plus(args) {
     if (args.length < 2) {
@@ -1304,7 +1307,7 @@ function color(args) {
 }
 
 export {interp, parseCheck, initEnv, parsePrefix, interpPrefix,
-        isRVAR, isRAPP, isRFUNCT, isRNUM, isRBOOL, isRSTRING, isRLIST, isRSYM, isRIMAGE, isRCOLOR, isRIF,
+        isRVAR, isRAPP, isRFUNCT, isRNUM, isRBOOL, isRSTRING, isRLIST, isRSYM, isRIMAGE, isRCOLOR, isRIF, isRSTRUCT,
         RVAR_T, RAPP_T, RFUNCT_T, RNUM_T, RBOOL_T, RSTRING_T, RLIST_T, RSYM_T, RIMAGE_T, RCOLOR_T, RIF_T,
         unparse_cons, unparse_list, toString_cons, toString_list,
         varRE};
