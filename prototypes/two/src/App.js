@@ -4,6 +4,7 @@ import {interp, parseCheck, parsePrefix, interpPrefix, unparse_cons, toString_co
 import {gray, pink, yellow, allBools, isBooleanFormula} from './header.js';
 import {paint, width, height, makeRectangle, makeOverlay} from './image.js';
 import toBSL from './prettyprint.js';
+import makeSendifier from './sendifier.js';
 import Octicon, {X, Alert, Check} from '@primer/octicons-react';
 import './App.css';
 
@@ -108,6 +109,7 @@ function deepEquals(proga, progb) {
 
             // make image that contains the xml data so we can draw it
             let img = document.createElement('img');
+            //console.log(img);
             img.src = image64;
 
             // draw the image onto the canvas
@@ -137,6 +139,12 @@ function deepEquals(proga, progb) {
 
     return proga.value === progb.value;
 }
+
+/****************************************
+ * Thing That Sends Stuff Out To Server *
+ ***************************************/
+
+let tellBigBrother = makeSendifier(3000);
 
 /*********************
    React Components
@@ -942,7 +950,6 @@ function Inputs(props) {
 
     // this looks awful...
     let inputFields = props.inputs.map((input, i) => {
-        console.log(input.key);
         let error = <div/>;
         if (props.dummy) {
             return (
@@ -1005,7 +1012,6 @@ function Inputs(props) {
     });
 
     return (
-
         <React.Fragment>
           {inputFields}
         </React.Fragment>
@@ -1128,7 +1134,6 @@ function TestCell(props) {
 }
 
 function DummyCell (props) {
-    console.log(props.parentOutput);
     if (props.parentOutput === gray || props.parentOutput === pink || props.parentOutput.value === false) {
         return (
             <td className={'gray'}>
@@ -1215,7 +1220,8 @@ class App extends React.Component {
                        signature: yellow,
                        purpose: yellow,
                        key: takeKey()}];
-        this.state = {tables};
+        let snapshots = [tables];
+        this.state = {tables, snapshots};
 
         this.programChange = this.programChange.bind(this);
     }
@@ -1341,10 +1347,14 @@ class App extends React.Component {
                 return {...table,
                         formulas};
             }
-
         }
 
         return program.map(calcTable);
+    }
+
+    componentDidUpdate(_, prevState) {
+        // He's always watching...
+        tellBigBrother(JSON.stringify(prevState.snapshots));
     }
 
     programChange(newProg) {
@@ -1352,7 +1362,8 @@ class App extends React.Component {
         //console.log(calkedProg);
         //console.log('next key: ', peekKey());
         this.setState((state) => {
-            return {tables: calkedProg};
+            return {tables: calkedProg,
+                    snapshots: [...state.snapshots, calkedProg]};
         });
     }
 
@@ -1444,6 +1455,11 @@ class App extends React.Component {
                       this.programChange(this.state.tables);
                   }}
                 />
+                <button
+                  onClick={() => console.log('I dunno lol')}
+                >
+                  Check If Stuff Sent!
+                </button>
               </div>
             </div>
         );
