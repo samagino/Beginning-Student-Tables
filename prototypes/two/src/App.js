@@ -1455,11 +1455,11 @@ class App extends React.Component {
                       this.programChange(this.state.tables);
                   }}
                 />
-                <button
-                  onClick={() => console.log('I dunno lol')}
-                >
-                  Check If Stuff Sent!
-                </button>
+                {/* <button */}
+                {/*   onClick={() => console.log('I dunno lol')} */}
+                {/* > */}
+                {/*   Check If Stuff Sent! */}
+                {/* </button> */}
               </div>
             </div>
         );
