@@ -239,6 +239,66 @@ class ValidatedInput extends React.Component {
     }
 }
 
+class ValidatedArea extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = {text: ''};
+
+        this.textChange = this.textChange.bind(this);
+    }
+
+    textChange(e) {
+        let text = e.target.value;
+
+        this.setState((state) => ({text}));
+
+        if (this.props.isValid(text)) {
+            this.props.onValid(text);
+        } else if (text === '' && !this.props.dummy) {
+            this.props.onEmpty();
+        }
+    }
+
+    render() {
+        let className;
+        if (this.props.dummy && this.state.text === '') { // empty dummy
+            className = 'dummy_input';
+        } else if (this.props.isValid(this.state.text)) { // valid
+            className = 'valid_input';
+        } else if (this.state.text === '') { // empty non-dummy
+            className = 'empty_input';
+        } else { // invalid
+            className = 'invalid_input';
+        }
+
+        let rows,
+            newlines = this.state.text.match(/\n/g);
+        if (newlines === null) {
+            rows = 1;
+        } else {
+            rows = newlines.length + 1;
+        }
+
+        let cols;
+        if (this.state.text.length === 0)
+            cols = this.props.placeholder.length;
+        else
+            cols = Math.max(...this.state.text.split('\n').map((line) => line.length + 1), 4);
+
+        return (
+            <textarea
+              className={className + ' validated_area'}
+              rows={rows}
+              cols={cols}
+              placeholder={this.props.placeholder}
+              onChange={this.textChange}
+            >
+              {this.state.text}
+            </textarea>
+        );
+    }
+}
+
 /*** Table Sections ***/
 // let's put everything in one table woo
 function Succinct(props) {
@@ -533,7 +593,7 @@ function SuccinctHead(props) {
     const reals = props.formulas.map((formula) => (
         <th key={formula.key} colSpan={countWidth(formula)} >
           <div className='flex_horiz'>
-            <ValidatedInput
+            <ValidatedArea
               placeholder={'Formula'}
               dummy={false}
               isValid={validProg}
@@ -555,7 +615,7 @@ function SuccinctHead(props) {
     const dummy = (
         <th key={peekKey()} colSpan={1}>
           <div className='flex_horiz'>
-            <ValidatedInput
+            <ValidatedArea
               dummy={true}
               placeholder='Formula'
               isValid={validProg}
@@ -764,7 +824,7 @@ function DepictFormula(props) {
             const reals = props.formula.thenChildren.map((child) => (
                 <th key={child.key} colSpan={countWidth(child)} >
                   <div className='flex_horiz'>
-                    <ValidatedInput
+                    <ValidatedArea
                       dummy={false}
                       placeholder={'Formula'}
                       isValid={validProg}
@@ -786,7 +846,7 @@ function DepictFormula(props) {
             const dummy = (
                 <th key={peekKey()} colSpan={1}>
                   <div className='flex_horiz'>
-                    <ValidatedInput
+                    <ValidatedArea
                       dummy={true}
                       placeholder='Formula'
                       isValid={validProg}
@@ -972,7 +1032,7 @@ function Inputs(props) {
                 <td key={input.key} >
                   <div className='flex_vert'>
                     <div className='flex_horiz'>
-                      <ValidatedInput
+                      <ValidatedArea
                         dummy={props.dummy}
                         placeholder={'Input'}
                         isValid={validProg}
@@ -1007,7 +1067,7 @@ function Inputs(props) {
                 <td key={input.key} >
                   <div className='flex_vert'>
                     <div className='flex_horiz'>
-                      <ValidatedInput
+                      <ValidatedArea
                         dummy={props.dummy}
                         placeholder={'Input'}
                         isValid={validProg}
@@ -1204,7 +1264,7 @@ function Want(props) {
         <React.Fragment>
           <td>
             <div className='flex_horiz'>
-              <ValidatedInput
+              <ValidatedArea
                 dummy={props.dummy}
                 placeholder={'Want'}
                 isValid={validProg}

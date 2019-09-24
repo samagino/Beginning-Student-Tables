@@ -2,24 +2,32 @@
     background-color: palegreen;
     font-family: monospace;
     flex: auto;
+    font-size: large;
 }
 
 .empty_input{
     background-color: palegoldenrod;
     font-family: monospace;
     flex: auto;
+    font-size: large;
 }
 
 .valid_input{
     background-color: white;
     font-family: monospace;
     flex: auto;
+    font-size: large;
 }
 
 .invalid_input{
     background-color: pink;
     font-family: monospace;
     flex: auto;
+    font-size: large;
+}
+
+.validated_area {
+    resize: none;
 }
 
 .output{
