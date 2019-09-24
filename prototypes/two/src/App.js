@@ -1210,12 +1210,12 @@ function TestCell(props) {
 }
 
 function DummyCell (props) {
-    if (props.parentOutput === gray || props.parentOutput === pink || props.parentOutput.value === false) {
+    if (props.parentOutput === gray || props.parentOutput.value === false) {
         return (
             <td className={'gray'}>
             </td>
         );
-    } else if (!isRBOOL(props.parentOutput)) {
+    } else if (props.parentOutput === pink || !isRBOOL(props.parentOutput)) {
         return (
             <td className={'pink'}>
             </td>
@@ -1358,6 +1358,8 @@ class App extends React.Component {
 
                     if (example === gray) {
                         return gray;
+                    } if (example === pink) {
+                        return pink;
                     } else if (!example.inputs.every((input) => input.prog !== yellow) || formula.prog === yellow) {
                         // if any of the inputs or the formula isn't initialized, return yellow
                         return yellow;
