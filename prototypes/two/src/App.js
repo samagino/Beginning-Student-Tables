@@ -160,7 +160,11 @@ function deepEquals(proga, progb) {
  * Thing That Sends Stuff Out To Server *
  ***************************************/
 
-let tellBigBrother = makeSendifier(3000);
+// this isn't in document.onload or something but hopefully it works anyways
+// if a window.onload function is defined in this file, it doesn't seem to
+// get loaded
+const sessionID = Math.floor(Math.random() * 1000000000);
+let tellBigBrother = makeSendifier(3000, sessionID);
 
 /*********************
    React Components
@@ -1308,8 +1312,8 @@ class App extends React.Component {
                 if (args.length !== table.params.length) {
                     throw new Error('Arity Mismatch, expected ' + table.params.length + ' argument' + (table.params.length === 1 ? '' : 's'));
                 }
-
                 let expr = table.examples.reduce((acc, example) => {
+
                     if (acc !== undefined) {
                         return acc;
                     }
@@ -1471,8 +1475,28 @@ class App extends React.Component {
             );
         }
 
+        function validPrefix (text) {
+            try {
+                parsePrefix(text);
+            } catch (e) {
+                return false;
+            }
+            return true;
+        }
+
+        function changeEnv (text) {
+            globalEnv = interpPrefix(parsePrefix(text), initEnv);
+            this.programChage(this.state.tables);
+        }
+
         return (
             <div>
+              <ValidatedArea
+                dummy={false}
+                placeholder='Definitions Area'
+                isValid={validPrefix}
+                onValid={changeEnv}
+              />
               <Succinct
                 tables={this.state.tables}
                 programChange={this.programChange}
@@ -1514,27 +1538,6 @@ class App extends React.Component {
               </div>
               <div>
                 {/*TODO: all this is pretty jank, make it less jank*/}
-                <textarea
-                  className='bsl_field'
-                  rows={20}
-                  cols={70}
-                  spellCheck={false}
-                  onChange={(e) => {
-                      let text = e.target.value;
-                      let progs;
-                      try {
-                          progs = parsePrefix(text);
-                      } catch (e) {
-                          return;
-                      }
-                    
-                      // update the global environment
-                      globalEnv = interpPrefix(progs, initEnv);
-
-                      // recalculate the tables
-                      this.programChange(this.state.tables);
-                  }}
-                />
                 {/* <button */}
                 {/*   onClick={() => console.log('I dunno lol')} */}
                 {/* > */}
