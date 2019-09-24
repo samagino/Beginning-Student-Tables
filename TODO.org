@@ -8,20 +8,24 @@
 *** make library implementing subset of 2htdp
 pentagon, hexagon, star
 
-
 ** bsl import (BSL to Table)
 ** maintain log of state
 whenever state changes, add it to log (which is a list of states)
 Also, a state is a list of tables (also called a Table Method Program)
 
+*** create sessionID at document.onLoad
+do this somehow
 *** make thing that can render snapshots
 pretty much a different version of the stuff in App.js with a couple of
 differences
- - print the value of inputs instead of using ValidatedInputs
+ - print the value of input fields instead of using ValidatedInputs
  - some way to addjust playback
      - arrow buttons
      - scrollbar or (better way)
 
+** "Prefix Text Area"
+- move to above tables
+- lable with "Definitions"
 * bugs:
 ** bugs I know how to fix but haven't yet
 *** image comparison (actually I dunno if I know how to fix this)
