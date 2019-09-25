@@ -1492,7 +1492,7 @@ class App extends React.Component {
 
         function changeEnv (text) {
             globalEnv = interpPrefix(parsePrefix(text), initEnv);
-            this.programChage(this.state.tables);
+            this.programChange(this.state.tables);
         }
 
         return (
@@ -1501,7 +1501,7 @@ class App extends React.Component {
                 dummy={false}
                 placeholder='Definitions Area'
                 isValid={validPrefix}
-                onValid={changeEnv}
+                onValid={changeEnv.bind(this)}
               />
               <Succinct
                 tables={this.state.tables}
