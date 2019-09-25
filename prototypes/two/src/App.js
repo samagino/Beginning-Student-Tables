@@ -1332,7 +1332,10 @@ class App extends React.Component {
                         return bool;
                     })) {
                         if (example.want === yellow) {
-                            throw new ReferenceError(`(${table.name} ${args.map(toString).join(' ')}) doesn't have a want`);
+                            let e = new ReferenceError();
+                            // shoehorn a non-string into the message field
+                            e.message = <React.Fragment>({table.name}{args.flatMap(a => [' ',...unparse(a)])}) doesn't have a want</React.Fragment>;
+                            throw e;
                         } else {
                             // Note: don't need to catch exception here because it will be caught in calcFormula
                             return interp(example.want, globalEnv);
@@ -1344,7 +1347,10 @@ class App extends React.Component {
 
                 if (expr === undefined) {
                     // it's like a reference error in the super meta table language
-                    throw new ReferenceError(args.map(toString).join() + ' is not an example in ' + table.name);
+                    let e = new ReferenceError();
+                    // shoehorn a non-string into the message field
+                    e.message = <React.Fragment>({table.name}{args.flatMap(a => [' ',...unparse(a)])}) is not an example</React.Fragment>;
+                    throw e;
                 }
 
                 return expr;
