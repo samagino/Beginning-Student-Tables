@@ -1149,73 +1149,58 @@ function Outputs(props) {
 }
 
 function TestCell(props) {
+    let output = props.output;
 
-    if (props.output === gray) {
+    if (output === gray) {
         return (
             <td className={'gray'}>
             </td>
         );
     }
 
-    if (props.output === pink) {
+    if (output === pink) {
         return (
             <td className={'pink'}>
             </td>
         );
     }
 
-    if (props.output === yellow) {
+    if (output === yellow) {
         return (
             <td className={'yellow'}>
             </td>
         );
     }
 
-    let output = props.output;
-    let want = yellow;
-
-    if (props.want !== yellow) {
-        try {
-            want = interp(props.want, globalEnv);
-        } catch (e) {
-            want = yellow;
-        }
-    }
-
-    let text, error;
     if (output instanceof Error) {
-        text = output.message;
-        error = true;
-    } else {
-        text = unparse(output);
-        error = false;
+        return <td><ErrorMessage error={output}/></td>
     }
 
-    let face;
-    if (error) {
-        face = <div title={"Oh no! You got an error!"} className="alert">
-                 <Octicon
-                  icon={Alert} size="small" verticalAlign="middle"
-                  ariaLabel='Error!'/>
-               </div>;
-    }else if (want === yellow) { // I should make this better
-        face = '';
-    } else if (deepEquals(output, want)) {
-        face = <div title={"Yay! It's right!"} className="check">
-                 <Octicon
+    let want;
+    try {
+        want = interp(props.want, globalEnv);
+    } catch (e) {
+        want = yellow;
+    }
+
+    if (want !== yellow && deepEquals(output, want)) {
+        return (
+            <td className='output'>
+              {unparse(output)}
+              <div title={"Yay! It's right!"} className="check">
+                <Octicon
                   icon={Check} size="small" verticalAlign="middle"
                   ariaLabel='Yay!'/>
-               </div>;
+              </div>
+            </td>
+        )
     } else {
-        face = '';
+        return (
+            <td className='output'>
+              {unparse(output)}
+            </td>
+        );
     }
-
-    return (
-        <td className={'output'}>
-          {text}
-          {face}
-        </td>
-    );
 }
 
 function DummyCell (props) {
