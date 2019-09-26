@@ -400,28 +400,30 @@ function toBSL(tables, listOrCons, width, ribbon) {
     }
 
     let pretty = makePretty(width, ribbon);
-    let tableBSLs = tables.map((table) => pretty(tableToDoc(table))).join('');
+    let tableBSLs = tables.map((table) => tableToString(table)).join('\n\n');
     return tableBSLs;
 
     // Table -> Doc
-    function tableToDoc(table) {
+    function tableToString(table) {
         let name = fieldToDoc(table.name);
         let sig = fieldToDoc(table.signature);
         let purp = fieldToDoc(table.purpose);
         let params = spread(table.params.map((param) => fieldToDoc(param.name)));
 
-        let checkExpects = stack(table.examples.map((example) => {
+        let checkExpects = table.examples.map((example) => {
             let inputs = stack(example.inputs.map((input) => fieldToDoc(input.prog)));
             let want = fieldToDoc(example.want);
 
-            return nest(1, bracket('(', group(stack([text('check-expect'), bracket('(', nest(1, stack([name, inputs])), ')'), want])), ')'));
-        }));
+            return pretty(nest(1, bracket('(', group(stack([text('check-expect'), bracket('(', nest(1, stack([name, inputs])), ')'), want])), ')')));
+        }).join('\n');
 
         let body = formulasToDoc(table.formulas);
-        let signature = spread([text(';;'), name, text(':'), sig]);
-        let purpose = spread([text(';;'), purp]);
-        let funct = nest(2, bracket('(', spread([text('define'), stack([bracket('(', spread([name, params]), ')'), body])]), ')'));
-        return stack([signature, purpose, funct, nil, checkExpects, line]);
+
+        let signature = pretty(spread([text(';;'), name, text(':'), sig]));
+        let purpose = pretty(spread([text(';;'), purp]));
+        let funct = pretty(nest(2, bracket('(', spread([text('define'), stack([bracket('(', spread([name, params]), ')'), body])]), ')')));
+
+        return [signature, purpose, funct, '', checkExpects].join('\n');
     }
 
     // [Formula] -> Doc
