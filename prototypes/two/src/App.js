@@ -177,6 +177,20 @@ function Colon (props) {
     );
 }
 
+// It's an error message (oh no!)
+function ErrorMessage (props) {
+    return (
+        <div>
+          {props.error.message}
+          <div title={"Oh no! You got an error!"} className="alert">
+            <Octicon
+              icon={Alert} size="small" verticalAlign="middle"
+              ariaLabel='Error!'/>
+          </div>
+        </div>
+    );
+}
+
 /*** Buttons ***/
 // Button that probably removes something
 function RemButton(props){
@@ -1054,16 +1068,7 @@ function Inputs(props) {
                 try {
                     interp(input.prog, globalEnv);
                 } catch (e) {
-                    error = (
-                        <div>
-                          {e.message}
-                          <div title={"Oh no! You got an error!"} className="alert">
-                            <Octicon
-                              icon={Alert} size="small" verticalAlign="middle"
-                              ariaLabel='Error!'/>
-                          </div>;
-                        </div>
-                    );
+                    error = <ErrorMessage error={e}/>
                 }
             }
 
@@ -1251,16 +1256,7 @@ function Want(props) {
                 valueCell = <td className='output'>{unparse(evalWant)}</td>;
             }
         } catch (e) {
-            valueCell = (
-                <td className='output'>
-                  {e.message}
-                  <div title={"Oh no! You got an error!"} className="alert">
-                    <Octicon
-                      icon={Alert} size="small" verticalAlign="middle"
-                      ariaLabel='Error!'/>
-                  </div>;
-                </td>
-            );
+            valueCell = <td><ErrorMessage error={e}/></td>
         }
     }
 
@@ -1282,9 +1278,17 @@ function Want(props) {
     );
 }
 
-function DefinitionsArea (props) {
+class DefinitionsArea extends React.Component {
+    constructor (props) {
+        super(props);
 
-    function validPrefix (text) {
+        let error = <div/>;
+        this.state = {error};
+
+        this.prefixChange = this.prefixChange.bind(this);
+    }
+
+    validPrefix (text) {
         try {
             parsePrefix(text);
         } catch (e) {
@@ -1293,28 +1297,36 @@ function DefinitionsArea (props) {
         return true;
     }
 
-    function prefixChange (text) {
+    prefixChange (text) {
+        let error = <div/>;
         try {
             globalEnv = interpPrefix(parsePrefix(text), initEnv);
         } catch (e) {
-            // TODO: Figure out how to show errors
+            error = <ErrorMessage error={e}/>
         }
 
-        props.programChange(props.tables);
+        this.setState((state) => ({error}));
+
+        this.props.programChange(this.props.tables);
     }
 
 
-    return (
-        <div>
-          <ValidatedArea
-            dummy={false}
-            placeholder='Definitions Area'
-            isValid={validPrefix}
-            onValid={prefixChange}
-          />
-        </div>
-
-    );
+    render () {
+        return (
+            <div className='flex_horiz'>
+              <div className='flex_vert no_grow'>
+                <ValidatedArea
+                  dummy={false}
+                  placeholder='Definitions Area'
+                  isValid={this.validPrefix}
+                  onValid={this.prefixChange}
+                />
+                {this.state.error}
+              </div>
+              <div className='grow'>{/* div to prevent this stuff from growing across the screen */}</div>
+            </div>
+        );
+    }
 }
 
 /*
