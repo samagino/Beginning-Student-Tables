@@ -158,11 +158,11 @@ function deepEquals(proga, progb) {
 
 /****************************************
  * Thing That Sends Stuff Out To Server *
- ***************************************/
+ ****************************************/
 
 // this isn't in document.onload or something but hopefully it works anyways
 // if a window.onload function is defined in this file, it doesn't seem to
-// get loaded
+// get excecuted
 const sessionID = Math.floor(Math.random() * 1000000000);
 let tellBigBrother = makeSendifier(3000, sessionID);
 
