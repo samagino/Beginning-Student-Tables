@@ -604,7 +604,7 @@ function typeCheck(prog, types) {
         let typesString = types.map(getType).reduce((acc, type) => acc + ` or a ${type}`);
         let e = new TypeError();
         // shoehorn a non-string into the message field
-        e.message = <React.Fragment>{[unparse_cons(prog), " ain't a" + typesString]}</React.Fragment>;
+        e.message = <React.Fragment>{[unparse_cons(prog), " ain't a " + typesString]}</React.Fragment>;
         throw e;
     }
 }
