@@ -1,3 +1,5 @@
+// for typeCheck Error messages
+import React from 'react';
 import {makeCircle, makeRectangle, makeEquiTriangle,
         makeBeside, makeAbove, makeOverlay,
         makePlace, emptyScene, makeColor,
@@ -122,6 +124,7 @@ const protoEnv = [
                               value: null}},
 ];
 
+// put posn in initEnv becaouse why not
 const initEnv = makeStruct('posn', ['x', 'y'], protoEnv);
 
 // String -> {prog: Program, rest: String}
@@ -360,7 +363,6 @@ function parsePrefix (text) {
 
             return {prog: {superID, fieldIDs, type: 'struct'}, rest: text}
         } else if (defineRE.test(text)) {
-            const closRE = /^\(/;
 
             text = text.slice('(define'.length);
             text = text.trim();
@@ -490,75 +492,6 @@ function makeDefine (name, binding, env) {
     return [...env, def];
 }
 
-// Program -> String
-function toString_cons(prog) {
-    switch (prog.type) {
-        case RNUM_T:
-            return prog.value;
-        case RBOOL_T:
-            return '#' + prog.value;
-        case RSTRING_T:
-            return `"${prog.value}"`;
-        case RLIST_T:
-            if (prog.value === null) {
-                return '\'()';
-            } else {
-                return `(cons ${toString_cons(prog.value.a)} ${toString_cons(prog.value.d)})`;
-            }
-        case RSYM_T:
-            return "'" + prog.value;
-        case RVAR_T:
-            return prog.value;
-        case RFUNCT_T:
-            return '#<procedure>';
-        case RAPP_T:
-            return `(${toString_cons(prog.value.funct)} ${prog.value.args.map(toString_cons).join(' ')})`;
-        case RIMAGE_T:
-            return '#<image>';
-        case RCOLOR_T:
-            return '#<color>';
-        case RSTRUCT_T:
-            return `#<${prog.value.id}>`;
-        default:
-            return 'error or something';
-    }
-}
-
-// Program -> String
-function toString_list (prog) {
-    switch (prog.type) {
-        case RNUM_T:
-            return prog.value;
-        case RBOOL_T:
-            return '#' + prog.value;
-        case RSTRING_T:
-            return `"${prog.value}"`;
-        case RLIST_T:
-            let elems = '';
-            while (prog.value !== null) {
-                elems += ' ' + toString_list(prog.value.a);
-                prog = prog.value.d;
-            }
-            return `(list${elems})`;
-        case RSYM_T:
-            return "'" + prog.value;
-        case RVAR_T:
-            return prog.value;
-        case RFUNCT_T:
-            return '#<procedure>';
-        case RAPP_T:
-            return `(${toString_cons(prog.value.funct)} ${prog.value.args.map(toString_cons).join(' ')})`;
-        case RIMAGE_T:
-            return '#<image>';
-        case RCOLOR_T:
-            return '#<color>';
-        case RSTRUCT_T:
-            return `#<${prog.value.id}>`;
-        default:
-            return 'error or something';
-    }
-}
-
 // Program -> [(String or SVG)]
 function unparse_cons(prog) {
     switch (prog.type) {
@@ -683,7 +616,10 @@ function typeCheck(prog, types) {
 
     if (!types.includes(prog.type)) {
         let typesString = types.map(getType).reduce((acc, type) => acc + ` or a ${type}`);
-        throw new TypeError(toString_cons(prog) + ' ain\'t a ' + typesString);
+        let e = new TypeError();
+        // shoehorn a non-string into the message field
+        e.message = <React.Fragment>{[unparse_cons(prog), " ain't a" + typesString]}</React.Fragment>;
+        throw e;
     }
 }
 
@@ -1357,5 +1293,5 @@ function color(args) {
 export {interp, parseCheck, initEnv, parsePrefix, interpPrefix,
         isRVAR, isRAPP, isRFUNCT, isRNUM, isRBOOL, isRSTRING, isRLIST, isRSYM, isRIMAGE, isRCOLOR, isRIF, isRSTRUCT,
         RVAR_T, RAPP_T, RFUNCT_T, RNUM_T, RBOOL_T, RSTRING_T, RLIST_T, RSYM_T, RIMAGE_T, RCOLOR_T, RIF_T,
-        unparse_cons, unparse_list, toString_cons, toString_list,
+        unparse_cons, unparse_list,
         varRE};
