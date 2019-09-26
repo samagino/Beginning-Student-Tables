@@ -327,12 +327,12 @@ function bracket (left, doc, right) {
 **************************************/
 
 // Program -> Doc
-function progToDoc (program) {
+function progToDoc_cons (program) {
     switch (program.type) {
         case RVAR_T:
             return text(program.value);
         case RAPP_T:
-            return nest(1, bracket('(', group(stack([progToDoc(program.value.funct), ...program.value.args.map(progToDoc)])), ')'));
+            return nest(1, bracket('(', group(stack([progToDoc_cons(program.value.funct), ...program.value.args.map(progToDoc_cons)])), ')'));
         case RFUNCT_T:
             return text('function');
         case RNUM_T:
@@ -345,7 +345,7 @@ function progToDoc (program) {
             if (program.value === null) {
                 return text("'()");
             } else {
-                return nest(1, bracket('(', group(stack([text('cons'), progToDoc(program.value.a), progToDoc(program.value.d)])), ')'));
+                return nest(1, bracket('(', group(stack([text('cons'), progToDoc_cons(program.value.a), progToDoc_cons(program.value.d)])), ')'));
             }
         case RSYM_T:
             return text("'" + program.value);
@@ -360,7 +360,7 @@ function progToDoc_list (program) {
         case RVAR_T:
             return text(program.value);
         case RAPP_T:
-            return nest(1, bracket('(', group(stack([progToDoc(program.value.funct), ...program.value.args.map(progToDoc)])), ')'));
+            return nest(1, bracket('(', group(stack([progToDoc_list(program.value.funct), ...program.value.args.map(progToDoc_list)])), ')'));
         case RFUNCT_T:
             return text('function');
         case RNUM_T:
@@ -378,6 +378,7 @@ function progToDoc_list (program) {
                 elems = progToDoc_list(program.value.a);
             while (list.value !== null) {
                 elems = stack([elems, progToDoc_list(list.value.a)]);
+                list = list.value.d;
             }
 
             return bracket('(', spread([text('list'), group(elems)]), ')');
@@ -389,7 +390,15 @@ function progToDoc_list (program) {
 }
 
 // [Table] -> String
-function toBSL(tables, unparse, width, ribbon) {
+function toBSL(tables, listOrCons, width, ribbon) {
+    // TODO make me work better somehow
+    let progToDoc;
+    if (listOrCons === 'cons') {
+        progToDoc = progToDoc_cons;
+    } else {
+        progToDoc = progToDoc_list;
+    }
+
     let pretty = makePretty(width, ribbon);
     let tableBSLs = tables.map((table) => pretty(tableToDoc(table))).join('');
     return tableBSLs;
@@ -467,7 +476,7 @@ function toBSL(tables, unparse, width, ribbon) {
 ****************/
 const widePretty = makePretty(Infinity, Infinity);
 
-export let unparse_cons = (prog) => widePretty(progToDoc(prog));
+export let unparse_cons = (prog) => widePretty(progToDoc_cons(prog));
 export let unparse_list = (prog) => widePretty(progToDoc_list(prog));
 
 export default toBSL;

@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOMServer from 'react-dom/server';
-import {interp, parseCheck, parsePrefix, interpPrefix, unparse_cons, toString_cons, toString_list, unparse_list, initEnv, isRAPP, RFUNCT_T, isRLIST, isRIMAGE, isRBOOL, isRSTRUCT} from './interpreter.js';
+import {interp, parseCheck, parsePrefix, interpPrefix, unparse_cons, unparse_list, initEnv, isRAPP, RFUNCT_T, isRLIST, isRIMAGE, isRBOOL, isRSTRUCT} from './interpreter.js';
 import {gray, pink, yellow, allBools, isBooleanFormula} from './header.js';
 import {paint, width, height, makeRectangle, makeOverlay} from './image.js';
 import toBSL from './prettyprint.js';
@@ -45,7 +45,7 @@ function peekKey(lookahead = 0) {
 **************/
 // TODO: maybe get rid of these?
 let unparse = unparse_cons;
-let toString = toString_cons;
+let listOrCons = 'cons';
 let showBSL = false;
 let globalEnv = initEnv;
 
@@ -1502,7 +1502,7 @@ class App extends React.Component {
                   rows={20}
                   cols={70}
                   readOnly={true}
-                  value={toBSL(this.state.tables, toString, 70, 70)}
+                  value={toBSL(this.state.tables, listOrCons, 70, 70)}
                 />
             );
         } else {
@@ -1532,10 +1532,10 @@ class App extends React.Component {
                   defaultValue='cons'
                   onChange={(e) => {
                       if (e.target.value === 'cons'){
-                          toString = toString_cons;
+                          listOrCons = 'cons';
                           unparse = unparse_cons;
                       } else {
-                          toString = toString_list;
+                          listOrCons = 'list';
                           unparse = unparse_list;
                       }
                       // this just rerenders everything, the state remains unchanged
