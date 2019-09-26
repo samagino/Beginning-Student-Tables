@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOMServer from 'react-dom/server';
-import {interp, parseCheck, parsePrefix, interpPrefix, unparse_cons, toString_cons, toString_list, unparse_list, initEnv, isRAPP, RFUNCT_T, isRLIST, isRIMAGE, isRBOOL, isRSTRUCT} from './interpreter.js';
+import {interp, parseCheck, parsePrefix, interpPrefix, unparse_cons, unparse_list, initEnv, isRAPP, RFUNCT_T, isRLIST, isRIMAGE, isRBOOL, isRSTRUCT} from './interpreter.js';
 import {gray, pink, yellow, allBools, isBooleanFormula} from './header.js';
 import {paint, width, height, makeRectangle, makeOverlay} from './image.js';
 import toBSL from './prettyprint.js';
@@ -45,7 +45,7 @@ function peekKey(lookahead = 0) {
 **************/
 // TODO: maybe get rid of these?
 let unparse = unparse_cons;
-let toString = toString_cons;
+let listOrCons = 'cons';
 let showBSL = false;
 let globalEnv = initEnv;
 
@@ -158,11 +158,11 @@ function deepEquals(proga, progb) {
 
 /****************************************
  * Thing That Sends Stuff Out To Server *
- ***************************************/
+ ****************************************/
 
 // this isn't in document.onload or something but hopefully it works anyways
 // if a window.onload function is defined in this file, it doesn't seem to
-// get loaded
+// get excecuted
 const sessionID = Math.floor(Math.random() * 1000000000);
 let tellBigBrother = makeSendifier(3000, sessionID);
 
@@ -296,9 +296,9 @@ class ValidatedArea extends React.Component {
               cols={cols}
               placeholder={this.props.placeholder}
               onChange={this.textChange}
-            >
-              {this.state.text}
-            </textarea>
+              spellCheck={false}
+              value={this.state.text}
+            />
         );
     }
 }
@@ -1282,6 +1282,41 @@ function Want(props) {
     );
 }
 
+function DefinitionsArea (props) {
+
+    function validPrefix (text) {
+        try {
+            parsePrefix(text);
+        } catch (e) {
+            return false;
+        }
+        return true;
+    }
+
+    function prefixChange (text) {
+        try {
+            globalEnv = interpPrefix(parsePrefix(text), initEnv);
+        } catch (e) {
+            // TODO: Figure out how to show errors
+        }
+
+        props.programChange(props.tables);
+    }
+
+
+    return (
+        <div>
+          <ValidatedArea
+            dummy={false}
+            placeholder='Definitions Area'
+            isValid={validPrefix}
+            onValid={prefixChange}
+          />
+        </div>
+
+    );
+}
+
 /*
   notes:
   #inputs === #params
@@ -1304,6 +1339,7 @@ class App extends React.Component {
         this.state = {tables, snapshots};
 
         this.programChange = this.programChange.bind(this);
+        this.render = this.render.bind(this);
     }
 
     calculate(program) {
@@ -1466,7 +1502,7 @@ class App extends React.Component {
                   rows={20}
                   cols={70}
                   readOnly={true}
-                  value={toBSL(this.state.tables, toString, 70, 70)}
+                  value={toBSL(this.state.tables, listOrCons, 70, 70)}
                 />
             );
         } else {
@@ -1481,27 +1517,11 @@ class App extends React.Component {
             );
         }
 
-        function validPrefix (text) {
-            try {
-                parsePrefix(text);
-            } catch (e) {
-                return false;
-            }
-            return true;
-        }
-
-        function changeEnv (text) {
-            globalEnv = interpPrefix(parsePrefix(text), initEnv);
-            this.programChange(this.state.tables);
-        }
-
         return (
             <div>
-              <ValidatedArea
-                dummy={false}
-                placeholder='Definitions Area'
-                isValid={validPrefix}
-                onValid={changeEnv.bind(this)}
+              <DefinitionsArea
+                tables={this.state.tables}
+                programChange={this.programChange}
               />
               <Succinct
                 tables={this.state.tables}
@@ -1512,10 +1532,10 @@ class App extends React.Component {
                   defaultValue='cons'
                   onChange={(e) => {
                       if (e.target.value === 'cons'){
-                          toString = toString_cons;
+                          listOrCons = 'cons';
                           unparse = unparse_cons;
                       } else {
-                          toString = toString_list;
+                          listOrCons = 'list';
                           unparse = unparse_list;
                       }
                       // this just rerenders everything, the state remains unchanged

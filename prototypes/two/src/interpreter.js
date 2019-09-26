@@ -1,3 +1,5 @@
+// for typeCheck Error messages
+import React from 'react';
 import {makeCircle, makeRectangle, makeEquiTriangle,
         makeBeside, makeAbove, makeOverlay,
         makePlace, emptyScene, makeColor,
@@ -122,6 +124,7 @@ const protoEnv = [
                               value: null}},
 ];
 
+// put posn in initEnv becaouse why not
 const initEnv = makeStruct('posn', ['x', 'y'], protoEnv);
 
 // String -> {prog: Program, rest: String}
@@ -274,20 +277,11 @@ function parseQ(text) {
     throw new SyntaxError('Invalid Syntax: "' + text + '"');
 }
 
-/**
- * A Prefix Prog is one of
- *   - defStruct
- *
- * A DefStruct is a
- *   {superID:  String,
- *    fieldIDs: [String],
- *    type: 'struct'}
- */
-
 // String -> [PrefixProg]
 function parsePrefix (text) {
     const commentRE = /;.*/g;
     const defStructRE = /^\(define-struct/;
+    const defineRE = /^\(define/;
     const nameRE = /^[^\s,'`()[\]{}|;#\d]+/;
 
     text = text.replace(commentRE, '');
@@ -352,6 +346,38 @@ function parsePrefix (text) {
             text = text.trim();
 
             return {prog: {superID, fieldIDs, type: 'struct'}, rest: text}
+        } else if (defineRE.test(text)) {
+
+            text = text.slice('(define'.length);
+            text = text.trim();
+
+
+            let name,
+                binding;
+            if (nameRE.test(text)) {    // not function definition
+                name = text.match(nameRE)[0];
+
+                text = text.slice(name.length);
+                text = text.trim();
+
+                let parsed = parse(text);
+
+                binding = parsed.prog;
+                text = parsed.rest.trim();
+
+            } else {
+                throw new Error(`Invalid Prefix Form: ${text}`);
+            }
+
+            if (text[0] !== ')') {
+                throw new Error(`Invalid Prefix Form: ${text}`);
+            }
+
+            text = text.slice(')'.length);
+            text = text.trim();
+
+            return {prog: {name, binding, type: 'define'}, rest: text};
+
         } else {
             throw new Error(`Invalid Prefix Form: ${text}`);
         }
@@ -364,7 +390,7 @@ function parsePrefix (text) {
                   binding: Program}
 ***/
 
-// Program -> Environment -> Program
+// Program, Environment -> Program
 function interp(prog, env) {
     function lookup(name) {
         let val = env.reduce((acc, variable) => {
@@ -409,15 +435,15 @@ function interp(prog, env) {
             }
 
         case RAPP_T:
-            // interpret function (valof rator env)
-            let funct = interp(prog.value.funct, env);
+
+            let rator = interp(prog.value.funct, env);
+            typeCheck(rator, [RFUNCT_T]);
 
             // interpret arguments (valof rand env)
-            let args = prog.value.args.map((arg) => interp(arg, env));
+            let rands = prog.value.args.map((arg) => interp(arg, env));
 
-            typeCheck(funct, [RFUNCT_T]);
-
-            return funct.value(args);
+            return rator.value(rands);
+            // this break only exists to make the js syntax checker stop complaining
         case RIMAGE_T:
             return prog;
         case RCOLOR_T:
@@ -429,86 +455,27 @@ function interp(prog, env) {
     }
 }
 
+// [PrefixProgram], Environment -> Environment
 function interpPrefix (progs, env) {
     let ext = progs.reduce((curEnv, prog) => {
         switch (prog.type) {
             case 'struct':
                 return makeStruct(prog.superID, prog.fieldIDs, curEnv);
+            case 'define':
+                return makeDefine(prog.name, prog.binding, curEnv);
             default:
                 throw new Error('Invalid Prefix Prog');
+
         }
     }, env);
 
     return ext;
 }
 
-// Program -> String
-function toString_cons(prog) {
-    switch (prog.type) {
-        case RNUM_T:
-            return prog.value;
-        case RBOOL_T:
-            return '#' + prog.value;
-        case RSTRING_T:
-            return `"${prog.value}"`;
-        case RLIST_T:
-            if (prog.value === null) {
-                return '\'()';
-            } else {
-                return `(cons ${toString_cons(prog.value.a)} ${toString_cons(prog.value.d)})`;
-            }
-        case RSYM_T:
-            return "'" + prog.value;
-        case RVAR_T:
-            return prog.value;
-        case RFUNCT_T:
-            return '#<procedure>';
-        case RAPP_T:
-            return `(${toString_cons(prog.value.funct)} ${prog.value.args.map(toString_cons).join(' ')})`;
-        case RIMAGE_T:
-            return '#<image>';
-        case RCOLOR_T:
-            return '#<color>';
-        case RSTRUCT_T:
-            return `#<${prog.value.id}>`;
-        default:
-            return 'error or something';
-    }
-}
-
-// Program -> String
-function toString_list (prog) {
-    switch (prog.type) {
-        case RNUM_T:
-            return prog.value;
-        case RBOOL_T:
-            return '#' + prog.value;
-        case RSTRING_T:
-            return `"${prog.value}"`;
-        case RLIST_T:
-            let elems = '';
-            while (prog.value !== null) {
-                elems += ' ' + toString_list(prog.value.a);
-                prog = prog.value.d;
-            }
-            return `(list${elems})`;
-        case RSYM_T:
-            return "'" + prog.value;
-        case RVAR_T:
-            return prog.value;
-        case RFUNCT_T:
-            return '#<procedure>';
-        case RAPP_T:
-            return `(${toString_cons(prog.value.funct)} ${prog.value.args.map(toString_cons).join(' ')})`;
-        case RIMAGE_T:
-            return '#<image>';
-        case RCOLOR_T:
-            return '#<color>';
-        case RSTRUCT_T:
-            return `#<${prog.value.id}>`;
-        default:
-            return 'error or something';
-    }
+// String, Program, Environment -> Environment
+function makeDefine (name, binding, env) {
+    let def = {name, binding: interp(binding, env)};
+    return [...env, def];
 }
 
 // Program -> [(String or SVG)]
@@ -635,29 +602,12 @@ function typeCheck(prog, types) {
 
     if (!types.includes(prog.type)) {
         let typesString = types.map(getType).reduce((acc, type) => acc + ` or a ${type}`);
-        throw new TypeError(toString_cons(prog) + ' ain\'t a ' + typesString);
+        let e = new TypeError();
+        // shoehorn a non-string into the message field
+        e.message = <React.Fragment>{[unparse_cons(prog), " ain't a" + typesString]}</React.Fragment>;
+        throw e;
     }
 }
-
-/**
- * More Data Definitions (TODO: add me to the file DataDefinitions)
- * An RSTRUCT is a
- *   {value: Struct, type: RSTRUCT_T}
- *
- * A Struct is a
- *   {id:     Super-Id,
- *    fields: [Field]
- *
- * A Super-Id is a
- *   String?
- *
- * A Field is a
- *   {id:      Field-Id,
- *    binding: Program}
- *
- * A Field-Id is a
- *   String?
- */
 
 // Super-Id, [Field-Id], Environment -> Environment
 // makes a racket structure according to id and field and appends
@@ -679,7 +629,7 @@ function makeStruct(superID, fieldIDs, env) {
 
     // [Program] -> RBOOL
     function isID (args) {
-        if (args.length !== 1) { //TODO: make something that generalizes arrity mismatches
+        if (args.length !== 1) {
             throw new Error(`${superID}?: arity mismatch, expected 1 argument but given ${args.length}`);
         }
 
@@ -692,7 +642,7 @@ function makeStruct(superID, fieldIDs, env) {
     let fieldExtractors = fieldIDs.map((fid) => (
         // Struct -> Program
         function (args) {
-            if (args.length !== 1) { //TODO: make something that generalizes arrity mismatches
+            if (args.length !== 1) {
                 throw new Error(`${superID}-${fid}: arity mismatch, expected 1 argument but given ${args.length}`);
             }
 
@@ -730,7 +680,6 @@ function makeStruct(superID, fieldIDs, env) {
 
 /**
  * Type Checking Functions
- *
  * so I don't have to do prog.type === RTYPE_T all the time
  */
 
@@ -770,6 +719,10 @@ function isRIF (prog) {
 function isRSTRUCT (prog) {
     return prog.type === RSTRUCT_T;
 }
+
+/************************************
+ * Functions in initial Environment *
+ ************************************/
 
 function plus(args) {
     if (args.length < 2) {
@@ -1309,5 +1262,5 @@ function color(args) {
 export {interp, parseCheck, initEnv, parsePrefix, interpPrefix,
         isRVAR, isRAPP, isRFUNCT, isRNUM, isRBOOL, isRSTRING, isRLIST, isRSYM, isRIMAGE, isRCOLOR, isRIF, isRSTRUCT,
         RVAR_T, RAPP_T, RFUNCT_T, RNUM_T, RBOOL_T, RSTRING_T, RLIST_T, RSYM_T, RIMAGE_T, RCOLOR_T, RIF_T,
-        unparse_cons, unparse_list, toString_cons, toString_list,
+        unparse_cons, unparse_list,
         varRE};
