@@ -364,7 +364,7 @@ function Succinct(props) {
     const reals = props.tables.map((table) => (
         <div key={table.key} className='flex_horiz table'>
           <div className='flex_vert no_grow'>
-            <div className='flex_horiz no_grow'>
+            <div className='flex_horiz no_grow signature'>
               <ValidatedInput
                 dummy={false}
                 placeholder='Table Name'

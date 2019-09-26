@@ -104,7 +104,7 @@ th, td{
     flex: auto;
 }
 
-.no_grow{
+.no_grow, .signature input:first-of-type {
     flex: initial;
 }
 
