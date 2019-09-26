@@ -277,17 +277,24 @@ function parseQ(text) {
 /**
  * A Prefix Prog is one of
  *   - defStruct
+ *   - define
  *
  * A DefStruct is a
  *   {superID:  String,
  *    fieldIDs: [String],
  *    type: 'struct'}
+ *
+ * A Define is a
+ *   {name:    String,
+ *    binding: Program,
+ *    type:    'define'}
  */
 
 // String -> [PrefixProg]
 function parsePrefix (text) {
     const commentRE = /;.*/g;
     const defStructRE = /^\(define-struct/;
+    const defineRE = /^\(define/;
     const nameRE = /^[^\s,'`()[\]{}|;#\d]+/;
 
     text = text.replace(commentRE, '');
@@ -352,6 +359,39 @@ function parsePrefix (text) {
             text = text.trim();
 
             return {prog: {superID, fieldIDs, type: 'struct'}, rest: text}
+        } else if (defineRE.test(text)) {
+            const closRE = /^\(/;
+
+            text = text.slice('(define'.length);
+            text = text.trim();
+
+
+            let name,
+                binding;
+            if (nameRE.test(text)) {    // not function definition
+                name = text.match(nameRE)[0];
+
+                text = text.slice(name.length);
+                text = text.trim();
+
+                let parsed = parse(text);
+
+                binding = parsed.prog;
+                text = parsed.rest.trim();
+
+            } else {
+                throw new Error(`Invalid Prefix Form: ${text}`);
+            }
+
+            if (text[0] !== ')') {
+                throw new Error(`Invalid Prefix Form: ${text}`);
+            }
+
+            text = text.slice(')'.length);
+            text = text.trim();
+
+            return {prog: {name, binding, type: 'define'}, rest: text};
+
         } else {
             throw new Error(`Invalid Prefix Form: ${text}`);
         }
@@ -409,15 +449,15 @@ function interp(prog, env) {
             }
 
         case RAPP_T:
-            // interpret function (valof rator env)
-            let funct = interp(prog.value.funct, env);
+
+            let rator = interp(prog.value.funct, env);
+            typeCheck(rator, [RFUNCT_T]);
 
             // interpret arguments (valof rand env)
-            let args = prog.value.args.map((arg) => interp(arg, env));
+            let rands = prog.value.args.map((arg) => interp(arg, env));
 
-            typeCheck(funct, [RFUNCT_T]);
-
-            return funct.value(args);
+            return rator.value(rands);
+            // this break only exists to make the js syntax checker stop complaining
         case RIMAGE_T:
             return prog;
         case RCOLOR_T:
@@ -434,12 +474,20 @@ function interpPrefix (progs, env) {
         switch (prog.type) {
             case 'struct':
                 return makeStruct(prog.superID, prog.fieldIDs, curEnv);
+            case 'define':
+                return makeDefine(prog.name, prog.binding, curEnv);
             default:
                 throw new Error('Invalid Prefix Prog');
+
         }
     }, env);
 
     return ext;
+}
+
+function makeDefine (name, binding, env) {
+    let def = {name, binding: interp(binding, env)};
+    return [...env, def];
 }
 
 // Program -> String
