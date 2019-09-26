@@ -70,6 +70,7 @@ A Program is one of
         -  RSym
         -  RImage
         -  RColor
+        -  RStruct
 
 A Variable is a
         {value: String,
@@ -178,3 +179,40 @@ A Color is
          g: Integer,
          b: Integer,
          a: Integer}
+
+A RClos is
+        {parametes:   [String],
+         environment: [Variable],
+         body:        Program}
+
+An RSTRUCT is
+        {value: Struct,
+         type: RSTRUCT_T}
+
+A Struct is a
+        {id:     Super-Id,
+         fields: [Field]}
+
+A Super-Id is a
+        String?
+
+A Field is a
+        {id:      Field-Id,
+         binding: Program}
+
+A Field-Id is a
+         String?
+
+A Prefix Prog is one of
+        - DefStruct
+        - Define
+
+A DefStruct is a
+        {superID:  String,
+         fieldIDs: [String],
+         type: 'struct'}
+
+A Define is a
+        {name:    String,
+         binding: Program,
+         type:    'define'}

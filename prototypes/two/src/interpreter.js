@@ -277,22 +277,6 @@ function parseQ(text) {
     throw new SyntaxError('Invalid Syntax: "' + text + '"');
 }
 
-/**
- * A Prefix Prog is one of
- *   - defStruct
- *   - define
- *
- * A DefStruct is a
- *   {superID:  String,
- *    fieldIDs: [String],
- *    type: 'struct'}
- *
- * A Define is a
- *   {name:    String,
- *    binding: Program,
- *    type:    'define'}
- */
-
 // String -> [PrefixProg]
 function parsePrefix (text) {
     const commentRE = /;.*/g;
@@ -406,7 +390,7 @@ function parsePrefix (text) {
                   binding: Program}
 ***/
 
-// Program -> Environment -> Program
+// Program, Environment -> Program
 function interp(prog, env) {
     function lookup(name) {
         let val = env.reduce((acc, variable) => {
@@ -471,6 +455,7 @@ function interp(prog, env) {
     }
 }
 
+// [PrefixProgram], Environment -> Environment
 function interpPrefix (progs, env) {
     let ext = progs.reduce((curEnv, prog) => {
         switch (prog.type) {
@@ -487,6 +472,7 @@ function interpPrefix (progs, env) {
     return ext;
 }
 
+// String, Program, Environment -> Environment
 function makeDefine (name, binding, env) {
     let def = {name, binding: interp(binding, env)};
     return [...env, def];
@@ -623,26 +609,6 @@ function typeCheck(prog, types) {
     }
 }
 
-/**
- * More Data Definitions (TODO: add me to the file DataDefinitions)
- * An RSTRUCT is a
- *   {value: Struct, type: RSTRUCT_T}
- *
- * A Struct is a
- *   {id:     Super-Id,
- *    fields: [Field]
- *
- * A Super-Id is a
- *   String?
- *
- * A Field is a
- *   {id:      Field-Id,
- *    binding: Program}
- *
- * A Field-Id is a
- *   String?
- */
-
 // Super-Id, [Field-Id], Environment -> Environment
 // makes a racket structure according to id and field and appends
 // a function to make an id, a function to check if something is an id
@@ -663,7 +629,7 @@ function makeStruct(superID, fieldIDs, env) {
 
     // [Program] -> RBOOL
     function isID (args) {
-        if (args.length !== 1) { //TODO: make something that generalizes arrity mismatches
+        if (args.length !== 1) {
             throw new Error(`${superID}?: arity mismatch, expected 1 argument but given ${args.length}`);
         }
 
@@ -676,7 +642,7 @@ function makeStruct(superID, fieldIDs, env) {
     let fieldExtractors = fieldIDs.map((fid) => (
         // Struct -> Program
         function (args) {
-            if (args.length !== 1) { //TODO: make something that generalizes arrity mismatches
+            if (args.length !== 1) {
                 throw new Error(`${superID}-${fid}: arity mismatch, expected 1 argument but given ${args.length}`);
             }
 
@@ -714,7 +680,6 @@ function makeStruct(superID, fieldIDs, env) {
 
 /**
  * Type Checking Functions
- *
  * so I don't have to do prog.type === RTYPE_T all the time
  */
 
@@ -754,6 +719,10 @@ function isRIF (prog) {
 function isRSTRUCT (prog) {
     return prog.type === RSTRUCT_T;
 }
+
+/************************************
+ * Functions in initial Environment *
+ ************************************/
 
 function plus(args) {
     if (args.length < 2) {
