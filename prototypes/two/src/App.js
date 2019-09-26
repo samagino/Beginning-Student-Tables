@@ -5,7 +5,7 @@ import {gray, pink, yellow, allBools, isBooleanFormula} from './header.js';
 import {paint, width, height, makeRectangle, makeOverlay} from './image.js';
 import toBSL from './prettyprint.js';
 import makeSendifier from './sendifier.js';
-import Octicon, {X, Alert, Check} from '@primer/octicons-react';
+import Octicon, {Trashcan, Alert, Check} from '@primer/octicons-react';
 import './App.css';
 
 /*****************************
@@ -185,7 +185,7 @@ function RemButton(props){
              onClick={props.onClick}
              title={props.title}>
           <Octicon
-            icon={X} size="small" verticalAlign="middle"
+            icon={Trashcan} size="small" verticalAlign="middle"
             ariaLabel='Remove'/>
         </div>
     );
