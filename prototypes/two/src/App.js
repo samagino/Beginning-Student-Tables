@@ -296,9 +296,9 @@ class ValidatedArea extends React.Component {
               cols={cols}
               placeholder={this.props.placeholder}
               onChange={this.textChange}
-            >
-              {this.state.text}
-            </textarea>
+              spellCheck={false}
+              value={this.state.text}
+            />
         );
     }
 }
@@ -1282,6 +1282,41 @@ function Want(props) {
     );
 }
 
+function DefinitionsArea (props) {
+
+    function validPrefix (text) {
+        try {
+            parsePrefix(text);
+        } catch (e) {
+            return false;
+        }
+        return true;
+    }
+
+    function prefixChange (text) {
+        try {
+            globalEnv = interpPrefix(parsePrefix(text), initEnv);
+        } catch (e) {
+            // TODO: Figure out how to show errors
+        }
+
+        props.programChange(props.tables);
+    }
+
+
+    return (
+        <div>
+          <ValidatedArea
+            dummy={false}
+            placeholder='Definitions Area'
+            isValid={validPrefix}
+            onValid={prefixChange}
+          />
+        </div>
+
+    );
+}
+
 /*
   notes:
   #inputs === #params
@@ -1304,6 +1339,7 @@ class App extends React.Component {
         this.state = {tables, snapshots};
 
         this.programChange = this.programChange.bind(this);
+        this.render = this.render.bind(this);
     }
 
     calculate(program) {
@@ -1475,27 +1511,11 @@ class App extends React.Component {
             );
         }
 
-        function validPrefix (text) {
-            try {
-                parsePrefix(text);
-            } catch (e) {
-                return false;
-            }
-            return true;
-        }
-
-        function changeEnv (text) {
-            globalEnv = interpPrefix(parsePrefix(text), initEnv);
-            this.programChage(this.state.tables);
-        }
-
         return (
             <div>
-              <ValidatedArea
-                dummy={false}
-                placeholder='Definitions Area'
-                isValid={validPrefix}
-                onValid={changeEnv}
+              <DefinitionsArea
+                tables={this.state.tables}
+                programChange={this.programChange}
               />
               <Succinct
                 tables={this.state.tables}
