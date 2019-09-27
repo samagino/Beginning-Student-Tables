@@ -46,7 +46,6 @@ function peekKey(lookahead = 0) {
 // TODO: maybe get rid of these?
 let unparse = unparse_cons;
 let listOrCons = 'cons';
-let showBSL = false;
 let globalEnv = initEnv;
 
 /*****************
@@ -433,7 +432,7 @@ function Succinct(props) {
     const dummy = (
         <div key={peekKey()} className='flex_horiz table'>
           <div className='flex_vert no_grow'>
-            <div className='flex_horiz no_grow'>
+            <div className='flex_horiz no_grow signature'>
               <ValidatedInput
                 dummy={true}
                 placeholder='Table Name'
@@ -1314,6 +1313,55 @@ class DefinitionsArea extends React.Component {
     }
 }
 
+class BSLArea extends React.Component {
+    constructor (props) {
+        super(props);
+
+        let showBSL = false;
+        this.state = {showBSL};
+
+        this.toggleDisplay = this.toggleDisplay.bind(this);
+    }
+
+    toggleDisplay (e) {
+        this.setState((state) => ({showBSL: !state.showBSL}));
+    }
+
+    render () {
+
+        let bslArea;
+        if (this.state.showBSL) {
+            bslArea = (
+                <textarea
+                  className='bsl_field'
+                  rows={20}
+                  cols={70}
+                  readOnly={true}
+                  value={toBSL(this.props.tables, listOrCons, 70, 70)}
+                />
+            );
+        } else {
+            bslArea = <div/>;
+        }
+
+        return (
+            <div className='bsl_io'>
+              <div className='bsl_checkbox'>
+                <input
+                  type='checkbox'
+                  id='bsl_toggle'
+                  name='bsl_output'
+                  onChange={this.toggleDisplay}
+                />
+                <label htmlFor='bsl_toggle'>Show BSL Output</label>
+              </div>
+              {bslArea}
+            </div>
+        );
+
+    }
+}
+
 /*
   notes:
   #inputs === #params
@@ -1491,29 +1539,6 @@ class App extends React.Component {
     }
 
     render(){
-        let bslField;
-        if (showBSL) {
-            bslField = (
-                <textarea
-                  className='bsl_field'
-                  rows={20}
-                  cols={70}
-                  readOnly={true}
-                  value={toBSL(this.state.tables, listOrCons, 70, 70)}
-                />
-            );
-        } else {
-            bslField = (
-                <textarea
-                  className='bsl_field'
-                  rows={20}
-                  cols={70}
-                  readOnly={true}
-                  value={''}
-                />
-            );
-        }
-
         return (
             <div>
               <DefinitionsArea
@@ -1543,30 +1568,9 @@ class App extends React.Component {
                   <option value='list'>Beginning Student with List Abbreviations</option>
                 </select>
               </div>
-              <div className='bsl_io'>
-                <div className='bsl_checkbox'>
-                  <input
-                    type='checkbox'
-                    id='bsl_output'
-                    name='bsl_output'
-                    onChange={(e) => {
-                        showBSL = !showBSL;
-                        // same here, state remains unchanged but everything is rerendered
-                        this.setState((state) => state);
-                    }}
-                  />
-                  <label htmlFor='bsl_output'>Show BSL Output</label>
-                </div>
-                {bslField}
-              </div>
-              <div>
-                {/*TODO: all this is pretty jank, make it less jank*/}
-                {/* <button */}
-                {/*   onClick={() => console.log('I dunno lol')} */}
-                {/* > */}
-                {/*   Check If Stuff Sent! */}
-                {/* </button> */}
-              </div>
+              <BSLArea
+                tables={this.state.tables}
+              />
             </div>
         );
     }
