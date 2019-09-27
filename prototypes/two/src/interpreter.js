@@ -21,6 +21,7 @@ const RIMAGE_T =  8;
 const RCOLOR_T =  9;
 const RIF_T =     10;
 const RSTRUCT_T = 11;
+const RCLOS_T =   12;
 
 const varRE = /^[^\s",'`()[\]{}|;#]+/; // except numbers
 const appRE = /^\(/;
@@ -301,6 +302,8 @@ function parsePrefix (text) {
     // Text -> {prog: PrefixProg, rest: String}
     function parsePrefixExpr (text) {
         if (defStructRE.test(text)) {
+            const openRE = /[([]/;
+
             text = text.slice('(define-struct'.length);
             text = text.trim();
 
@@ -312,15 +315,23 @@ function parsePrefix (text) {
             text = text.slice(superID.length)
             text = text.trim();
 
-            if (text[0] !== '(') {
+            if (!openRE.test(text)) {
                 throw new Error('Invalid Struct Definition');
             }
 
+            let fieldOpen = text[0];
             text = text.slice('('.length);
             text = text.trim();
 
+            let fieldClose;
+            if (fieldOpen === '(') {
+                fieldClose = ')';
+            } else if (fieldOpen === '[') {
+                fieldClose = ']';
+            }
+
             let fieldIDs = [];
-            while (text[0] !== ')') {
+            while (text[0] !== fieldClose) {
                 if (!nameRE.test(text)) {
                     throw new Error('Invalid Field Name');
                 }
@@ -333,9 +344,6 @@ function parsePrefix (text) {
                 fieldIDs = [...fieldIDs, fieldID];
             }
 
-            if (text[0] !== ')') {
-                throw new Error('Invalid Struct Definition');
-            }
             text = text.slice(')'.length);
             text = text.trim();
 
@@ -347,6 +355,7 @@ function parsePrefix (text) {
 
             return {prog: {superID, fieldIDs, type: 'struct'}, rest: text}
         } else if (defineRE.test(text)) {
+            const closRE = /^\(/;
 
             text = text.slice('(define'.length);
             text = text.trim();
@@ -365,6 +374,44 @@ function parsePrefix (text) {
                 binding = parsed.prog;
                 text = parsed.rest.trim();
 
+            } else if (closRE.test(text)) {
+                text = text.slice('('.length);
+                text = text.trim();
+
+                if (!nameRE.test(text)) {
+                    throw new Error(`Invalid Prefix Form: ${text}`);
+                }
+
+                name = text.match(nameRE)[0];
+
+                text = text.slice(name.length);
+                text = text.trim();
+
+                let parameters = [];
+                while (text[0] !== ')') {
+                    if (!nameRE.test(text)) {
+                        throw new Error(`Invalid Prefix Form: ${text}`);
+                    }
+
+                    let param = text.match(nameRE)[0];
+
+                    text = text.slice(param.length);
+                    text = text.trim();
+
+                    parameters = [...parameters, param];
+                }
+
+                text = text.slice(')'.length);
+                text = text.trim();
+
+                let parsed = parse(text);
+
+                let body = parsed.prog;
+
+                text = parsed.rest;
+                text = text.trim();
+
+                binding = {value: {parameters, body}, type: RCLOS_T}
             } else {
                 throw new Error(`Invalid Prefix Form: ${text}`);
             }
@@ -423,6 +470,9 @@ function interp(prog, env) {
             return lookup(prog.value);
         case RFUNCT_T:
             return prog;
+        case RCLOS_T:
+            // put environment in there and stuff
+            return {value: {parameters: prog.value.parameters, body: prog.value.body, env: env}, type: RCLOS_T};
         case RIF_T:
             let tst = interp(prog.value.tst, env);
             typeCheck(tst, [RBOOL_T]);
@@ -435,15 +485,32 @@ function interp(prog, env) {
             }
 
         case RAPP_T:
+            let name = 'anonymous';
+            if (isRVAR(prog.value.funct)) {
+                name = prog.value.funct.value; // that's a lot of .s
+            }
 
+            // interp operator (valof rator env)
             let rator = interp(prog.value.funct, env);
-            typeCheck(rator, [RFUNCT_T]);
 
             // interpret arguments (valof rand env)
             let rands = prog.value.args.map((arg) => interp(arg, env));
+            switch(rator.type) {
+                case RFUNCT_T:
+                    return rator.value(rands);
+                case RCLOS_T:
+                    if (rands.length !== rator.value.parameters.length) {
+                        throw new Error (`Arity Mismatch: ${name} expects ${rator.value.parameters.length} arguments but got ${rands.length}`);
+                    }
 
-            return rator.value(rands);
+                    let extedEnv = [...rator.value.env, ...rator.value.parameters.map((name, i) => ({name, binding: rands[i]}))];
+                    return interp(rator.value.body, extedEnv);
+                default:
+                    typeCheck(rator, [RFUNCT_T]);
+            }
+
             // this break only exists to make the js syntax checker stop complaining
+            break;
         case RIMAGE_T:
             return prog;
         case RCOLOR_T:
@@ -474,8 +541,14 @@ function interpPrefix (progs, env) {
 
 // String, Program, Environment -> Environment
 function makeDefine (name, binding, env) {
-    let def = {name, binding: interp(binding, env)};
-    return [...env, def];
+    switch (binding.type) {
+        case RCLOS_T: // TODO: make recursion work
+            let closVar = {name, binding: interp(binding, env)};
+            return [...env, closVar];
+        default:
+            let def = {name, binding: interp(binding, env)};
+            return [...env, def];
+    }
 }
 
 // Program -> [(String or SVG)]
@@ -499,6 +572,8 @@ function unparse_cons(prog) {
             return [prog.value];
         case RFUNCT_T:
             return ['#<procedure>'];
+        case RCLOS_T:
+            return ['#<user_defined_procedure>'];
         case RAPP_T:
             return ['(', ...unparse_cons(prog.value.funct), ...prog.value.args.map(unparse_cons).reduce((acc, arr) => [...acc, ' ', ...arr], ''), ')'];
         case RIMAGE_T:
@@ -541,6 +616,8 @@ function unparse_list (prog) {
             return [prog.value];
         case RFUNCT_T:
             return ['#<procedure>'];
+        case RCLOS_T:
+            return ['#<user_defined_procedure>'];
         case RAPP_T:
             return ['(', ...unparse_list(prog.value.funct), ...prog.value.args.map(unparse_list).reduce((acc, arr) => [...acc, ' ', ...arr], ''), ')'];
         case RIMAGE_T:
@@ -581,6 +658,8 @@ function typeCheck(prog, types) {
             return 'application';
         case RFUNCT_T:
             return 'function';
+        case RCLOS_T:
+            return 'closure';
         case RNUM_T:
             return 'number';
         case RBOOL_T:
@@ -604,6 +683,7 @@ function typeCheck(prog, types) {
         let typesString = types.map(getType).reduce((acc, type) => acc + ` or a ${type}`);
         let e = new TypeError();
         // shoehorn a non-string into the message field
+        // TODO: somehow make this use the approproate unparser maybe
         e.message = <React.Fragment>{[unparse_cons(prog), " ain't a " + typesString]}</React.Fragment>;
         throw e;
     }
