@@ -1577,3 +1577,7 @@ class App extends React.Component {
 }
 
 export default App;
+
+// The following line mitigates the problem that sometimes toRGBAArray returns
+// all-zeros.  Probably it doesn't completely fix #12.
+document.createElement('img');
