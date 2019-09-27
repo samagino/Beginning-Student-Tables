@@ -71,6 +71,7 @@ A Program is one of
         -  RImage
         -  RColor
         -  RStruct
+        -  RClos
 
 A Variable is a
         {value: String,
@@ -189,30 +190,42 @@ An RSTRUCT is
         {value: Struct,
          type: RSTRUCT_T}
 
-A Struct is a
+A Struct is
         {id:     Super-Id,
          fields: [Field]}
 
-A Super-Id is a
+A Super-Id is
         String?
 
-A Field is a
+An RClos is
+        {parameters: [String],
+         body:       Program,
+         env:        Environment}
+
+An Environment is
+        [Variable]
+
+A Variable is
+        {name:    String,
+         binding: Program}
+
+A Field is
         {id:      Field-Id,
          binding: Program}
 
-A Field-Id is a
+A Field-Id is
          String?
 
 A Prefix Prog is one of
         - DefStruct
         - Define
 
-A DefStruct is a
+A DefStruct is
         {superID:  String,
          fieldIDs: [String],
          type: 'struct'}
 
-A Define is a
+A Define is
         {name:    String,
          binding: Program,
          type:    'define'}
