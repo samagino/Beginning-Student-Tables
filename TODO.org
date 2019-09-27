@@ -30,6 +30,7 @@ and
 produce the same image (an empty-scene 100 px by 100 px), but they
 are evaluated as being different sometimes, but not always...
 ** bugs I don't know how to fix:
+Make Recursion Work in Definition Area functions
 * stuff that may be nice:
 undo/redo button
 * stuff that will probably happen eventually:
