@@ -14,7 +14,7 @@
 importScripts("https://storage.googleapis.com/workbox-cdn/releases/4.3.1/workbox-sw.js");
 
 importScripts(
-  "/Beginning-Student-Tables/precache-manifest.671c593953475d69ca6b59871b2d0d8e.js"
+  "/Beginning-Student-Tables/precache-manifest.7f4a8b84641110dd7ad1a310ec9e2e7d.js"
 );
 
 self.addEventListener('message', (event) => {
