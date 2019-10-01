@@ -281,9 +281,9 @@ function parseQ(text) {
 // String -> [PrefixProg]
 function parsePrefix (text) {
     const commentRE = /;.*/g;
-    const defStructRE = /^\(define-struct/;
-    const defineRE = /^\(define/;
-    const nameRE = /^[^\s,'`()[\]{}|;#\d]+/;
+    const defStructRE = /^\(\s*define-struct(?=$|[\s",'`()[\]{}|;#])/;
+    const defineRE = /^\(\s*define(?=$|[\s",'`()[\]{}|;#])/;
+    const nameRE = /^(?!-?(?:\d+(?:\.\d*)?|\.\d+)(?=$|[\s",'`()[\]{}|;#]))[^\s",'`()[\]{}|;#]+/;
 
     text = text.replace(commentRE, '');
     text = text.trim();
@@ -304,24 +304,21 @@ function parsePrefix (text) {
         if (defStructRE.test(text)) {
             const openRE = /[([]/;
 
-            text = text.slice('(define-struct'.length);
-            text = text.trim();
+            text = text.slice(text.match(defStructRE)[0].length).trim();
 
             if (!nameRE.test(text)) {
                 throw new Error('Invalid Struct Name');
             }
 
             let superID = text.match(nameRE)[0];
-            text = text.slice(superID.length)
-            text = text.trim();
+            text = text.slice(superID.length).trim();
 
             if (!openRE.test(text)) {
                 throw new Error('Invalid Struct Definition');
             }
 
-            let fieldOpen = text[0];
-            text = text.slice('('.length);
-            text = text.trim();
+            let fieldOpen = text.match(openRE)[0];
+            text = text.slice(fieldOpen.length).trim();
 
             let fieldClose;
             if (fieldOpen === '(') {
@@ -344,30 +341,24 @@ function parsePrefix (text) {
                 fieldIDs = [...fieldIDs, fieldID];
             }
 
-            text = text.slice(')'.length);
-            text = text.trim();
+            text = text.slice(1).trim();
 
             if (text[0] !== ')') {
                 throw new Error('Invalid Struct Definition');
             }
-            text = text.slice(')'.length);
-            text = text.trim();
+            text = text.slice(1).trim();
 
             return {prog: {superID, fieldIDs, type: 'struct'}, rest: text}
         } else if (defineRE.test(text)) {
             const closRE = /^\(/;
 
-            text = text.slice('(define'.length);
-            text = text.trim();
-
+            text = text.slice(text.match(defineRE)[0].length).trim();
 
             let name,
                 binding;
             if (nameRE.test(text)) {    // not function definition
                 name = text.match(nameRE)[0];
-
-                text = text.slice(name.length);
-                text = text.trim();
+                text = text.slice(name.length).trim();
 
                 let parsed = parse(text);
 
@@ -375,34 +366,26 @@ function parsePrefix (text) {
                 text = parsed.rest.trim();
 
             } else if (closRE.test(text)) {
-                text = text.slice('('.length);
-                text = text.trim();
+                text = text.slice(text.match(closRE)[0].length).trim();
 
                 if (!nameRE.test(text)) {
                     throw new Error(`Invalid Prefix Form: ${text}`);
                 }
 
                 name = text.match(nameRE)[0];
-
-                text = text.slice(name.length);
-                text = text.trim();
+                text = text.slice(name.length).trim();
 
                 let parameters = [];
                 while (text[0] !== ')') {
                     if (!nameRE.test(text)) {
                         throw new Error(`Invalid Prefix Form: ${text}`);
                     }
-
                     let param = text.match(nameRE)[0];
-
-                    text = text.slice(param.length);
-                    text = text.trim();
-
+                    text = text.slice(param.length).trim();
                     parameters = [...parameters, param];
                 }
 
-                text = text.slice(')'.length);
-                text = text.trim();
+                text = text.slice(1).trim();
 
                 let parsed = parse(text);
 
@@ -420,8 +403,7 @@ function parsePrefix (text) {
                 throw new Error(`Invalid Prefix Form: ${text}`);
             }
 
-            text = text.slice(')'.length);
-            text = text.trim();
+            text = text.slice(1).trim();
 
             return {prog: {name, binding, type: 'define'}, rest: text};
 
