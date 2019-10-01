@@ -46,7 +46,6 @@ function peekKey(lookahead = 0) {
 // TODO: maybe get rid of these?
 let unparse = unparse_cons;
 let listOrCons = 'cons';
-let globalEnv = initEnv;
 
 /*****************
     Deep Equals
@@ -353,7 +352,7 @@ function Succinct(props) {
 
         let tableVars = props.tables.filter((table) => table !== modTab).map((otherTab) => ({name: otherTab.name, binding: null}));
         let paramVars = modTab.params.map((param) => ({name: param, binding: null}));
-        let env = [...globalEnv, ...tableVars, ...paramVars];
+        let env = [...props.globalEnv, ...tableVars, ...paramVars];
 
         return varRE.test(text) && !inEnv(text, env);
     }
@@ -420,6 +419,7 @@ function Succinct(props) {
               />
             </div>
             <SuccinctTab
+              globalEnv={props.globalEnv}
               table={table}
               tableNames={props.tables.map((table) => table.name)}
               tableChange={(newTab) => tableChange(newTab, table)}
@@ -477,6 +477,7 @@ function Succinct(props) {
               />
             </div>
             <SuccinctTab
+              globalEnv={props.globalEnv}
               table={{name: yellow,
                       signature: yellow,
                       purpose: yellow,
@@ -515,6 +516,7 @@ function SuccinctTab(props) {
     return (
         <table className={'grow'}>
           <SuccinctHead
+            globalEnv={props.globalEnv}
             params={props.table.params}
             examples={props.table.examples}
             tableNames={props.tableNames}
@@ -524,6 +526,7 @@ function SuccinctTab(props) {
             formulasChange={formulasChange}
           />
           <SuccinctBody
+            globalEnv={props.globalEnv}
             examples={props.table.examples}
             formulas={props.table.formulas}
             paramNames={props.table.params.map((param) => param.name)}
@@ -666,6 +669,7 @@ function SuccinctHead(props) {
         <thead>
           <tr>
             <Parameters
+              globalEnv={props.globalEnv}
               params={props.params}
               examples={props.examples}
               tableNames={props.tableNames}
@@ -696,7 +700,7 @@ function Parameters(props) {
         // These are not technically Variables, see note above
         let paramVars = props.params.filter((param) => param !== modParam).map((param) => ({name: param.name, binding: null}));
         let tableVars = props.tableNames.map((name) => ({name: name, binding: null}));
-        let env = [...globalEnv, ...tableVars, ...paramVars];
+        let env = [...props.globalEnv, ...tableVars, ...paramVars];
 
         return varRE.test(text) && !inEnv(text, env);
     }
@@ -965,6 +969,7 @@ function SuccinctBody(props) {
               />
             </td>
             <Inputs
+              globalEnv={props.globalEnv}
               dummy={false}
               inputs={example.inputs}
               inputsChange={(inputs) => exampleChange({...example, inputs},
@@ -972,6 +977,7 @@ function SuccinctBody(props) {
             />
             <td>{/* empty cell to align with param dummy input */}</td>
             <Outputs
+              globalEnv={props.globalEnv}
               dummy={false}
               formulas={props.formulas}
               want={example.want}
@@ -979,6 +985,7 @@ function SuccinctBody(props) {
             />
             <td>{/* empty cell to align with top level formula dummy input */}</td>
             <Want
+              globalEnv={props.globalEnv}
               dummy={false}
               want={example.want}
               wantChange={(want) => exampleChange({...example, want},
@@ -991,6 +998,7 @@ function SuccinctBody(props) {
           <tr key={peekKey(props.paramNames.length)}>
             <td>{/* empty cell to offset rembutton */}</td>
             <Inputs
+              globalEnv={props.globalEnv}
               dummy={true}
               inputs={props.paramNames.map((_, i) => ({key: peekKey(i)}))}
               inputsChange={(inputs) => exampleChange({inputs,
@@ -1000,11 +1008,13 @@ function SuccinctBody(props) {
             />
             <td>{/* empty cell to align with param dummy input */}</td>
             <Outputs
+              globalEnv={props.globalEnv}
               dummy={true}
               formulas={props.formulas}
             />
             <td>{/* empty cell to align with top level formula dummy input */}</td>
             <Want
+              globalEnv={props.globalEnv}
               dummy={true}
               wantChange={(want) => exampleChange({want,
                                                    inputs: props.paramNames.map((_) => ({prog: yellow, key: takeKey()})),
@@ -1065,7 +1075,7 @@ function Inputs(props) {
         } else {
             if (input.prog !== yellow) {
                 try {
-                    interp(input.prog, globalEnv);
+                    interp(input.prog, props.globalEnv);
                 } catch (e) {
                     error = <ErrorMessage error={e}/>
                 }
@@ -1125,12 +1135,14 @@ function Outputs(props) {
               {props.formulas.map((formula) => (
                   <React.Fragment key={formula.key}>
                     <TestCell
+                      globalEnv={props.globalEnv}
                       output={formula.outputs[props.row]}
                       want={props.want}
                     />
                     {isBooleanFormula(formula) ?
                      <React.Fragment>
                        <Outputs
+                         globalEnv={props.globalEnv}
                          formulas={formula.thenChildren}
                          want={props.want}
                          row={props.row}
@@ -1177,7 +1189,7 @@ function TestCell(props) {
 
     let want;
     try {
-        want = interp(props.want, globalEnv);
+        want = interp(props.want, props.globalEnv);
     } catch (e) {
         want = yellow;
     }
@@ -1233,7 +1245,7 @@ function Want(props) {
         valueCell = <script/>;
     } else {
         try {
-            let evalWant = interp(props.want, globalEnv);
+            let evalWant = interp(props.want, props.globalEnv);
             if (deepEquals(evalWant, props.want)) {
                 valueCell = <script/>;
             } else {
@@ -1267,7 +1279,7 @@ class DefinitionsArea extends React.Component {
         super(props);
 
         let error = <div/>;
-        this.state = {error};
+        this.state = {error: error, globalEnv: initEnv};
 
         this.prefixChange = this.prefixChange.bind(this);
     }
@@ -1283,17 +1295,16 @@ class DefinitionsArea extends React.Component {
 
     prefixChange (text) {
         let error = <div/>;
+        let prefix = parsePrefix(text);
+        let globalEnv = this.state.globalEnv;
         try {
-            globalEnv = interpPrefix(parsePrefix(text), initEnv);
+            globalEnv = interpPrefix(prefix, initEnv);
         } catch (e) {
             error = <ErrorMessage error={e}/>
         }
-
-        this.setState((state) => ({error}));
-
-        this.props.programChange(this.props.tables);
+        this.setState((state) => ({error, globalEnv}));
+        this.props.prefixChange(prefix, globalEnv);
     }
-
 
     render () {
         return (
@@ -1373,6 +1384,8 @@ class BSLArea extends React.Component {
 class App extends React.Component {
     constructor(props){
         super(props);
+        let prefix = "";
+        let globalEnv = initEnv;
         let tables = [{examples: [{inputs: [{prog: yellow, key: takeKey()}], want: yellow, key: takeKey()}],
                        formulas: [{prog: yellow, outputs: [yellow], key: takeKey()}],
                        params: [{name: yellow, key: takeKey()}],
@@ -1380,14 +1393,15 @@ class App extends React.Component {
                        signature: yellow,
                        purpose: yellow,
                        key: takeKey()}];
-        let snapshots = [tables];
-        this.state = {tables, snapshots};
+        let snapshots = [{prefix, globalEnv, tables}];
+        this.state = {prefix, globalEnv, tables, snapshots};
 
         this.programChange = this.programChange.bind(this);
+        this.prefixChange = this.prefixChange.bind(this);
         this.render = this.render.bind(this);
     }
 
-    calculate(program) {
+    calculate(env, program) {
         function makeLookup(table) {
             function lookup(args) {
                 if (args.length !== table.params.length) {
@@ -1406,7 +1420,7 @@ class App extends React.Component {
                         }
                         let bool;
                         try {
-                            bool = deepEquals(interp(input.prog, globalEnv), args[i]);
+                            bool = deepEquals(interp(input.prog, env), args[i]);
                         } catch (e) {
                             bool = false;
                         }
@@ -1419,7 +1433,7 @@ class App extends React.Component {
                             throw e;
                         } else {
                             // Note: don't need to catch exception here because it will be caught in calcFormula
-                            return interp(example.want, globalEnv);
+                            return interp(example.want, env);
                         }
                     }
 
@@ -1441,7 +1455,7 @@ class App extends React.Component {
         }
 
         let lookups = program.map((table) => ({name: table.name, binding: {value: makeLookup(table), type: RFUNCT_T}}));
-        let tableEnv = [...globalEnv, ...lookups];
+        let tableEnv = [...env, ...lookups];
 
         function calcTable(table) {
             function calcFormula(formula, examples) {
@@ -1521,20 +1535,28 @@ class App extends React.Component {
         return program.map(calcTable);
     }
 
-    // React people say that this is unsafe (https://reactjs.org/docs/react-component.html#unsafe_componentwillupdate)
-    // but it sends the ith list of snapshots to the server whereas the safe componentDidUpdate sends the i-1th
-    componentWillUpdate(_, nextState) {
+    componentDidUpdate() {
         // He's always watching...
-        tellBigBrother(JSON.stringify(nextState.snapshots));
+        tellBigBrother(JSON.stringify(this.state.snapshots));
+    }
+
+    prefixChange(prefix, globalEnv) {
+        let tables = this.calculate(globalEnv, this.state.tables);
+        this.setState((state) => {
+            return {prefix, globalEnv, tables,
+                    snapshots: [...state.snapshots, {prefix, globalEnv, tables}]};
+        });
     }
 
     programChange(newProg) {
-        let calkedProg = this.calculate(newProg);
-        //console.log(calkedProg);
+        let prefix = this.state.prefix;
+        let globalEnv = this.state.globalEnv;
+        let tables = this.calculate(globalEnv, newProg);
+        //console.log(tables);
         //console.log('next key: ', peekKey());
         this.setState((state) => {
-            return {tables: calkedProg,
-                    snapshots: [...state.snapshots, calkedProg]};
+            return {tables,
+                    snapshots: [...state.snapshots, {prefix, globalEnv, tables}]};
         });
     }
 
@@ -1542,10 +1564,10 @@ class App extends React.Component {
         return (
             <div>
               <DefinitionsArea
-                tables={this.state.tables}
-                programChange={this.programChange}
+                prefixChange={this.prefixChange}
               />
               <Succinct
+                globalEnv={this.state.globalEnv}
                 tables={this.state.tables}
                 programChange={this.programChange}
               />
