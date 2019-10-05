@@ -1614,6 +1614,11 @@ class App extends React.Component {
             fetch(url)
             .then(response => response.json())
             .then((snapshots) => {
+                      if (snapshots.every(snapshot => !('prefix' in snapshot) &&
+                                                      !('tables' in snapshot))) {
+                          // Try to upgrade old snapshot
+                          snapshots = snapshots.map(tables => ({prefix:'', tables}));
+                      }
                       const playbackTime = 0;
                       const prefix = snapshots[playbackTime].prefix;
                       const tables = snapshots[playbackTime].tables;
