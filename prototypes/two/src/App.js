@@ -47,6 +47,13 @@ function peekKey(lookahead = 0) {
 let unparse = unparse_cons;
 let listOrCons = 'cons';
 
+function unparse_to_string(prog) {
+    if (prog.yellow === 'yellow') {
+        return '';
+    }
+    return unparse(prog).join('');
+}
+
 /*****************
     Deep Equals
 *****************/
@@ -154,16 +161,6 @@ function deepEquals(proga, progb) {
     return proga.value === progb.value;
 }
 
-/****************************************
- * Thing That Sends Stuff Out To Server *
- ****************************************/
-
-// this isn't in document.onload or something but hopefully it works anyways
-// if a window.onload function is defined in this file, it doesn't seem to
-// get excecuted
-const sessionID = Math.floor(Math.random() * 1000000000);
-let tellBigBrother = makeSendifier(3000, sessionID);
-
 /*********************
    React Components
 *********************/
@@ -208,48 +205,50 @@ class ValidatedInput extends React.Component {
     constructor(props) {
         super(props);
         this.state = {text: ''};
-
         this.textChange = this.textChange.bind(this);
     }
 
     textChange(e) {
-        let text = e.target.value;
-
-        this.setState((state) => ({text}));
-
-        if (this.props.isValid(text)) {
-            this.props.onValid(text);
-        } else if (text === '' && !this.props.dummy) {
-            this.props.onEmpty();
+        if (this.props.text === undefined) {
+            const text = e.target.value;
+            this.setState({text});
+            if (this.props.isValid(text)) {
+                this.props.onValid(text);
+            } else if (text === '' && !this.props.dummy) {
+                this.props.onEmpty();
+            }
         }
     }
 
     render() {
+        const text = this.props.text === undefined ? this.state.text
+                   : this.props.text.yellow === 'yellow' ? ''
+                   : this.props.text;
         let className;
-        if (this.props.dummy && this.state.text === '') { // empty dummy
+        if (this.props.dummy && text === '') { // empty dummy
             className = 'dummy_input';
-        } else if (this.props.isValid(this.state.text)) { // valid
+        } else if (this.props.isValid(text)) { // valid
             className = 'valid_input';
-        } else if (this.state.text === '') { // empty non-dummy
+        } else if (text === '') { // empty non-dummy
             className = 'empty_input';
         } else { // invalid
             className = 'invalid_input';
         }
         
         let size;
-        if (this.state.text.length === 0)
+        if (text.length === 0)
             size = this.props.placeholder.length;
         else
-            size = Math.max(this.state.text.length + 2, 4);
+            size = Math.max(text.length + 2, 4);
 
         return (
             <input
+              type={'text'}
               className={className}
               size={size}
               placeholder={this.props.placeholder}
-              type={'text'}
-              value={this.state.text}
               onChange={this.textChange}
+              value={text}
             />
         );
     }
@@ -259,36 +258,38 @@ class ValidatedArea extends React.Component {
     constructor(props) {
         super(props);
         this.state = {text: ''};
-
         this.textChange = this.textChange.bind(this);
     }
 
     textChange(e) {
-        let text = e.target.value;
-
-        this.setState((state) => ({text}));
-
-        if (this.props.isValid(text)) {
-            this.props.onValid(text);
-        } else if (text === '' && !this.props.dummy) {
-            this.props.onEmpty();
+        if (this.props.text === undefined) {
+            const text = e.target.value;
+            this.setState({text});
+            if (this.props.isValid(text)) {
+                this.props.onValid(text);
+            } else if (text === '' && !this.props.dummy) {
+                this.props.onEmpty();
+            }
         }
     }
 
     render() {
+        const text = this.props.text === undefined ? this.state.text
+                   : this.props.text.yellow === 'yellow' ? ''
+                   : this.props.text;
         let className;
-        if (this.props.dummy && this.state.text === '') { // empty dummy
+        if (this.props.dummy && text === '') { // empty dummy
             className = 'dummy_input';
-        } else if (this.props.isValid(this.state.text)) { // valid
+        } else if (this.props.isValid(text)) { // valid
             className = 'valid_input';
-        } else if (this.state.text === '') { // empty non-dummy
+        } else if (text === '') { // empty non-dummy
             className = 'empty_input';
         } else { // invalid
             className = 'invalid_input';
         }
 
         let rows,
-            newlines = this.state.text.match(/\n/g);
+            newlines = text.match(/\n/g);
         if (newlines === null) {
             rows = 1;
         } else {
@@ -296,10 +297,10 @@ class ValidatedArea extends React.Component {
         }
 
         let cols;
-        if (this.state.text.length === 0)
+        if (text.length === 0)
             cols = this.props.placeholder.length;
         else
-            cols = Math.max(...this.state.text.split('\n').map((line) => line.length + 1), 4);
+            cols = Math.max(...text.split('\n').map((line) => line.length + 1), 4);
 
         return (
             <textarea
@@ -309,7 +310,7 @@ class ValidatedArea extends React.Component {
               placeholder={this.props.placeholder}
               onChange={this.textChange}
               spellCheck={false}
-              value={this.state.text}
+              value={text}
             />
         );
     }
@@ -380,6 +381,7 @@ function Succinct(props) {
               <ValidatedInput
                 dummy={false}
                 placeholder='Table Name'
+                text={props.disabled ? table.name : undefined}
                 isValid={(text) => validName(text, table)}
                 onValid={(text) => tableChange({...table,
                                                 name: text},
@@ -392,6 +394,7 @@ function Succinct(props) {
               <ValidatedInput
                 dummy={false}
                 placeholder='Signature'
+                text={props.disabled ? table.signature : undefined}
                 isValid={(text) => validSignature(text, table)}
                 onValid={(text) => tableChange({...table,
                                                 signature: text},
@@ -401,7 +404,7 @@ function Succinct(props) {
                                            table)}
               />
               <RemButton
-                onClick={() => remTable(table)}
+                onClick={props.disabled ? undefined : (() => remTable(table))}
                 title='Remove this table'
               />
             </div>
@@ -409,6 +412,7 @@ function Succinct(props) {
               <ValidatedInput
                 dummy={false}
                 placeholder='Purpose'
+                text={props.disabled ? table.purpose : undefined}
                 isValid={(text) => text !== ''}
                 onValid={(text) => tableChange({...table,
                                                 purpose: text},
@@ -419,6 +423,7 @@ function Succinct(props) {
               />
             </div>
             <SuccinctTab
+              disabled={props.disabled}
               globalEnv={props.globalEnv}
               table={table}
               tableNames={props.tables.map((table) => table.name)}
@@ -436,6 +441,7 @@ function Succinct(props) {
               <ValidatedInput
                 dummy={true}
                 placeholder='Table Name'
+                text={props.disabled ? '' : undefined}
                 isValid={(text) => validName(text, {params: []})}
                 onValid={(text) => tableChange({name: text,
                                                 signature: yellow,
@@ -450,6 +456,7 @@ function Succinct(props) {
               <ValidatedInput
                 dummy={true}
                 placeholder='Signature'
+                text={props.disabled ? '' : undefined}
                 isValid={(text) => text !== ''}
                 onValid={(text) => tableChange({name: yellow,
                                                 signature: text,
@@ -465,6 +472,7 @@ function Succinct(props) {
               <ValidatedInput
                 dummy={true}
                 placeholder='Purpose'
+                text={props.disabled ? '' : undefined}
                 isValid={(text) => text !== ''}
                 onValid={(text) => tableChange({name: yellow,
                                                 signature: yellow,
@@ -477,6 +485,7 @@ function Succinct(props) {
               />
             </div>
             <SuccinctTab
+              disabled={props.disabled}
               globalEnv={props.globalEnv}
               table={{name: yellow,
                       signature: yellow,
@@ -516,6 +525,7 @@ function SuccinctTab(props) {
     return (
         <table className={'grow'}>
           <SuccinctHead
+            disabled={props.disabled}
             globalEnv={props.globalEnv}
             params={props.table.params}
             examples={props.table.examples}
@@ -526,6 +536,7 @@ function SuccinctTab(props) {
             formulasChange={formulasChange}
           />
           <SuccinctBody
+            disabled={props.disabled}
             globalEnv={props.globalEnv}
             examples={props.table.examples}
             formulas={props.table.formulas}
@@ -616,6 +627,7 @@ function SuccinctHead(props) {
             <ValidatedArea
               placeholder={'Formula'}
               dummy={false}
+              text={props.disabled ? unparse_to_string(formula.prog) : undefined}
               isValid={validProg}
               onValid={(text) => formulaChange({...formula,
                                                 prog: parseCheck(text)},
@@ -626,7 +638,7 @@ function SuccinctHead(props) {
             />
             <RemButton
               title={'Remove this formula'}
-              onClick={() => remFormula(formula)}
+              onClick={props.disabled ? undefined : (() => remFormula(formula))}
             />
           </div>
         </th>
@@ -638,6 +650,7 @@ function SuccinctHead(props) {
             <ValidatedArea
               dummy={true}
               placeholder='Formula'
+              text={props.disabled ? '' : undefined}
               isValid={validProg}
               onValid={(text) => formulaChange({prog: parseCheck(text),
                                                 outputs: props.examples.map((_) => yellow),
@@ -653,6 +666,7 @@ function SuccinctHead(props) {
           <th colSpan={numParams + 2}>{/* empty cell to align with example RemButton and Parameters */}</th>
           {props.formulas.map((formula) => (
               <DepictFormula
+                disabled={props.disabled}
                 key={formula.key}
                 formula={formula}
                 depth={depth}
@@ -669,6 +683,7 @@ function SuccinctHead(props) {
         <thead>
           <tr>
             <Parameters
+              disabled={props.disabled}
               globalEnv={props.globalEnv}
               params={props.params}
               examples={props.examples}
@@ -742,6 +757,7 @@ function Parameters(props) {
             <ValidatedInput
               dummy={false}
               placeholder='Parameter'
+              text={props.disabled ? param.name : undefined}
               isValid={(text) => validParam(text, param)}
               onValid={(text) => paramChange({...param,
                                               name: text},
@@ -752,7 +768,7 @@ function Parameters(props) {
             />
             <RemButton
               title='Remove this parameter'
-              onClick={() => remParam(param)}
+              onClick={props.disabled ? undefined : (() => remParam(param))}
             />
           </div>
         </th>
@@ -764,6 +780,7 @@ function Parameters(props) {
             <ValidatedInput
               dummy={true}
               placeholder='Parameter'
+              text={props.disabled ? '' : undefined}
               isValid={(text) => validParam(text, {})}
               onValid={(text) => paramChange({name: text,
                                               key: takeKey()},
@@ -829,6 +846,7 @@ function DepictFormula(props) {
                <React.Fragment>
                  {props.formula.thenChildren.map((child) => (
                      <DepictFormula
+                       disabled={props.disabled}
                        key={child.key}
                        formula={child}
                        depth={props.depth - 1}
@@ -848,6 +866,7 @@ function DepictFormula(props) {
                     <ValidatedArea
                       dummy={false}
                       placeholder={'Formula'}
+                      text={props.disabled ? unparse_to_string(child.prog) : undefined}
                       isValid={validProg}
                       onValid={(text) => childChange({...child,
                                                       prog: parseCheck(text)},
@@ -858,7 +877,7 @@ function DepictFormula(props) {
                     />
                     <RemButton
                       title={'Remove this formula'}
-                      onClick={() => remChild(child)}
+                      onClick={props.disabled ? undefined : (() => remChild(child))}
                     />
                   </div>
                 </th>
@@ -870,6 +889,7 @@ function DepictFormula(props) {
                     <ValidatedArea
                       dummy={true}
                       placeholder='Formula'
+                      text={props.disabled ? '' : undefined}
                       isValid={validProg}
                       onValid={(text) => childChange({prog: parseCheck(text),
                                                       outputs: Array(props.numExamples).fill(yellow),
@@ -964,11 +984,12 @@ function SuccinctBody(props) {
           <tr key={example.key}>
             <td>
               <RemButton
-                onClick={() => remExample(example)}
+                onClick={props.disabled ? undefined : (() => remExample(example))}
                 title={'Remove this example'}
               />
             </td>
             <Inputs
+              disabled={props.disabled}
               globalEnv={props.globalEnv}
               dummy={false}
               inputs={example.inputs}
@@ -985,6 +1006,7 @@ function SuccinctBody(props) {
             />
             <td>{/* empty cell to align with top level formula dummy input */}</td>
             <Want
+              disabled={props.disabled}
               globalEnv={props.globalEnv}
               dummy={false}
               want={example.want}
@@ -998,6 +1020,7 @@ function SuccinctBody(props) {
           <tr key={peekKey(props.paramNames.length)}>
             <td>{/* empty cell to offset rembutton */}</td>
             <Inputs
+              disabled={props.disabled}
               globalEnv={props.globalEnv}
               dummy={true}
               inputs={props.paramNames.map((_, i) => ({key: peekKey(i)}))}
@@ -1014,6 +1037,7 @@ function SuccinctBody(props) {
             />
             <td>{/* empty cell to align with top level formula dummy input */}</td>
             <Want
+              disabled={props.disabled}
               globalEnv={props.globalEnv}
               dummy={true}
               wantChange={(want) => exampleChange({want,
@@ -1062,6 +1086,7 @@ function Inputs(props) {
                       <ValidatedArea
                         dummy={props.dummy}
                         placeholder={'Input'}
+                        text={props.disabled ? '' : undefined}
                         isValid={validProg}
                         onValid={(text) => inputChange({prog: parseCheck(text)},
                                                        input)}
@@ -1073,7 +1098,7 @@ function Inputs(props) {
             );
 
         } else {
-            if (input.prog !== yellow) {
+            if (input.prog.yellow !== 'yellow') {
                 try {
                     interp(input.prog, props.globalEnv);
                 } catch (e) {
@@ -1088,6 +1113,7 @@ function Inputs(props) {
                       <ValidatedArea
                         dummy={props.dummy}
                         placeholder={'Input'}
+                        text={props.disabled ? unparse_to_string(input.prog) : undefined}
                         isValid={validProg}
                         onValid={(text) => inputChange({...input,
                                                         prog: parseCheck(text)},
@@ -1176,7 +1202,7 @@ function TestCell(props) {
         );
     }
 
-    if (output === yellow) {
+    if (output.yellow === 'yellow') {
         return (
             <td className={'yellow'}>
             </td>
@@ -1194,7 +1220,7 @@ function TestCell(props) {
         want = yellow;
     }
 
-    if (want !== yellow && deepEquals(output, want)) {
+    if (want.yellow !== 'yellow' && deepEquals(output, want)) {
         return (
             <td className='output'>
               {unparse(output)}
@@ -1241,7 +1267,7 @@ function Want(props) {
     }
 
     let valueCell;
-    if (props.dummy || props.want === yellow) {
+    if (props.dummy || props.want.yellow === 'yellow') {
         valueCell = <script/>;
     } else {
         try {
@@ -1263,6 +1289,8 @@ function Want(props) {
               <ValidatedArea
                 dummy={props.dummy}
                 placeholder={'Want'}
+                text={props.disabled ? props.dummy ? '' : unparse_to_string(props.want)
+                                     : undefined}
                 isValid={validProg}
                 onValid={(text) => props.wantChange(parseCheck(text))}
                 onEmpty={() => props.wantChange(yellow)}
@@ -1277,10 +1305,7 @@ function Want(props) {
 class DefinitionsArea extends React.Component {
     constructor (props) {
         super(props);
-
-        let error = <div/>;
-        this.state = {error: error, globalEnv: initEnv};
-
+        this.state = {error: false};
         this.prefixChange = this.prefixChange.bind(this);
     }
 
@@ -1294,29 +1319,24 @@ class DefinitionsArea extends React.Component {
     }
 
     prefixChange (text) {
-        let error = <div/>;
-        let prefix = parsePrefix(text);
-        let globalEnv = this.state.globalEnv;
-        try {
-            globalEnv = interpPrefix(prefix, initEnv);
-        } catch (e) {
-            error = <ErrorMessage error={e}/>
-        }
-        this.setState((state) => ({error, globalEnv}));
-        this.props.prefixChange(prefix, globalEnv);
+        this.setState({error: this.props.prefixChange(text)});
     }
 
     render () {
+        const e = this.props.error === undefined
+                  ? this.state.error
+                  : this.props.error;
         return (
             <div className='flex_horiz'>
               <div className='flex_vert no_grow'>
                 <ValidatedArea
                   dummy={false}
                   placeholder='Definitions Area'
+                  text={this.props.text}
                   isValid={this.validPrefix}
                   onValid={this.prefixChange}
                 />
-                {this.state.error}
+                {e ? <ErrorMessage error={e}/> : []}
               </div>
               <div className='grow'>{/* div to prevent this stuff from growing across the screen */}</div>
             </div>
@@ -1364,7 +1384,7 @@ class BSLArea extends React.Component {
                   name='bsl_output'
                   onChange={this.toggleDisplay}
                 />
-                <label htmlFor='bsl_toggle'>Show BSL Output</label>
+                <label htmlFor='bsl_toggle'>Show Combined Program</label>
               </div>
               {bslArea}
             </div>
@@ -1384,7 +1404,8 @@ class BSLArea extends React.Component {
 class App extends React.Component {
     constructor(props){
         super(props);
-        let prefix = "";
+        let prefix = '';
+        let prefixError = false;
         let globalEnv = initEnv;
         let tables = [{examples: [{inputs: [{prog: yellow, key: takeKey()}], want: yellow, key: takeKey()}],
                        formulas: [{prog: yellow, outputs: [yellow], key: takeKey()}],
@@ -1393,12 +1414,25 @@ class App extends React.Component {
                        signature: yellow,
                        purpose: yellow,
                        key: takeKey()}];
-        let snapshots = [{prefix, globalEnv, tables}];
-        this.state = {prefix, globalEnv, tables, snapshots};
+        let snapshots = [{prefix, tables}];
+        this.state = {prefix, prefixError, globalEnv, tables,
+                      snapshots, playbackSessionID: "", playbackTime: 0};
 
-        this.programChange = this.programChange.bind(this);
         this.prefixChange = this.prefixChange.bind(this);
+        this.programChange = this.programChange.bind(this);
+        this.playbackSessionIDChange = this.playbackSessionIDChange.bind(this);
+        this.playbackTimeChange = this.playbackTimeChange.bind(this);
         this.render = this.render.bind(this);
+
+        /****************************************
+         * Thing That Sends Stuff Out To Server *
+         ****************************************/
+
+        // this isn't in document.onload or something but hopefully it works anyways
+        // if a window.onload function is defined in this file, it doesn't seem to
+        // get excecuted
+        const sessionID = Math.floor(Math.random() * 1000000000);
+        this.tellBigBrother = makeSendifier(3000, sessionID);
     }
 
     calculate(env, program) {
@@ -1415,7 +1449,7 @@ class App extends React.Component {
 
                     // I have no idea what should happen if this is called on a table with no params
                     if (example.inputs.every((input, i) => {
-                        if (input.prog === yellow) {
+                        if (input.prog.yellow === 'yellow') {
                             return false;
                         }
                         let bool;
@@ -1426,7 +1460,7 @@ class App extends React.Component {
                         }
                         return bool;
                     })) {
-                        if (example.want === yellow) {
+                        if (example.want.yellow === 'yellow') {
                             let e = new ReferenceError();
                             // shoehorn a non-string into the message field
                             e.message = <React.Fragment>({table.name}{args.flatMap(a => [' ',...unparse(a)])}) doesn't have a want</React.Fragment>;
@@ -1465,7 +1499,7 @@ class App extends React.Component {
                         return gray;
                     } if (example === pink) {
                         return pink;
-                    } else if (!example.inputs.every((input) => input.prog !== yellow) || formula.prog === yellow) {
+                    } else if (!example.inputs.every((input) => input.prog.yellow !== 'yellow') || formula.prog.yellow === 'yellow') {
                         // if any of the inputs or the formula isn't initialized, return yellow
                         return yellow;
                     }
@@ -1522,7 +1556,7 @@ class App extends React.Component {
                 }
             }
 
-            if (table.name === yellow || !table.params.every((param) => param.name !== yellow)) {
+            if (table.name.yellow === 'yellow' || !table.params.every((param) => param.name.yellow !== 'yellow')) {
                 // if the table or any of the table's parameters don't have a name yet, freeze outputs
                 return {...table}; 
             } else {
@@ -1536,37 +1570,95 @@ class App extends React.Component {
     }
 
     componentDidUpdate() {
-        // He's always watching...
-        tellBigBrother(JSON.stringify(this.state.snapshots));
+        if (this.state.playbackSessionID === '' && this.state.snapshots)
+            this.tellBigBrother(JSON.stringify(this.state.snapshots));
     }
 
-    prefixChange(prefix, globalEnv) {
-        let tables = this.calculate(globalEnv, this.state.tables);
-        this.setState((state) => {
-            return {prefix, globalEnv, tables,
-                    snapshots: [...state.snapshots, {prefix, globalEnv, tables}]};
-        });
+    prefixChange(prefix) {
+        let tables = this.state.tables;
+        let globalEnv;
+        try {
+            globalEnv = interpPrefix(parsePrefix(prefix), initEnv);
+        } catch (prefixError) {
+            this.setState((state) => ({
+                prefix, prefixError,
+                snapshots: state.playbackSessionID === '' && state.snapshots
+                           ? [...state.snapshots, {prefix, tables}]
+                           : state.snapshots}));
+            return prefixError;
+        }
+        tables = this.calculate(globalEnv, tables);
+        this.setState((state) => ({
+            prefix, prefixError: false, globalEnv, tables,
+            snapshots: state.playbackSessionID === '' && state.snapshots
+                       ? [...state.snapshots, {prefix, tables}]
+                       : state.snapshots}));
+        return false;
     }
 
     programChange(newProg) {
         let prefix = this.state.prefix;
-        let globalEnv = this.state.globalEnv;
-        let tables = this.calculate(globalEnv, newProg);
-        //console.log(tables);
-        //console.log('next key: ', peekKey());
-        this.setState((state) => {
-            return {tables,
-                    snapshots: [...state.snapshots, {prefix, globalEnv, tables}]};
-        });
+        let tables = this.calculate(this.state.globalEnv, newProg);
+        this.setState((state) => ({
+            tables,
+            snapshots: state.playbackSessionID === '' && state.snapshots
+                       ? [...state.snapshots, {prefix, tables}]
+                       : state.snapshots}));
+    }
+
+    playbackSessionIDChange(event) {
+        const playbackSessionID = event.target.value;
+        this.setState({playbackSessionID, playbackTime: 0, snapshots: false});
+        if (playbackSessionID.length > 0) {
+            const url = "http://107.170.76.216:8000/log/session" + playbackSessionID.trim();
+            fetch(url)
+            .then(response => response.json())
+            .then((snapshots) => {
+                      const playbackTime = 0;
+                      const prefix = snapshots[playbackTime].prefix;
+                      const tables = snapshots[playbackTime].tables;
+                      this.setState({playbackSessionID, playbackTime, snapshots,
+                                     prefix, prefixError: false,
+                                     globalEnv: initEnv, tables});
+                  }); // TODO: indicate request and error by yellow and pink
+        }
+    }
+
+    playbackTimeChange(event) {
+        const snapshots = this.state.snapshots;
+        if (this.state.playbackSessionID.length > 0 && snapshots) {
+            const playbackTime = Math.max(0,
+                                 Math.min(snapshots.length-1,
+                                 Math.floor(event.target.value)));
+            const prefix = snapshots[playbackTime].prefix;
+            let globalEnv, prefixError = false;
+            for (let t = playbackTime; t >= 0; t--) {
+                try {
+                    globalEnv = interpPrefix(parsePrefix(snapshots[t].prefix), initEnv);
+                    break;
+                } catch (e) {
+                    globalEnv = initEnv;
+                    if (!prefixError) {
+                        prefixError = e;
+                    }
+                }
+            }
+            const tables = this.calculate(globalEnv, snapshots[playbackTime].tables);
+            this.setState({playbackTime, prefix, prefixError, globalEnv, tables});
+        }
     }
 
     render(){
+        const disabled = !(this.state.playbackSessionID === '' && this.state.snapshots);
         return (
             <div>
               <DefinitionsArea
+                text={disabled ? this.state.prefix : undefined}
+                error={disabled ? this.state.prefixError : undefined}
                 prefixChange={this.prefixChange}
               />
               <Succinct
+                disabled={disabled}
                 globalEnv={this.state.globalEnv}
                 tables={this.state.tables}
                 programChange={this.programChange}
@@ -1593,6 +1685,23 @@ class App extends React.Component {
               <BSLArea
                 tables={this.state.tables}
               />
+              <div className='flex_horiz'>
+                <input
+                  className='no_grow'
+                  type='text'
+                  placeholder='Playback Session ID'
+                  value={this.state.playbackSessionID}
+                  onChange={this.playbackSessionIDChange}/>
+                {this.state.playbackSessionID.length > 0 && this.state.snapshots ?
+                 <input
+                   className='grow'
+                   type='range'
+                   min='0'
+                   max={this.state.snapshots.length-1}
+                   value={this.state.playbackTime}
+                   onChange={this.playbackTimeChange}/>
+                 : []}
+              </div>
             </div>
         );
     }
