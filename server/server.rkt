@@ -37,7 +37,11 @@
 
 (define (list-logs req)
   (define l (directory-list log-dir))
-  (response/json (map path->string l)))
+  (response/json 
+   (for/hash ([p (in-list l)])
+	     (values
+	      (string->symbol (path->string p))
+	      (hash 'time (file-or-directory-modify-seconds (build-path log-dir p)))))))
 
 (define (get req id)
   (log-error "id is: ~s" id)
