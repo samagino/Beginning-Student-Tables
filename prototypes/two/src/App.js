@@ -4,7 +4,7 @@ import {interp, parseCheck, parsePrefix, interpPrefix, unparse_cons, unparse_lis
 import {gray, pink, yellow, allBools, isBooleanFormula} from './header.js';
 import {paint, width, height, makeRectangle, makeOverlay} from './image.js';
 import toBSL from './prettyprint.js';
-import makeSendifier from './sendifier.js';
+import {sessionURL, Sendifier} from './sendifier.js';
 import Octicon, {Trashcan, Alert, Check} from '@primer/octicons-react';
 import './App.css';
 
@@ -1402,7 +1402,7 @@ class BSLArea extends React.Component {
   ---------------------
 */
 class App extends React.Component {
-    constructor(props){
+    constructor(props) {
         super(props);
         let prefix = '';
         let prefixError = false;
@@ -1414,25 +1414,66 @@ class App extends React.Component {
                        signature: yellow,
                        purpose: yellow,
                        key: takeKey()}];
-        let snapshots = [{prefix, tables}];
-        this.state = {prefix, prefixError, globalEnv, tables,
-                      snapshots, playbackSessionID: "", playbackTime: 0};
+        if (props.snapshots && props.snapshots.length > 0) {
+            prefix = props.snapshots[0].prefix;
+            try {
+                globalEnv = interpPrefix(parsePrefix(prefix), initEnv);
+            } catch (e) {
+                prefixError = e;
+            }
+            tables = this.calculate(globalEnv, props.snapshots[0].tables);
+        }
+        this.state = {
+            prefix, prefixError, globalEnv, tables,
+            playbackTime: (props.snapshots ? 0 : undefined),
+            snapshots: (props.snapshots ? undefined : [{prefix, tables}])
+        };
 
         this.prefixChange = this.prefixChange.bind(this);
         this.programChange = this.programChange.bind(this);
-        this.playbackSessionIDChange = this.playbackSessionIDChange.bind(this);
         this.playbackTimeChange = this.playbackTimeChange.bind(this);
         this.render = this.render.bind(this);
 
+        // The following line mitigates the problem that sometimes toRGBAArray returns
+        // all-zeros.  Probably it doesn't completely fix #12.
+        document.createElement('img');
+    }
+
+    componentDidMount() {
         /****************************************
          * Thing That Sends Stuff Out To Server *
          ****************************************/
+        this.sendifier = new Sendifier(3000, Math.floor(Math.random() * 1000000000));
+    }
 
-        // this isn't in document.onload or something but hopefully it works anyways
-        // if a window.onload function is defined in this file, it doesn't seem to
-        // get excecuted
-        const sessionID = Math.floor(Math.random() * 1000000000);
-        this.tellBigBrother = makeSendifier(3000, sessionID);
+    componentDidUpdate(prevProps) {
+        if (this.props.snapshots &&
+            this.props.snapshots !== prevProps.snapshots &&
+            this.props.snapshots.length > 0) {
+            let prefix = this.props.snapshots[0].prefix;
+            let prefixError = false;
+            let globalEnv = initEnv;
+            try {
+                globalEnv = interpPrefix(parsePrefix(prefix), initEnv);
+            } catch (e) {
+                prefixError = e;
+            }
+            let tables = this.calculate(globalEnv, this.props.snapshots[0].tables);
+            this.setState({
+                prefix, prefixError, globalEnv, tables,
+                playbackTime: 0, snapshots: undefined
+            });
+        }
+        if (this.sendifier && !this.props.snapshots) {
+            this.sendifier.setItem(this.state.snapshots);
+        }
+    }
+
+    componentWillUnmount() {
+        if (this.sendifier) {
+            this.sendifier.clear();
+            delete this.sendifier;
+        }
     }
 
     calculate(env, program) {
@@ -1569,20 +1610,15 @@ class App extends React.Component {
         return program.map(calcTable);
     }
 
-    componentDidUpdate() {
-        if (this.state.playbackSessionID === '' && this.state.snapshots)
-            this.tellBigBrother(JSON.stringify(this.state.snapshots));
-    }
-
     prefixChange(prefix) {
         let tables = this.state.tables;
         let globalEnv;
         try {
             globalEnv = interpPrefix(parsePrefix(prefix), initEnv);
         } catch (prefixError) {
-            this.setState((state) => ({
+            this.setState(state => ({
                 prefix, prefixError,
-                snapshots: state.playbackSessionID === '' && state.snapshots
+                snapshots: !this.props.snapshots && state.snapshots
                            ? [...state.snapshots, {prefix, tables}]
                            : state.snapshots}));
             return prefixError;
@@ -1590,48 +1626,28 @@ class App extends React.Component {
         tables = this.calculate(globalEnv, tables);
         this.setState((state) => ({
             prefix, prefixError: false, globalEnv, tables,
-            snapshots: state.playbackSessionID === '' && state.snapshots
+            snapshots: !this.props.snapshots && state.snapshots
                        ? [...state.snapshots, {prefix, tables}]
                        : state.snapshots}));
         return false;
     }
 
     programChange(newProg) {
-        let prefix = this.state.prefix;
-        let tables = this.calculate(this.state.globalEnv, newProg);
-        this.setState((state) => ({
-            tables,
-            snapshots: state.playbackSessionID === '' && state.snapshots
-                       ? [...state.snapshots, {prefix, tables}]
-                       : state.snapshots}));
-    }
-
-    playbackSessionIDChange(event) {
-        const playbackSessionID = event.target.value;
-        this.setState({playbackSessionID, playbackTime: 0, snapshots: false});
-        if (playbackSessionID.length > 0) {
-            const url = "http://107.170.76.216:8000/log/session" + playbackSessionID.trim();
-            fetch(url)
-            .then(response => response.json())
-            .then((snapshots) => {
-                      if (snapshots.every(snapshot => !('prefix' in snapshot) &&
-                                                      !('tables' in snapshot))) {
-                          // Try to upgrade old snapshot
-                          snapshots = snapshots.map(tables => ({prefix:'', tables}));
-                      }
-                      const playbackTime = 0;
-                      const prefix = snapshots[playbackTime].prefix;
-                      const tables = snapshots[playbackTime].tables;
-                      this.setState({playbackSessionID, playbackTime, snapshots,
-                                     prefix, prefixError: false,
-                                     globalEnv: initEnv, tables});
-                  }); // TODO: indicate request and error by yellow and pink
-        }
+        this.setState(state => {
+            let prefix = state.prefix;
+            let tables = this.calculate(state.globalEnv, newProg);
+            return {
+                tables,
+                snapshots: !this.props.snapshots && state.snapshots
+                           ? [...state.snapshots, {prefix, tables}]
+                           : state.snapshots
+            }
+        });
     }
 
     playbackTimeChange(event) {
-        const snapshots = this.state.snapshots;
-        if (this.state.playbackSessionID.length > 0 && snapshots) {
+        const snapshots = this.props.snapshots;
+        if (snapshots) {
             const playbackTime = Math.max(0,
                                  Math.min(snapshots.length-1,
                                  Math.floor(event.target.value)));
@@ -1654,9 +1670,12 @@ class App extends React.Component {
     }
 
     render(){
-        const disabled = !(this.state.playbackSessionID === '' && this.state.snapshots);
+        const disabled = !!this.props.snapshots;
         return (
             <div>
+              {this.state.snapshots
+                  ? <p>Sessions may be recorded to ensure quality service.</p>
+                  : []}
               <DefinitionsArea
                 text={disabled ? this.state.prefix : undefined}
                 error={disabled ? this.state.prefixError : undefined}
@@ -1691,18 +1710,12 @@ class App extends React.Component {
                 tables={this.state.tables}
               />
               <div className='flex_horiz'>
-                <input
-                  className='no_grow'
-                  type='text'
-                  placeholder='Playback Session ID'
-                  value={this.state.playbackSessionID}
-                  onChange={this.playbackSessionIDChange}/>
-                {this.state.playbackSessionID.length > 0 && this.state.snapshots ?
+                {this.props.snapshots ?
                  <input
                    className='grow'
                    type='range'
                    min='0'
-                   max={this.state.snapshots.length-1}
+                   max={this.props.snapshots.length-1}
                    value={this.state.playbackTime}
                    onChange={this.playbackTimeChange}/>
                  : []}
@@ -1712,8 +1725,46 @@ class App extends React.Component {
     }
 }
 
-export default App;
+class FetchRecordings extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = {snapshots: false};
+    }
 
-// The following line mitigates the problem that sometimes toRGBAArray returns
-// all-zeros.  Probably it doesn't completely fix #12.
-document.createElement('img');
+    componentDidMount() {
+        this.playbackSessionIDChange();
+    }
+
+    componentDidUpdate(prevProps) {
+        if (this.props.match.params.id !== prevProps.match.params.id)
+            this.playbackSessionIDChange();
+    }
+
+    playbackSessionIDChange() {
+        const playbackSessionID = this.props.match.params.id;
+        this.setState({snapshots: false});
+        if (playbackSessionID.length > 0) {
+            const url = sessionURL(playbackSessionID);
+            fetch(url)
+            .then(response => response.json())
+            .then(snapshots => {
+                      if (snapshots.every(snapshot => !('prefix' in snapshot) &&
+                                                      !('tables' in snapshot))) {
+                          // Try to upgrade old snapshot
+                          snapshots = snapshots.map(tables => ({prefix:'', tables}));
+                      }
+                      this.setState({snapshots});
+                  }); // TODO: indicate request and error by yellow and pink
+        }
+    }
+
+    render() {
+        return (this.state.snapshots
+            ? <App snapshots={this.state.snapshots}/>
+            : <p>
+                Loading session {this.props.match.params.id} for playback
+              </p>);
+    }
+}
+
+export { App, FetchRecordings };

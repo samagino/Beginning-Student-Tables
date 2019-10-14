@@ -1,35 +1,48 @@
-// Number String -> (String -> Side Effect)
-function makeSendifier (delay, sessionID) {
-    const url = "http://107.170.76.216:8000/log/session" + sessionID;
-    let item = false;
+function sessionURL(sessionID) {
+    return ("http://107.170.76.216:8000/log/session" + sessionID);
+}
 
-    function setItem (news) {
-        item = news;
+class Sendifier {
+    constructor(delay, sessionID) {
+        this.delay = delay;
+        this.url = sessionURL(sessionID);
+        this.item = false;
+        this.sendItem = this.sendItem.bind(this);
+        this.sendItem();
     }
 
-    function sendItem () {
-        if (item) {
-            const sent = item;
-            fetch(url, { method: 'POST', // or 'PUT'
-                         body: sent, // data can be `string` or {object}!
-                         mode: 'no-cors',
-                         headers: { 'Content-Type': 'application/json' } })
-            .then(function () {
-                      setTimeout(sendItem, delay);
+    sendItem() {
+        this.clear();
+        if (this.item) {
+            const sent = this.item;
+            fetch(this.url, {
+                method: 'POST', // or 'PUT'
+                body: JSON.stringify(sent), // data can be `string` or {object}!
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' }})
+            .then(() => {
+                      this.timerID = setTimeout(this.sendItem, this.delay);
                   },
-                  function () {
-                      if (!item) item = sent;
-                      setTimeout(sendItem, delay);
+                  () => {
+                      if (!this.item) this.item = sent;
+                      this.timerID = setTimeout(this.sendItem, this.delay);
                   });
-            item = false;
+            this.item = false;
         } else {
-            setTimeout(sendItem, delay);
+            this.timerID = setTimeout(this.sendItem, this.delay);
         }
     }
 
-    sendItem();
+    setItem(news) {
+        this.item = news;
+    }
 
-    return setItem;
+    clear() {
+        if (this.timerID) {
+            clearTimeout(this.timerID);
+            delete this.timerID;
+        }
+    }
 }
 
-export default makeSendifier;
+export { sessionURL, Sendifier };
