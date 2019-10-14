@@ -41,7 +41,9 @@
    (for/hash ([p (in-list l)])
 	     (values
 	      (string->symbol (path->string p))
-	      (hash 'time (file-or-directory-modify-seconds (build-path log-dir p)))))))
+	      (hash 
+	       'size (file-size (build-path log-dir p))
+	       'time (file-or-directory-modify-seconds (build-path log-dir p)))))))
 
 (define (get req id)
   (log-error "id is: ~s" id)
