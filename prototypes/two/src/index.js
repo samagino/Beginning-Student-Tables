@@ -7,9 +7,9 @@ import * as serviceWorker from './serviceWorker';
 
 ReactDOM.render(
     <BrowserRouter>
-        <Route path="/" exact={true} component={App}/>
-        <Route path="/list" exact={true} component={ListRecordings}/>
-        <Route path="/session:id" component={FetchRecordings}/>
+        <Route path="/(Beginning-Student-Tables)?/" exact={true} component={App}/>
+        <Route path="/(Beginning-Student-Tables)?/list" exact={true} component={ListRecordings}/>
+        <Route path="/(Beginning-Student-Tables)?/session:id" component={FetchRecordings}/>
     </BrowserRouter>, document.getElementById('root'));
 
 // If you want your app to work offline and load faster, you can change

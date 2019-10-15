@@ -1747,7 +1747,7 @@ class ListRecordings extends React.Component {
     render() {
         const alignRight = {'text-align': 'right'};
         const columns = [{
-            Cell: props => <Link to={"/session"+props.value}>{props.value}</Link>,
+            Cell: props => <Link to={"session"+props.value}>{props.value}</Link>,
             Header: 'Session ID',
             accessor: 'id',
             maxWidth: 150
