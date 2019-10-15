@@ -35,6 +35,10 @@
          (response/make "it worked!")]
         [(response/404)]))
 
+(define headers
+  (list (make-header #"Access-Control-Allow-Origin" #"*")
+        #;(make-header #"Cache-Control" #"no-cache")))
+
 (define (list-logs req)
   (define l (directory-list log-dir))
   (response/json 
@@ -43,7 +47,8 @@
 	      (string->symbol (path->string p))
 	      (hash 
 	       'size (file-size (build-path log-dir p))
-	       'time (file-or-directory-modify-seconds (build-path log-dir p)))))))
+	       'time (file-or-directory-modify-seconds (build-path log-dir p)))))
+   #:headers headers))
 
 (define (get req id)
   (log-error "id is: ~s" id)
@@ -51,7 +56,7 @@
          (define f (build-path log-dir id))
 	 (if (file-exists? f)
 	     (response/file f #"text/plain" 
-			    #:headers (list (make-header #"Access-Control-Allow-Origin" #"*")))
+			    #:headers headers)
 	     (response/404))]
         [else
          (response/404)]))
