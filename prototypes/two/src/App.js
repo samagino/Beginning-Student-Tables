@@ -1,5 +1,8 @@
 import React from 'react';
 import ReactDOMServer from 'react-dom/server';
+import ReactTable from 'react-table';
+import 'react-table/react-table.css';
+import TimeAgo from 'react-timeago';
 import {Link} from 'react-router-dom';
 import {interp, parseCheck, parsePrefix, interpPrefix, unparse_cons, unparse_list, initEnv, isRAPP, RFUNCT_T, isRLIST, isRIMAGE, isRBOOL, isRSTRUCT} from './interpreter.js';
 import {gray, pink, yellow, allBools, isBooleanFormula} from './header.js';
@@ -1742,24 +1745,41 @@ class ListRecordings extends React.Component {
     }
 
     render() {
-        return (
-            <table>
-                <tr>
-                    <th className="recordingSessionID">Session ID</th>
-                    <th className="recordingTime">Time</th>
-                    <th className="recordingSize">Size</th>
-                </tr>
-                {this.state.recordings
-                    ? this.state.recordings.map(({id, time, size}) =>
-                        <tr>
-                            <td className="recordingSessionID"><Link to={"/session"+id}>{id}</Link></td>
-                            <td className="recordingTime">{time}</td>
-                            <td className="recordingSize">{size}</td>
-                        </tr>)
-                    : <td colspan={3}>Loading list of recordings</td>
-                }
-            </table>
-        );
+        const alignRight = {'text-align': 'right'};
+        const columns = [{
+            Cell: props => <Link to={"/session"+props.value}>{props.value}</Link>,
+            Header: 'Session ID',
+            accessor: 'id',
+            maxWidth: 150
+        }, {
+            Cell: props => {
+                const date = new Date(1000*props.value);
+                const abs = date.toLocaleString(undefined, {dateStyle: 'medium', timeStyle: 'medium'});
+                return <div className="date">
+                    <span>{abs}</span>
+                    <TimeAgo date={date}/>
+                </div>;
+            },
+            defaultSortDesc: true,
+            Header: 'Last recording time',
+            accessor: 'time',
+            maxWidth: 350
+        }, {
+            defaultSortDesc: true,
+            Header: 'Size (bytes)',
+            accessor: 'size',
+            headerStyle: alignRight,
+            style: alignRight,
+            maxWidth: 150
+        }];
+
+        return (this.state.recordings
+                ? <ReactTable
+                    data={this.state.recordings}
+                    columns={columns}
+                    defaultSorted={[{id: 'time', desc: true}]}
+                  />
+                : <p>Loading list of recordings</p>);
     }
 }
 
