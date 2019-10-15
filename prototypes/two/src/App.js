@@ -1,5 +1,6 @@
 import React from 'react';
 import ReactDOMServer from 'react-dom/server';
+import {Link} from 'react-router-dom';
 import {interp, parseCheck, parsePrefix, interpPrefix, unparse_cons, unparse_list, initEnv, isRAPP, RFUNCT_T, isRLIST, isRIMAGE, isRBOOL, isRSTRUCT} from './interpreter.js';
 import {gray, pink, yellow, allBools, isBooleanFormula} from './header.js';
 import {paint, width, height, makeRectangle, makeOverlay} from './image.js';
@@ -1725,6 +1726,43 @@ class App extends React.Component {
     }
 }
 
+class ListRecordings extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = {recordings: false};
+    }
+
+    componentDidMount() {
+        fetch('http://107.170.76.216:8000/list')
+        .then(response => response.json())
+        .then(o => { this.setState({ recordings:
+            Object.entries(o).flatMap(([name, info]) =>
+            name.startsWith('session') ? [{id: name.slice(7), ...info}] : []) }) });
+        // TODO: indicate request and error by yellow and pink
+    }
+
+    render() {
+        return (
+            <table>
+                <tr>
+                    <th className="recordingSessionID">Session ID</th>
+                    <th className="recordingTime">Time</th>
+                    <th className="recordingSize">Size</th>
+                </tr>
+                {this.state.recordings
+                    ? this.state.recordings.map(({id, time, size}) =>
+                        <tr>
+                            <td className="recordingSessionID"><Link to={"/session"+id}>{id}</Link></td>
+                            <td className="recordingTime">{time}</td>
+                            <td className="recordingSize">{size}</td>
+                        </tr>)
+                    : <td colspan={3}>Loading list of recordings</td>
+                }
+            </table>
+        );
+    }
+}
+
 class FetchRecordings extends React.Component {
     constructor(props) {
         super(props);
@@ -1767,4 +1805,4 @@ class FetchRecordings extends React.Component {
     }
 }
 
-export { App, FetchRecordings };
+export { App, FetchRecordings, ListRecordings };

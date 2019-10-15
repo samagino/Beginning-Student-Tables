@@ -136,3 +136,7 @@ th, td{
     margin-top: 16px;
     margin-bottom: 16px;
 }
+
+.recordingSessionID, .recordingTime, .recordingSize {
+    text-align: right;
+}
