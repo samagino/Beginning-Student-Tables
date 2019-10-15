@@ -20,7 +20,7 @@ import './App.css';
 const dryRun = {yo: 'don\'t actually change anything'};
 // this one's different because it has a $ at the end so it tests
 // the string until the end
-const varRE = /^[^\s",'`()[\]{}|;#]+$/; // except numbers
+const nameRE = /^(?!-?(?:\d+(?:\.\d*)?|\.\d+)(?=$|[\s",'`()[\]{}|;#]))[^\s",'`()[\]{}|;#]+$/;
 
 
 /*********************
@@ -359,7 +359,7 @@ function Succinct(props) {
         let paramVars = modTab.params.map((param) => ({name: param, binding: null}));
         let env = [...props.globalEnv, ...tableVars, ...paramVars];
 
-        return varRE.test(text) && !inEnv(text, env);
+        return nameRE.test(text) && !inEnv(text, env);
     }
 
     // TODO make more sophisticated parser that can handle functions as parameters in signature
@@ -721,7 +721,7 @@ function Parameters(props) {
         let tableVars = props.tableNames.map((name) => ({name: name, binding: null}));
         let env = [...props.globalEnv, ...tableVars, ...paramVars];
 
-        return varRE.test(text) && !inEnv(text, env);
+        return nameRE.test(text) && !inEnv(text, env);
     }
 
     function remParam(deadParam) {
