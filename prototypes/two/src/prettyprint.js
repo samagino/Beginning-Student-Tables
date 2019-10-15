@@ -463,7 +463,7 @@ function toBSL(tables, listOrCons, width, ribbon) {
 
     // Field (yellow or string or program) -> Doc
     function fieldToDoc(input) {
-        if (input === yellow) {                 // empty
+        if (input.yellow === 'yellow') {                 // empty
             return text('...');
         } else if (typeof input === 'string') { // name
             return text(input);
