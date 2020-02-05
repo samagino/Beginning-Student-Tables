@@ -1,17 +1,25 @@
 {
   "files": {
     "main.css": "/Beginning-Student-Tables/static/css/main.47aeab0f.chunk.css",
-    "main.js": "/Beginning-Student-Tables/static/js/main.80fbc59d.chunk.js",
-    "main.js.map": "/Beginning-Student-Tables/static/js/main.80fbc59d.chunk.js.map",
-    "runtime~main.js": "/Beginning-Student-Tables/static/js/runtime~main.badfee33.js",
-    "runtime~main.js.map": "/Beginning-Student-Tables/static/js/runtime~main.badfee33.js.map",
+    "main.js": "/Beginning-Student-Tables/static/js/main.ff2c1b99.chunk.js",
+    "main.js.map": "/Beginning-Student-Tables/static/js/main.ff2c1b99.chunk.js.map",
+    "runtime-main.js": "/Beginning-Student-Tables/static/js/runtime-main.92ef36ab.js",
+    "runtime-main.js.map": "/Beginning-Student-Tables/static/js/runtime-main.92ef36ab.js.map",
     "static/css/2.11f871ab.chunk.css": "/Beginning-Student-Tables/static/css/2.11f871ab.chunk.css",
-    "static/js/2.5557fb60.chunk.js": "/Beginning-Student-Tables/static/js/2.5557fb60.chunk.js",
-    "static/js/2.5557fb60.chunk.js.map": "/Beginning-Student-Tables/static/js/2.5557fb60.chunk.js.map",
+    "static/js/2.d5ecec47.chunk.js": "/Beginning-Student-Tables/static/js/2.d5ecec47.chunk.js",
+    "static/js/2.d5ecec47.chunk.js.map": "/Beginning-Student-Tables/static/js/2.d5ecec47.chunk.js.map",
     "index.html": "/Beginning-Student-Tables/index.html",
-    "precache-manifest.15da1a42c36aaa2306bd25d061f3ca98.js": "/Beginning-Student-Tables/precache-manifest.15da1a42c36aaa2306bd25d061f3ca98.js",
+    "precache-manifest.dba7c558b23e7b9f6723f30096c01a50.js": "/Beginning-Student-Tables/precache-manifest.dba7c558b23e7b9f6723f30096c01a50.js",
     "service-worker.js": "/Beginning-Student-Tables/service-worker.js",
     "static/css/2.11f871ab.chunk.css.map": "/Beginning-Student-Tables/static/css/2.11f871ab.chunk.css.map",
-    "static/css/main.47aeab0f.chunk.css.map": "/Beginning-Student-Tables/static/css/main.47aeab0f.chunk.css.map"
-  }
+    "static/css/main.47aeab0f.chunk.css.map": "/Beginning-Student-Tables/static/css/main.47aeab0f.chunk.css.map",
+    "static/js/2.d5ecec47.chunk.js.LICENSE.txt": "/Beginning-Student-Tables/static/js/2.d5ecec47.chunk.js.LICENSE.txt"
+  },
+  "entrypoints": [
+    "static/js/runtime-main.92ef36ab.js",
+    "static/css/2.11f871ab.chunk.css",
+    "static/js/2.d5ecec47.chunk.js",
+    "static/css/main.47aeab0f.chunk.css",
+    "static/js/main.ff2c1b99.chunk.js"
+  ]
 }
