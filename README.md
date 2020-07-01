@@ -28,9 +28,9 @@ note: the version of the Table Method Thing at this link may be several commits 
    cd path/to/repo/prototypes/two
    ```
 
-4. using npm, install react-scripts
+4. using npm, install dependencies
    ```
-   npm install react-scripts
+   npm install
    ```
 
 5. run ```npm start``` to start a development server
