@@ -1736,7 +1736,7 @@ class ListRecordings extends React.Component {
     }
 
     componentDidMount() {
-        fetch('http://107.170.76.216:8000/list')
+        fetch(`${process.env.PUBLIC_URL}/list`)
         .then(response => response.json())
         .then(o => { this.setState({ recordings:
             Object.entries(o).flatMap(([name, info]) =>
@@ -1747,7 +1747,7 @@ class ListRecordings extends React.Component {
     render() {
         const alignRight = {'text-align': 'right'};
         const columns = [{
-            Cell: props => <Link to={"session"+props.value}>{props.value}</Link>,
+            Cell: props => <Link to={`${process.env.PUBLIC_URL}/session${props.value}/`}>{props.value}</Link>,
             Header: 'Session ID',
             accessor: 'id',
             maxWidth: 150

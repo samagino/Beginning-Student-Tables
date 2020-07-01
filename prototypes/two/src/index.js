@@ -8,7 +8,7 @@ import * as serviceWorker from './serviceWorker';
 ReactDOM.render(
     <BrowserRouter>
         <Route path="/(Beginning-Student-Tables)?/" exact={true} component={App}/>
-        <Route path="/(Beginning-Student-Tables)?/list" exact={true} component={ListRecordings}/>
+        <Route path="/(Beginning-Student-Tables)?/recordings" exact={true} component={ListRecordings}/>
         <Route path="/(Beginning-Student-Tables)?/session:id" component={FetchRecordings}/>
     </BrowserRouter>, document.getElementById('root'));
 

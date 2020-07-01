@@ -1,5 +1,5 @@
 function sessionURL(sessionID) {
-    return ("http://107.170.76.216:8000/log/session" + sessionID);
+    return `${process.env.PUBLIC_URL}/log/session${sessionID}`;
 }
 
 class Sendifier {

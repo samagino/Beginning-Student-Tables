@@ -5,7 +5,7 @@ It's like the Recursive Argument Method except not at all
 
 ## How to use
 ### easy way
-click me: https://samagino.github.io/Beginning-Student-Tables/
+click me: http://cedar.sice.indiana.edu:35888/Beginning-Student-Tables/
 
 note: the version of the Table Method Thing at this link may be several commits behind
 ### slightly less easy way that lets you play around with the code more
@@ -45,20 +45,14 @@ If this doesn't make sense, the README in ```prototypes/two``` contains more inf
    cd path/to/repo/prototypes/two
    ```
 
-2. using npm, install ```gh-pages```
+2. using npm, run ```build```
    ```
-   npm install gh-pages
+   npm run build
    ```
 
-3. run 
+3. run server in server directory using racket
    ```
-   npm run deploy
+   cd ../../server
+   mkdir -p logs
+   racket server.rkt
    ``` 
-   This command compiles the project and pushes the compiled version
-   to gh-pages
-   
-
-I followed the instructions at
-https://create-react-app.dev/docs/deployment#github-pages-https-pagesgithubcom
-to set up the gh-pages branch, so if something doesn't work that site
-might help you out
