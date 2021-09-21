@@ -46,6 +46,10 @@ const protoEnv = [
                           value: times}},
     {name: '/', binding: {type: RFUNCT_T,
                           value: divide}},
+    {name: 'sqr', binding: {type: RFUNCT_T,
+                          value: sqr}},
+    {name: 'sqrt', binding: {type: RFUNCT_T,
+                             value: sqrt}},
     {name: 'car', binding: {type: RFUNCT_T,
                             value: car}},
     {name: 'first', binding: {type: RFUNCT_T,
@@ -86,6 +90,8 @@ const protoEnv = [
                            value: stringLength}},
     {name: 'string-append', binding: {type: RFUNCT_T,
                            value: stringAppend}},
+    {name: 'substring', binding: { type: RFUNCT_T,
+				   value: substring}},
     {name: 'string=?', binding: {type: RFUNCT_T,
                                  value: isstrequal}},
     {name: 'circle', binding: {type: RFUNCT_T,
@@ -808,6 +814,30 @@ function add1(args) {
     return {value: args[0].value + 1,
             type: RNUM_T};
 }
+
+function sqr(args) {
+    if (args.length !== 1) {
+        throw new Error('arity mismatch');
+    }
+
+    typeCheck(args[0], [RNUM_T]);
+
+    return {value: args[0].value * args[0].value,
+            type: RNUM_T};
+}
+
+function sqrt(args) {
+    if (args.length !== 1) {
+        throw new Error('arity mismatch');
+    }
+
+    typeCheck(args[0], [RNUM_T]);
+
+    return {value: Math.sqrt(args[0].value),
+            type: RNUM_T};
+}
+
+
 function minus(args) {
     if (args.length < 1) {
         throw new Error('arity mismatch');
@@ -1093,6 +1123,25 @@ function stringLength(args) {
     return {value: firstArg.value.length,
             type: RNUM_T};
 }
+
+function substring(args) {
+    if (args.length !== 3) {
+        throw new Error('arity mismatch');
+    }
+
+    let firstArg = args[0];
+    let sndArg = args[1];
+    let thrArg = args[2];
+
+    typeCheck(firstArg, [RSTRING_T]);
+    typeCheck(sndArg, [RNUM_T]);
+    typeCheck(thrArg, [RNUM_T]);
+
+    return {value: firstArg.value.slice(sndArg.value,thrArg.value),
+            type: RSTRING_T};
+}
+
+
 function stringAppend(args) {
     if (args.length < 2) {
         throw new Error('arity mismatch');
