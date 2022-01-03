@@ -11,6 +11,7 @@ import toBSL from './prettyprint.js';
 import {sessionURL, Sendifier} from './sendifier.js';
 import Octicon, {Trashcan, Alert, Check} from '@primer/octicons-react';
 import './App.css';
+import { DragDropContext, Draggable, Droppable } from 'react-beautiful-dnd';
 
 /*****************************
   Universal Constants I Want
@@ -377,8 +378,13 @@ function Succinct(props) {
 
         return noNull && paramTypes.length === modTab.params.length && outType.length === 1;
     }
+/*
+    function handleOnDrag(source) {
+        // pass
 
-    const reals = props.tables.map((table) => (
+    }
+*/
+    const reals = props.tables.map((table, index) => (
         <div key={table.key} className='flex_horiz table'>
           <div className='flex_vert no_grow'>
             <div className='flex_horiz no_grow signature'>
@@ -432,6 +438,9 @@ function Succinct(props) {
               table={table}
               tableNames={props.tables.map((table) => table.name)}
               tableChange={(newTab) => tableChange(newTab, table)}
+              handleOnDrag={props.handleOnDrag}
+              tableIndex={index}
+              // setstate : {tables : [...tables, adjusted]}
             />
           </div>
           <div className='grow'>{/* div to prevent text fields from stretching across the screen */}</div>
@@ -514,6 +523,7 @@ function Succinct(props) {
 }
 
 function SuccinctTab(props) {
+    
     function paramsExamplesChange(params, examples) {
         props.tableChange({...props.table, params, examples});
     }
@@ -527,28 +537,30 @@ function SuccinctTab(props) {
     }
 
     return (
-        <table className={'grow'}>
-          <SuccinctHead
-            disabled={props.disabled}
-            globalEnv={props.globalEnv}
-            params={props.table.params}
-            examples={props.table.examples}
-            tableNames={props.tableNames}
-            paramsExamplesChange={paramsExamplesChange}
+    <table className={'grow'}>
+        <SuccinctHead
+        disabled={props.disabled}
+        globalEnv={props.globalEnv}
+        params={props.table.params}
+        examples={props.table.examples}
+        tableNames={props.tableNames}
+        paramsExamplesChange={paramsExamplesChange}
 
-            formulas={props.table.formulas}
-            formulasChange={formulasChange}
-          />
-          <SuccinctBody
-            disabled={props.disabled}
-            globalEnv={props.globalEnv}
-            examples={props.table.examples}
-            formulas={props.table.formulas}
-            paramNames={props.table.params.map((param) => param.name)}
-            examplesFormulasChange={examplesFormulasChange}
-            formulasChange={formulasChange}
-          />
-        </table>
+        formulas={props.table.formulas}
+        formulasChange={formulasChange}
+        />
+    <SuccinctBody
+        disabled={props.disabled}
+        globalEnv={props.globalEnv}
+        examples={props.table.examples}
+        formulas={props.table.formulas}
+        paramNames={props.table.params.map((param) => param.name)}
+        examplesFormulasChange={examplesFormulasChange}
+        formulasChange={formulasChange}
+        handleOnDrag={props.handleOnDrag}
+        tableIndex={props.tableIndex}
+    />
+    </table>
     );
 }
 
@@ -984,40 +996,61 @@ function SuccinctBody(props) {
         return true; // this doesn't actually do anything
     }
 
+    // handleOnRowDrag : DragObject -> 
+    // passes an updated Example order to handleOnDrag
+    function handleOnRowDrag(result) {
+        if(!result.destination) {
+            console.log('returned');
+            return;
+        } else {
+            const sourceIndex = result.source.index;
+            const destinationIndex = result.destination.index;
+            const examplesList = Array.from(props.examples);
+            const [reorderedExample] = examplesList.splice(sourceIndex, 1);
+            examplesList.splice(destinationIndex, 0, reorderedExample);
+
+            props.handleOnDrag(examplesList, props.tableIndex);
+        }
+    }
+
     const reals = props.examples.map((example, i) => (
-          <tr key={example.key}>
-            <td>
-              <RemButton
-                onClick={props.disabled ? undefined : (() => remExample(example))}
-                title={'Remove this example'}
-              />
-            </td>
-            <Inputs
-              disabled={props.disabled}
-              globalEnv={props.globalEnv}
-              dummy={false}
-              inputs={example.inputs}
-              inputsChange={(inputs) => exampleChange({...example, inputs},
-                                                      example)}
-            />
-            <td>{/* empty cell to align with param dummy input */}</td>
-            <Outputs
-              globalEnv={props.globalEnv}
-              dummy={false}
-              formulas={props.formulas}
-              want={example.want}
-              row={i}
-            />
-            <td>{/* empty cell to align with top level formula dummy input */}</td>
-            <Want
-              disabled={props.disabled}
-              globalEnv={props.globalEnv}
-              dummy={false}
-              want={example.want}
-              wantChange={(want) => exampleChange({...example, want},
-                                                  example)}
-            />
-          </tr>
+        <Draggable key={example.key} index={i} draggableId={example.key.toString()}>
+            {(provided) => (
+                <tr ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps}>
+                    <td>
+                    <RemButton
+                        onClick={props.disabled ? undefined : (() => remExample(example))}
+                        title={'Remove this example'}
+                    />
+                    </td>
+                    <Inputs
+                    disabled={props.disabled}
+                    globalEnv={props.globalEnv}
+                    dummy={false}
+                    inputs={example.inputs}
+                    inputsChange={(inputs) => exampleChange({...example, inputs},
+                                                            example)}
+                    />
+                    <td>{/* empty cell to align with param dummy input */}</td>
+                    <Outputs
+                    globalEnv={props.globalEnv}
+                    dummy={false}
+                    formulas={props.formulas}
+                    want={example.want}
+                    row={i}
+                    />
+                    <td>{/* empty cell to align with top level formula dummy input */}</td>
+                    <Want
+                    disabled={props.disabled}
+                    globalEnv={props.globalEnv}
+                    dummy={false}
+                    want={example.want}
+                    wantChange={(want) => exampleChange({...example, want},
+                                                        example)}
+                    />
+                </tr>
+            )}
+        </Draggable>
     ));
     
     const dummy = (
@@ -1051,12 +1084,25 @@ function SuccinctBody(props) {
             />
           </tr>
     );
-
     return (
-        <tbody>
+        <DragDropContext onDragEnd={handleOnRowDrag}>
+            <Droppable droppableId="droppable-main-table">
+                {(provided) => (
+                    <tbody ref={provided.innerRef} {...provided.droppableProps}>
+                        {[...reals]}
+                        {provided.placeholder}
+                        {dummy}
+                    </tbody>
+                )}
+            </Droppable>
+        </DragDropContext>
+    );
+
+    /*
+    <tbody>
           {[...reals, dummy]}
         </tbody>
-    );
+    */
 }
 
 function Inputs(props) {
@@ -1437,6 +1483,7 @@ class App extends React.Component {
         this.programChange = this.programChange.bind(this);
         this.playbackTimeChange = this.playbackTimeChange.bind(this);
         this.render = this.render.bind(this);
+        this.handleOnDrag = this.handleOnDrag.bind(this);
 
         // The following line mitigates the problem that sometimes toRGBAArray returns
         // all-zeros.  Probably it doesn't completely fix #12.
@@ -1649,6 +1696,19 @@ class App extends React.Component {
         });
     }
 
+    // handleOnDrag : Example Number -> Table
+    // assings the Table with the new Example and updates the state of tables
+    handleOnDrag(newExampleOrder, tableIndex) {
+       const currentTables = Array.from(this.state.tables);
+       const tableToChange = currentTables[tableIndex];
+       const changedTable = {...tableToChange, examples:newExampleOrder};
+       currentTables[tableIndex] = changedTable;
+       
+       this.setState({
+           tables: currentTables
+       });
+    }
+
     playbackTimeChange(event) {
         const snapshots = this.props.snapshots;
         if (snapshots) {
@@ -1690,6 +1750,7 @@ class App extends React.Component {
                 globalEnv={this.state.globalEnv}
                 tables={this.state.tables}
                 programChange={this.programChange}
+                handleOnDrag={this.handleOnDrag}
               />
               <div className='language_select'>
                 <select
